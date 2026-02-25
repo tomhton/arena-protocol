@@ -1,0 +1,58 @@
+name: Build IPA
+
+on:
+  workflow_dispatch: # manual trigger from GitHub UI
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Build IPA (unsigned)
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Export IPA
+        run: |
+          mkdir -p $RUNNER_TEMP/ipa
+          cp -r "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" $RUNNER_TEMP/ipa/
+          cd $RUNNER_TEMP/ipa
+          mkdir Payload
+          cp -r App.app Payload/
+          zip -r App.ipa Payload/
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: App-IPA
+          path: ${{ runner.temp }}/ipa/App.ipa
+          retention-days: 7
