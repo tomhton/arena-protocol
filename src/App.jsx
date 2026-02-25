@@ -185,27 +185,28 @@ export default function App() {
   return () => clearInterval(intervalRef.current);
 }, [isRunning, isPaused]);
 
-  const startArena = (gcal = false) => {
-    const dur = effectiveDuration;
-    if (!dur || dur <= 0) return;
-    const now = new Date();
-    startTimeRef.current = now;
-    setTimeLeft(dur * 60);
-    setTotalTime(dur * 60);
-    setIsRunning(true);
-    setIsPaused(false);
-    setLogToCalendar(gcal);
-    setFocusExample(selectedArena.examples[Math.floor(Math.random() * selectedArena.examples.length)]);
-    if (gcal) {
-      const endTime = Date.now() + dur * 60 * 1000;
-      localStorage.setItem('timerEndTime', endTime);
-      const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-      const details = [selectedArena.description, sessionNote ? `Note: ${sessionNote}` : ""].filter(Boolean).join("\n\n");
-      window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[${selectedArena.label}] Focus Block`)}&dates=${fmt(now)}/${fmt(end)}&details=${encodeURIComponent(details)}`, "_blank");
-    }
-    setScreen("active");
-    scheduleTimerNotification(dur * 60, selectedArena.label);
-  };
+const startArena = (gcal = false) => {
+  const dur = effectiveDuration;
+  if (!dur || dur <= 0) return;
+  const now = new Date();
+  startTimeRef.current = now;
+  const endTime = Date.now() + dur * 60 * 1000;
+  localStorage.setItem('timerEndTime', endTime);
+  setTimeLeft(dur * 60);
+  setTotalTime(dur * 60);
+  setIsRunning(true);
+  setIsPaused(false);
+  setLogToCalendar(gcal);
+  setFocusExample(selectedArena.examples[Math.floor(Math.random() * selectedArena.examples.length)]);
+  if (gcal) {
+    const end = new Date(endTime);
+    const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    const details = [selectedArena.description, sessionNote ? `Note: ${sessionNote}` : ""].filter(Boolean).join("\n\n");
+    window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[${selectedArena.label}] Focus Block`)}&dates=${fmt(now)}/${fmt(end)}&details=${encodeURIComponent(details)}`, "_blank");
+  }
+  setScreen("active");
+  scheduleTimerNotification(dur * 60, selectedArena.label);
+};
 
   const handleArenaSelect = (arena) => {
     setSelectedArena(arena);
