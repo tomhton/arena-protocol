@@ -166,23 +166,24 @@ export default function App() {
   const durationValid = !(isCustomActive && (!customMinutes || parseInt(customMinutes) <= 0));
 
   useEffect(() => {
-    if (isRunning && !isPaused && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft((t) => {
-          if (t <= 1) {
-            clearInterval(intervalRef.current);
-            setIsRunning(false);
-            setScreen("complete");
-            return 0;
-          }
-          return t - 1;
-        });
-      }, 1000);
-    } else {
-      clearInterval(intervalRef.current);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [isRunning, isPaused, timeLeft]);
+  if (isRunning && !isPaused) {
+    intervalRef.current = setInterval(() => {
+      const endTime = parseInt(localStorage.getItem('timerEndTime'));
+      const remaining = Math.round((endTime - Date.now()) / 1000);
+      if (remaining <= 0) {
+        clearInterval(intervalRef.current);
+        setIsRunning(false);
+        setTimeLeft(0);
+        setScreen("complete");
+      } else {
+        setTimeLeft(remaining);
+      }
+    }, 1000);
+  } else {
+    clearInterval(intervalRef.current);
+  }
+  return () => clearInterval(intervalRef.current);
+}, [isRunning, isPaused]);
 
   const startArena = (gcal = false) => {
     const dur = effectiveDuration;
@@ -196,7 +197,8 @@ export default function App() {
     setLogToCalendar(gcal);
     setFocusExample(selectedArena.examples[Math.floor(Math.random() * selectedArena.examples.length)]);
     if (gcal) {
-      const end = new Date(now.getTime() + dur * 60 * 1000);
+      const endTime = Date.now() + dur * 60 * 1000;
+      localStorage.setItem('timerEndTime', endTime);
       const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
       const details = [selectedArena.description, sessionNote ? `Note: ${sessionNote}` : ""].filter(Boolean).join("\n\n");
       window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[${selectedArena.label}] Focus Block`)}&dates=${fmt(now)}/${fmt(end)}&details=${encodeURIComponent(details)}`, "_blank");
