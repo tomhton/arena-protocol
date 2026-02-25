@@ -1,0 +1,45 @@
+workflows:
+  ionic-capacitor-ios:
+    name: Arena Protocol iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: AC_API_KEY
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install dependencies
+        script: npm install
+      - name: Build web app
+        script: npm run build
+      - name: Install Capacitor CLI
+        script: npm install -g @capacitor/cli
+      - name: Add iOS platform
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+      - name: Sync Capacitor
+        script: npx cap sync ios
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install
+      - name: Build iOS unsigned
+        script: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            archive
+    artifacts:
+      - $CM_BUILD_DIR/App.xcarchive
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.ipa
+      - /tmp/xcodebuild_logs/*.log
