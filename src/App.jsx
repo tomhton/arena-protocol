@@ -1,3 +1,4 @@
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { useState, useEffect, useRef } from "react";
 
 const ARENAS = [
@@ -75,6 +76,30 @@ function formatTime(seconds) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+async function scheduleTimerNotification(durationSeconds, arenaLabel) {
+  try {
+    await LocalNotifications.requestPermissions();
+    await LocalNotifications.cancel({ notifications: [{ id: 1 }] });
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 1,
+        title: `${arenaLabel} session complete`,
+        body: "Your focus block has ended.",
+        schedule: { at: new Date(Date.now() + durationSeconds * 1000) },
+        sound: 'default',
+      }]
+    });
+  } catch (e) {
+    console.log('Notification error:', e);
+  }
+}
+
+async function cancelTimerNotification() {
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: 1 }] });
+  } catch (e) {}
 }
 
 function ArenaCard({ arena, sessCount, i, onClick }) {
@@ -177,6 +202,7 @@ export default function App() {
       window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`[${selectedArena.label}] Focus Block`)}&dates=${fmt(now)}/${fmt(end)}&details=${encodeURIComponent(details)}`, "_blank");
     }
     setScreen("active");
+    scheduleTimerNotification(dur * 60, selectedArena.label);
   };
 
   const handleArenaSelect = (arena) => {
@@ -186,6 +212,7 @@ export default function App() {
   };
 
   const resetSession = () => {
+    cancelTimerNotification();
     setScreen("home");
     setSelectedArena(null);
     setIsRunning(false);
