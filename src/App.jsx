@@ -504,6 +504,7 @@ function AddArenaCard({ i, onClick }) {
 function ArenaEditor({ arena, onSave, onDelete, onClose }) {
   const isNew = !arena.id;
   const [label, setLabel] = useState(arena.label || "");
+  const [subtitle, setSubtitle] = useState(arena.subtitle || "");
   const [icon, setIcon] = useState(arena.icon || "◈");
   const [color, setColor] = useState(arena.color || "#E8C547");
   const [description, setDescription] = useState(arena.description || "");
@@ -516,6 +517,7 @@ function ArenaEditor({ arena, onSave, onDelete, onClose }) {
       label: label.trim().toUpperCase(),
       letter: arena.letter || "?",
       color, icon,
+      subtitle: subtitle.trim(),
       description: description.trim(),
       examples: examples.split("\n").map(e => e.trim()).filter(Boolean),
     });
@@ -525,12 +527,30 @@ function ArenaEditor({ arena, onSave, onDelete, onClose }) {
     <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "52px 22px 32px", overflowY: "auto" }}>
       <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 10, letterSpacing: 4, marginBottom: 28, textAlign: "left", padding: 0 }}>← BACK</button>
       <div style={{ fontSize: 9, letterSpacing: 7, color: "rgba(255,255,255,0.25)", marginBottom: 4 }}>{isNew ? "NEW ARENA" : "EDIT ARENA"}</div>
-      <div style={{ fontSize: 24, fontWeight: "bold", letterSpacing: 2, color, marginBottom: 28 }}>{label || "UNTITLED"}</div>
+
+      {/* Live preview of label + subtitle */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 24, fontWeight: "bold", letterSpacing: 2, color, lineHeight: 1.1 }}>{label || "UNTITLED"}</div>
+        {subtitle && <div style={{ fontSize: 10, color: `${color}99`, letterSpacing: 1, marginTop: 4 }}>{subtitle}</div>}
+      </div>
 
       {/* Name */}
       <div style={{ marginBottom: 20 }}>
         <div style={labelStyle}>NAME</div>
         <input value={label} onChange={e => setLabel(e.target.value)} placeholder="ARENA NAME" maxLength={12} style={{ ...inputStyle, color, borderColor: color + '50', background: color + '08', textTransform: "uppercase", letterSpacing: 3 }} />
+      </div>
+
+      {/* Subtitle */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={labelStyle}>SUBTITLE <span style={{ color: "rgba(255,255,255,0.2)" }}>— OPTIONAL</span></div>
+        <input
+          value={subtitle}
+          onChange={e => setSubtitle(e.target.value)}
+          placeholder="e.g. move · fuel · rest"
+          maxLength={48}
+          style={{ ...inputStyle, color: `${color}cc`, borderColor: subtitle ? color + '40' : undefined, fontSize: 12, letterSpacing: 1 }}
+        />
+        <div style={{ fontSize: 8, color: "rgba(255,255,255,0.18)", letterSpacing: 2, marginTop: 6 }}>SHOWS AS A HINT LINE BELOW THE ARENA NAME ON THE CARD</div>
       </div>
 
       {/* Icon */}
