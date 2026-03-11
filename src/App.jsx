@@ -11,6 +11,7 @@ const LocalNotifications = {
 const DEFAULT_ARENAS = [
   {
     id: "body", label: "BODY", letter: "A", color: "#C0392B",
+    subtitle: "move · fuel · rest",
     description: "The instrument. Without it, nothing else functions. Move it, fuel it, rest it.",
     icon: "◉",
     examples: ["10 min walk", "20 pushups", "Cold shower", "Cook a real meal", "Sleep before midnight", "5 min breathwork", "Stretch for 10 min", "Drink 2L of water"],
@@ -22,6 +23,7 @@ const DEFAULT_ARENAS = [
   },
   {
     id: "spirit", label: "SPIRIT", letter: "B", color: "#D4A017",
+    subtitle: "reflect · read · meditate",
     description: "The inner fire. Who you are beneath the noise. Purpose, identity, the story you tell yourself.",
     icon: "★",
     examples: ["Write 3 things you're grateful for", "Journal one page", "Read 10 pages", "Meditate 10 min", "Define today's one intention", "Review your goals", "Visualize your future self", "Name one lie depression told you today"],
@@ -33,6 +35,7 @@ const DEFAULT_ARENAS = [
   },
   {
     id: "tribe", label: "TRIBE", letter: "C", color: "#B87333",
+    subtitle: "reach out · show up · plan",
     description: "The hearth. You exist because of others. Show up for them — and let them show up for you.",
     icon: "◇",
     examples: ["Send one meaningful text", "Call someone you've been avoiding", "Plan something with a friend", "Reply to a message you've been ignoring", "Tell someone you appreciate them", "Check in on family", "Accept an invitation"],
@@ -44,6 +47,7 @@ const DEFAULT_ARENAS = [
   },
   {
     id: "craft", label: "CRAFT", letter: "D", color: "#708090",
+    subtitle: "deep work · admin · build",
     description: "The work. What you are building in the world — your output, your mastery, your mark.",
     icon: "△",
     examples: ["Send one important email", "Complete one work task", "Work on a side project for 25 min", "Research one lead", "Write 200 words", "Outline one idea", "Do one thing you've been avoiding", "Update one key metric"],
@@ -437,21 +441,21 @@ function ArenaCard({ arena, sessCount, streak, i, onClick, editMode, onEdit, ses
     <div style={{ position: "relative", animation: `fadeUp 0.5s ease ${i * 0.07}s both`, width: "100%" }}>
       <button onClick={editMode ? onEdit : onClick} style={{
         background: mat.bg, border: editMode ? `1px solid ${arena.color}40` : mat.border,
-        borderRadius: 14, padding: "16px 12px 14px", cursor: "pointer", textAlign: "left",
+        borderRadius: 16, padding: "20px 16px 18px", cursor: "pointer", textAlign: "left",
         position: "relative", overflow: "hidden", transition: "all 0.25s ease", width: "100%",
-        minHeight: 110,
+        minHeight: 150,
       }}
         onPointerEnter={e => { if (!editMode) { e.currentTarget.style.background = mat.hoverBg; e.currentTarget.style.border = mat.hoverBorder; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = mat.hoverShadow; } }}
         onPointerLeave={e => { if (!editMode) { e.currentTarget.style.background = mat.bg; e.currentTarget.style.border = mat.border; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; } }}
       >
         {/* Top accent bar */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: arena.color, borderRadius: "14px 14px 0 0", opacity: 0.85 }} />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: arena.color, borderRadius: "16px 16px 0 0", opacity: 0.85 }} />
 
         {/* SVG illustration — faded watermark, bottom-right anchored */}
         {illustration && (
           <div style={{
-            position: "absolute", bottom: -8, right: -8,
-            width: 90, height: 105,
+            position: "absolute", bottom: -10, right: -10,
+            width: 110, height: 126,
             opacity: 0.13,
             pointerEvents: "none",
             mixBlendMode: "screen",
@@ -463,17 +467,20 @@ function ArenaCard({ arena, sessCount, streak, i, onClick, editMode, onEdit, ses
 
         {/* Content layer */}
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: 3, marginBottom: 10 }}>{arena.letter}</div>
-          <div style={{ fontSize: 11, fontWeight: "bold", letterSpacing: 3, color: "#E8E8E8", marginBottom: 2 }}>{arena.label}</div>
+          <div style={{ fontSize: 8, color: "rgba(255,255,255,0.18)", letterSpacing: 3, marginBottom: 12 }}>{arena.letter}</div>
+          <div style={{ fontSize: 15, fontWeight: "bold", letterSpacing: 3, color: "#ECECEC", marginBottom: 5, lineHeight: 1 }}>{arena.label}</div>
+          {arena.subtitle && (
+            <div style={{ fontSize: 9, color: `${arena.color}99`, letterSpacing: 1, lineHeight: 1.4, marginBottom: 6 }}>{arena.subtitle}</div>
+          )}
           {streak > 1 && !editMode && (
-            <div style={{ fontSize: 8, color: arena.color, letterSpacing: 1, opacity: 0.8 }}>🔥 {streak}d streak</div>
+            <div style={{ fontSize: 8, color: arena.color, letterSpacing: 1, opacity: 0.8, marginTop: 4 }}>🔥 {streak}d</div>
           )}
         </div>
 
         {/* Forge mark */}
-        {forge && <div style={{ position: "absolute", bottom: 8, left: 10, fontSize: 10, color: arena.color, filter: `drop-shadow(0 0 4px ${arena.color})`, opacity: 0.9, zIndex: 2 }} title={forge.name}>{forge.mark}</div>}
-        {!editMode && sessCount > 0 && streak <= 1 && !forge && <div style={{ position: "absolute", top: 10, right: 10, fontSize: 8, color: arena.color, zIndex: 2 }}>●{sessCount}</div>}
-        {editMode && <div style={{ position: "absolute", top: 8, right: 8, fontSize: 12, color: arena.color, opacity: 0.7, zIndex: 2 }}>✎</div>}
+        {forge && <div style={{ position: "absolute", bottom: 10, left: 12, fontSize: 11, color: arena.color, filter: `drop-shadow(0 0 4px ${arena.color})`, opacity: 0.9, zIndex: 2 }} title={forge.name}>{forge.mark}</div>}
+        {!editMode && sessCount > 0 && streak <= 1 && !forge && <div style={{ position: "absolute", bottom: 10, right: 12, fontSize: 8, color: arena.color, zIndex: 2, letterSpacing: 1 }}>●{sessCount}</div>}
+        {editMode && <div style={{ position: "absolute", top: 10, right: 10, fontSize: 12, color: arena.color, opacity: 0.7, zIndex: 2 }}>✎</div>}
       </button>
     </div>
   );
@@ -1041,6 +1048,7 @@ function StuckScreen({ onBack, onSelectArena, arenas }) {
   const [isCustomActive, setIsCustomActive] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
+  const [intention, setIntention] = useState("");
   const [prompt] = useState(STUCK_PROMPTS[Math.floor(Math.random() * STUCK_PROMPTS.length)]);
   const intervalRef = useRef(null);
   const effectiveDuration = isCustomActive && parseInt(customMinutes) > 0 ? parseInt(customMinutes) : selectedDuration;
@@ -1069,14 +1077,45 @@ function StuckScreen({ onBack, onSelectArena, arenas }) {
   }, [phase]);
 
   if (phase === "config") return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "52px 20px 32px" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "52px 20px 32px", overflowY: "auto" }}>
       <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 10, letterSpacing: 4, marginBottom: 36, textAlign: "left", padding: 0 }}>← BACK</button>
       <div style={{ fontSize: 9, letterSpacing: 7, color: "rgba(255,255,255,0.25)", marginBottom: 4 }}>EMERGENCY PROTOCOL</div>
       <div style={{ fontSize: 32, fontWeight: "bold", letterSpacing: 2, marginBottom: 6 }}>I AM <span style={{ color: "#FF8FA3" }}>STUCK</span></div>
-      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 28, lineHeight: 1.7 }}>Set a countdown. When it hits zero, you <em>must</em> enter an arena.</div>
+      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 24, lineHeight: 1.7 }}>Set a countdown. When it hits zero, you <em>must</em> enter an arena.</div>
+
       <div style={{ padding: "16px", background: "rgba(255,143,163,0.06)", border: "1px solid rgba(255,143,163,0.2)", borderRadius: 12, marginBottom: 28 }}>
         <div style={{ fontSize: 12, color: "rgba(255,143,163,0.8)", lineHeight: 1.6, fontStyle: "italic" }}>"{prompt}"</div>
       </div>
+
+      {/* Optional intention field */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 9, letterSpacing: 5, color: "rgba(255,255,255,0.22)", marginBottom: 8 }}>
+          IF YOU COULD DO ANYTHING RIGHT NOW <span style={{ color: "rgba(255,255,255,0.12)" }}>— OPTIONAL</span>
+        </div>
+        <textarea
+          value={intention}
+          onChange={e => setIntention(e.target.value)}
+          placeholder="What's one thing you'd actually do if you weren't stuck..."
+          rows={3}
+          style={{
+            ...inputStyle,
+            resize: "none",
+            lineHeight: 1.6,
+            fontSize: intention ? 13 : 12,
+            color: intention ? "#FF8FA3" : "rgba(255,255,255,0.3)",
+            borderColor: intention ? "rgba(255,143,163,0.45)" : "rgba(255,255,255,0.08)",
+            background: intention ? "rgba(255,143,163,0.06)" : "rgba(255,255,255,0.02)",
+            transition: "all 0.2s ease",
+            boxShadow: intention ? "0 0 12px rgba(255,143,163,0.1)" : "none",
+          }}
+        />
+        {intention && (
+          <div style={{ fontSize: 9, letterSpacing: 2, color: "rgba(255,143,163,0.5)", marginTop: 6 }}>
+            ▸ HOLD THIS THOUGHT
+          </div>
+        )}
+      </div>
+
       <div style={{ fontSize: 9, letterSpacing: 5, color: "rgba(255,255,255,0.22)", marginBottom: 12 }}>GRACE PERIOD</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {DURATIONS.map(d => <button key={d.value} onClick={() => { setSelectedDuration(d.value); setIsCustomActive(false); }} style={{ padding: "10px 12px", borderRadius: 10, flex: 1, border: !isCustomActive && selectedDuration === d.value ? "1.5px solid #FF8FA3" : "1px solid rgba(255,255,255,0.1)", background: !isCustomActive && selectedDuration === d.value ? "rgba(255,143,163,0.12)" : "transparent", color: !isCustomActive && selectedDuration === d.value ? "#FF8FA3" : "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 11, letterSpacing: 2, fontFamily: "'Courier New', monospace" }}>{d.label}</button>)}
@@ -1088,7 +1127,7 @@ function StuckScreen({ onBack, onSelectArena, arenas }) {
   );
 
   if (phase === "countdown") return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", gap: 28 }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", gap: 24 }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 9, letterSpacing: 7, color: "rgba(255,255,255,0.25)", marginBottom: 6 }}>GRACE PERIOD</div>
         <div style={{ fontSize: 20, fontWeight: "bold", letterSpacing: 4, color: "#FF8FA3" }}>CHOOSE YOUR ARENA</div>
@@ -1103,9 +1142,19 @@ function StuckScreen({ onBack, onSelectArena, arenas }) {
           <div style={{ fontSize: 9, letterSpacing: 3, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>UNTIL MANDATORY</div>
         </div>
       </div>
-      <div style={{ padding: "14px 20px", background: "rgba(255,143,163,0.06)", borderRadius: 12, border: "1px solid rgba(255,143,163,0.15)", textAlign: "center", maxWidth: 280 }}>
-        <div style={{ fontSize: 12, color: "rgba(255,143,163,0.7)", lineHeight: 1.6, fontStyle: "italic" }}>"{prompt}"</div>
-      </div>
+
+      {/* Show intention if they typed one */}
+      {intention ? (
+        <div style={{ width: "100%", maxWidth: 300, padding: "16px 18px", background: "rgba(255,143,163,0.07)", borderRadius: 14, border: "1px solid rgba(255,143,163,0.2)" }}>
+          <div style={{ fontSize: 8, letterSpacing: 4, color: "rgba(255,143,163,0.5)", marginBottom: 8 }}>YOUR INTENTION</div>
+          <div style={{ fontSize: 13, color: "#FF8FA3", lineHeight: 1.6, fontStyle: "italic" }}>{intention}</div>
+        </div>
+      ) : (
+        <div style={{ padding: "14px 20px", background: "rgba(255,143,163,0.06)", borderRadius: 12, border: "1px solid rgba(255,143,163,0.15)", textAlign: "center", maxWidth: 280 }}>
+          <div style={{ fontSize: 12, color: "rgba(255,143,163,0.7)", lineHeight: 1.6, fontStyle: "italic" }}>"{prompt}"</div>
+        </div>
+      )}
+
       <button onClick={() => setPhase("pickArena")} style={{ padding: "14px 32px", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, color: "rgba(255,255,255,0.4)", fontSize: 10, letterSpacing: 4, cursor: "pointer", fontFamily: "'Courier New', monospace" }}>I'M READY NOW →</button>
     </div>
   );
@@ -1116,6 +1165,9 @@ function StuckScreen({ onBack, onSelectArena, arenas }) {
         <div style={{ fontSize: 28, color: "#FF8FA3", marginBottom: 8, filter: "drop-shadow(0 0 12px #FF8FA3)" }}>⚡</div>
         <div style={{ fontSize: 9, letterSpacing: 7, color: "rgba(255,255,255,0.25)", marginBottom: 6 }}>TIME IS UP</div>
         <div style={{ fontSize: 22, fontWeight: "bold", letterSpacing: 3 }}>PICK AN ARENA</div>
+        {intention && (
+          <div style={{ marginTop: 12, fontSize: 11, color: "rgba(255,143,163,0.6)", fontStyle: "italic", maxWidth: 260, margin: "12px auto 0" }}>"{intention}"</div>
+        )}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {arenas.map((arena, i) => <ArenaCard key={arena.id} arena={arena} sessCount={0} streak={0} i={i} onClick={() => onSelectArena(arena)} />)}
@@ -1768,15 +1820,15 @@ export default function App() {
             </button>
           </div>
 
-          <div style={{ flex: 1, padding: "4px 14px 10px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          <div style={{ flex: 1, padding: "4px 12px 8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {letteredArenas.slice(0, Math.ceil(letteredArenas.length / 2)).map((arena, i) => (
                   <ArenaCard key={arena.id} arena={arena} sessCount={sessions.filter(s => s.arenaId === arena.id && s.date === todayStr()).length} streak={arenaStreaks[arena.id] || 0} i={i} editMode={editMode} onClick={() => handleArenaSelect(arena)} onEdit={() => setEditingArena(arena)} sessions={sessions} />
                 ))}
                 {editMode && <AddArenaCard i={letteredArenas.length} onClick={() => setEditingArena({})} />}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {letteredArenas.slice(Math.ceil(letteredArenas.length / 2)).map((arena, i) => (
                   <ArenaCard key={arena.id} arena={arena} sessCount={sessions.filter(s => s.arenaId === arena.id && s.date === todayStr()).length} streak={arenaStreaks[arena.id] || 0} i={i + Math.ceil(letteredArenas.length / 2)} editMode={editMode} onClick={() => handleArenaSelect(arena)} onEdit={() => setEditingArena(arena)} sessions={sessions} />
                 ))}
