@@ -1,6 +1,7 @@
 name: Build Native iOS (SwiftUI — iOS 18+)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "claude/**"
