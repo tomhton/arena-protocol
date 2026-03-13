@@ -20,6 +20,9 @@ let package = Package(
         .target(
             name: "ArenaProtocol",
             path: "ArenaProtocol",
+            exclude: [
+                "Resources/Info.plist"
+            ],
             resources: [
                 .process("Resources")
             ]
