@@ -1,0 +1,77 @@
+name: Build Native iOS (SwiftUI — iOS 18+)
+
+on:
+  push:
+    branches:
+      - "claude/**"
+      - main
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    name: Swift Test + Build
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.app
+          swift --version
+          xcodebuild -version
+
+      - name: Run Unit Tests
+        working-directory: ios
+        run: |
+          swift test --verbose 2>&1 | tee test-results.txt
+          if grep -q "FAILED" test-results.txt; then
+            echo "Tests failed"
+            exit 1
+          fi
+
+      - name: Build for iOS Simulator
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -scheme ArenaProtocol \
+            -destination "platform=iOS Simulator,name=iPhone 16 Pro,OS=18.0" \
+            -derivedDataPath build \
+            -configuration Debug \
+            clean build \
+            CODE_SIGNING_ALLOWED=NO \
+            GCC_TREAT_WARNINGS_AS_ERRORS=NO \
+          | xcpretty || true
+
+      - name: Archive (unsigned IPA)
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -scheme ArenaProtocol \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            archive \
+            -archivePath ArenaProtocol.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+          | xcpretty || true
+
+      - name: Upload archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArenaProtocol-${{ github.ref_name }}-${{ github.sha }}
+          path: ios/ArenaProtocol.xcarchive
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.sha }}
+          path: ios/test-results.txt
+          retention-days: 14
