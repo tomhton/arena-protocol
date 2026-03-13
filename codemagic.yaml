@@ -1,6 +1,61 @@
 workflows:
-  ionic-capacitor-ios:
-    name: Arena Protocol iOS
+  # ── Native SwiftUI build (iOS 18+ / Swift 6) ──────────────────────────────────
+  native-swift-ios:
+    name: Arena Protocol — Native SwiftUI
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+
+    environment:
+      xcode: latest        # Xcode 16+ with Swift 6 + iOS 18 SDK
+
+    scripts:
+      - name: Swift version info
+        script: swift --version && xcodebuild -version
+
+      - name: Run unit tests
+        script: |
+          cd ios
+          swift test --verbose
+
+      - name: Build for simulator (debug validation)
+        script: |
+          cd ios
+          xcodebuild \
+            -scheme ArenaProtocol \
+            -destination "platform=iOS Simulator,name=iPhone 16 Pro" \
+            -configuration Debug \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build | xcpretty
+
+      - name: Archive release (unsigned IPA)
+        script: |
+          cd ios
+          xcodebuild \
+            -scheme ArenaProtocol \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            archive \
+            -archivePath $CM_BUILD_DIR/ArenaProtocol.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO | xcpretty
+
+    artifacts:
+      - $CM_BUILD_DIR/ArenaProtocol.xcarchive
+      - ios/build/Logs/**/*.xcresult
+
+    publishing:
+      email:
+        recipients:
+          - dev@arenaprotocol.app
+        notify:
+          success: true
+          failure: true
+
+  # ── Legacy Capacitor/React build (archived reference) ─────────────────────────
+  ionic-capacitor-ios-legacy:
+    name: Arena Protocol — Legacy Capacitor (archived)
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
@@ -16,7 +71,7 @@ workflows:
         script: npm install -g @capacitor/cli
       - name: Add iOS platform
         script: |
-          if [ ! -d "ios" ]; then
+          if [ ! -d "ios/App" ]; then
             npx cap add ios
           fi
       - name: Sync Capacitor
