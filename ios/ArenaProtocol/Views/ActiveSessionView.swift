@@ -1,6 +1,7 @@
 // ActiveSessionView.swift — Arena Protocol
 // Live focus timer with pause/resume, circular progress, completion
 
+import ActivityKit
 import SwiftUI
 
 struct ActiveSessionView: View {
@@ -14,6 +15,7 @@ struct ActiveSessionView: View {
     @State private var isPaused = false
     @State private var focusHint = ""
     @State private var endTime: Date = Date()
+    @State private var liveActivity: Activity<ArenaLiveActivityAttributes>? = nil
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private var arenaColor: Color { Color(hex: arena.color) }
@@ -154,6 +156,31 @@ struct ActiveSessionView: View {
         }
         if let example = arena.examples.randomElement() { focusHint = example }
         UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
+        #if canImport(ActivityKit)
+        if ActivityAuthorizationInfo().areActivitiesEnabled, let session = store.activeSession {
+            let attrs = ArenaLiveActivityAttributes(
+                arenaId: session.arena.id,
+                arenaLabel: session.arena.label,
+                arenaColor: session.arena.color,
+                arenaIcon: session.arena.icon,
+                questNote: session.note
+            )
+            let contentState = ArenaLiveActivityAttributes.ContentState(
+                endTime: session.endTime,
+                isPaused: false,
+                pausedRemaining: 0
+            )
+            do {
+                liveActivity = try Activity<ArenaLiveActivityAttributes>.request(
+                    attributes: attrs,
+                    content: .init(state: contentState, staleDate: session.endTime),
+                    pushType: nil
+                )
+            } catch {
+                print("Live Activity start error: \(error)")
+            }
+        }
+        #endif
     }
 
     private func tick() {
@@ -161,6 +188,7 @@ struct ActiveSessionView: View {
         let remaining = Int(endTime.timeIntervalSinceNow)
         if remaining <= 0 {
             timeLeft = 0
+            endLiveActivity()
             store.endSession()
             navigate(.complete(arena, duration, note))
         } else {
@@ -180,16 +208,44 @@ struct ActiveSessionView: View {
             store.activeSession?.endTime = endTime
             UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
         }
+        #if canImport(ActivityKit)
+        Task {
+            let newState = ArenaLiveActivityAttributes.ContentState(
+                endTime: store.activeSession?.endTime ?? endTime,
+                isPaused: isPaused,
+                pausedRemaining: store.activeSession?.pausedRemaining ?? 0
+            )
+            await liveActivity?.update(.init(state: newState, staleDate: nil))
+        }
+        #endif
+    }
+
+    private func endLiveActivity() {
+        #if canImport(ActivityKit)
+        Task {
+            let finalState = ArenaLiveActivityAttributes.ContentState(
+                endTime: endTime,
+                isPaused: false,
+                pausedRemaining: 0
+            )
+            await liveActivity?.end(
+                ActivityContent(state: finalState, staleDate: nil),
+                dismissalPolicy: .immediate
+            )
+        }
+        #endif
     }
 
     private func finishEarly() {
         cancelNotification(id: "session_1")
+        endLiveActivity()
         store.endSession()
         navigate(.complete(arena, duration, note))
     }
 
     private func abandonSession() {
         cancelNotification(id: "session_1")
+        endLiveActivity()
         store.endSession()
         navigate(.home)
     }
