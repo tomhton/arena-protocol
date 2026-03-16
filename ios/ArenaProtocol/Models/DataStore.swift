@@ -2,9 +2,26 @@
 // All models, defaults, and persistence layer
 // iOS 26 / Swift 6 compatible using @Observable + UserDefaults
 
+import ActivityKit
 import Foundation
 import Observation
 @preconcurrency import UserNotifications
+
+// MARK: - Live Activity Attributes
+
+struct ArenaLiveActivityAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var endTime: Date
+        var isPaused: Bool
+        var pausedRemaining: TimeInterval
+    }
+
+    var arenaId: String
+    var arenaLabel: String
+    var arenaColor: String
+    var arenaIcon: String
+    var questNote: String
+}
 
 // MARK: - Models
 

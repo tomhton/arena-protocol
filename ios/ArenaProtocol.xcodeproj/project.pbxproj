@@ -30,6 +30,7 @@
 		CA88FDA92F6816550015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
 		CA88FDCF2F6837930015A8AB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD792F6811D70015A8AB /* WidgetKit.framework */; };
 		CA88FDD02F6837930015A8AB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */; };
+		CA88FE572F68515D0015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -94,19 +95,8 @@
 		CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArenaProtocolWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		CA88FDE32F6837950015A8AB /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = CA88FDCD2F6837930015A8AB /* ArenaProtocolWidgetExtension */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		CA88FD7D2F6811D70015A8AB /* ArenaProtocolWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ArenaProtocolWidget; sourceTree = "<group>"; };
-		CA88FDD12F6837930015A8AB /* ArenaProtocolWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (CA88FDE32F6837950015A8AB /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ArenaProtocolWidget; sourceTree = "<group>"; };
+		CA88FDD12F6837930015A8AB /* ArenaProtocolWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ArenaProtocolWidget; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,7 +133,6 @@
 				CA88FDA62F6815EC0015A8AB /* ArenaProtocolWidgetExtension.entitlements */,
 				7000000000000000000003AB /* ArenaProtocol */,
 				7000000000000000000008AB /* Tests/ArenaProtocolTests */,
-				CA88FD7D2F6811D70015A8AB /* ArenaProtocolWidget */,
 				CA88FDD12F6837930015A8AB /* ArenaProtocolWidget */,
 				CA88FD782F6811D70015A8AB /* Frameworks */,
 				7000000000000000000002AB /* Products */,
@@ -405,6 +394,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA88FE572F68515D0015A8AB /* SharedStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -560,7 +550,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -590,7 +580,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

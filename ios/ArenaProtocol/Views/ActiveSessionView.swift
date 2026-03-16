@@ -209,26 +209,32 @@ struct ActiveSessionView: View {
             UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
         }
         #if canImport(ActivityKit)
+        let activity = liveActivity
+        let currentEndTime = store.activeSession?.endTime ?? endTime
+        let currentPaused = isPaused
+        let currentRemaining = store.activeSession?.pausedRemaining ?? 0
         Task {
             let newState = ArenaLiveActivityAttributes.ContentState(
-                endTime: store.activeSession?.endTime ?? endTime,
-                isPaused: isPaused,
-                pausedRemaining: store.activeSession?.pausedRemaining ?? 0
+                endTime: currentEndTime,
+                isPaused: currentPaused,
+                pausedRemaining: currentRemaining
             )
-            await liveActivity?.update(.init(state: newState, staleDate: nil))
+            await activity?.update(.init(state: newState, staleDate: nil))
         }
         #endif
     }
 
     private func endLiveActivity() {
         #if canImport(ActivityKit)
+        let activity = liveActivity
+        let currentEndTime = endTime
         Task {
             let finalState = ArenaLiveActivityAttributes.ContentState(
-                endTime: endTime,
+                endTime: currentEndTime,
                 isPaused: false,
                 pausedRemaining: 0
             )
-            await liveActivity?.end(
+            await activity?.end(
                 ActivityContent(state: finalState, staleDate: nil),
                 dismissalPolicy: .immediate
             )
