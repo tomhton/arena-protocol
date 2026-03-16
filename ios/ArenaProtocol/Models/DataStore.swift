@@ -84,6 +84,15 @@ struct AppSettings: Codable {
     var windDownTime: String = "21:30"
 }
 
+struct ActiveSessionState {
+    var arena: Arena
+    var durationMins: Int
+    var note: String
+    var endTime: Date
+    var isPaused: Bool = false
+    var pausedRemaining: TimeInterval = 0
+}
+
 struct MorningCheckin: Codable {
     var date: String
     var completed: [String]
@@ -440,6 +449,8 @@ final class DataStore {
         return saved.date == todayString() ? saved : MorningCheckin(date: todayString(), completed: [])
     }()
 
+    var activeSession: ActiveSessionState? = nil
+
     var letteredArenas: [Arena] { Arena.reletter(arenas) }
     var todaySessions:  Int    { sessions.filter { $0.date == todayString() }.count }
 
@@ -454,6 +465,20 @@ final class DataStore {
     func saveProtocols() { saveToDefaults("arena_protocols",      protocols) }
     func saveSeenDrops() { saveToDefaults("arena_seen_drops",     seenDrops) }
     func saveCheckin()   { saveToDefaults("arena_checkin",        checkin) }
+
+    // Active session lifecycle
+    func startSession(arena: Arena, durationMins: Int, note: String) {
+        activeSession = ActiveSessionState(
+            arena: arena,
+            durationMins: durationMins,
+            note: note,
+            endTime: Date.now + TimeInterval(durationMins * 60)
+        )
+    }
+
+    func endSession() {
+        activeSession = nil
+    }
 
     // Session management
     func addSession(_ s: Session) {
