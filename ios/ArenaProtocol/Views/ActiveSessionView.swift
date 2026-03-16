@@ -131,6 +131,7 @@ struct ActiveSessionView: View {
         endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
         if let example = arena.examples.randomElement() { focusHint = example }
         UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
+        SharedStore.writeActiveSession(arenaName: arena.label, arenaColor: arena.color, endsAt: endTime)
     }
 
     private func tick() {
@@ -138,6 +139,7 @@ struct ActiveSessionView: View {
         let remaining = Int(endTime.timeIntervalSinceNow)
         if remaining <= 0 {
             timeLeft = 0
+            SharedStore.clearActiveSession()
             navigate(.complete(arena, duration, note))
         } else {
             timeLeft = remaining
@@ -149,16 +151,19 @@ struct ActiveSessionView: View {
         if !isPaused {
             endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
             UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
+            SharedStore.writeActiveSession(arenaName: arena.label, arenaColor: arena.color, endsAt: endTime)
         }
     }
 
     private func finishEarly() {
         cancelNotification(id: "session_1")
+        SharedStore.clearActiveSession()
         navigate(.complete(arena, duration, note))
     }
 
     private func abandonSession() {
         cancelNotification(id: "session_1")
+        SharedStore.clearActiveSession()
         navigate(.home)
     }
 }
