@@ -95,8 +95,18 @@
 		CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArenaProtocolWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CA3792242F685B3900A87FC1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CA88FDCD2F6837930015A8AB /* ArenaProtocolWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		CA88FDD12F6837930015A8AB /* ArenaProtocolWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ArenaProtocolWidget; sourceTree = "<group>"; };
+		CA88FDD12F6837930015A8AB /* ArenaProtocolWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (CA3792242F685B3900A87FC1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ArenaProtocolWidget; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
