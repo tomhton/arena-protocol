@@ -32,7 +32,8 @@
 		CA88FD8D2F6811D80015A8AB /* ArenaProtocolWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CA88FD772F6811D70015A8AB /* ArenaProtocolWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CA88FDA82F6816550015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
 		CA88FDA92F6816550015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
-		6000000000000000000016AB /* ArenaLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000016AB /* ArenaLiveActivityAttributes.swift */; };
+		CA88FDCF2F6837930015A8AB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD792F6811D70015A8AB /* WidgetKit.framework */; };
+		CA88FDD02F6837930015A8AB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +49,13 @@
 			containerPortal = 1000000000000000000001AB /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = CA88FD762F6811D70015A8AB;
+			remoteInfo = ArenaProtocolWidgetExtension;
+		};
+		CA88FDDF2F6837950015A8AB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1000000000000000000001AB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA88FDCD2F6837930015A8AB;
 			remoteInfo = ArenaProtocolWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
@@ -96,7 +104,7 @@
 		CA88FD952F6812A70015A8AB /* ArenaProtocol.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArenaProtocol.entitlements; sourceTree = "<group>"; };
 		CA88FDA62F6815EC0015A8AB /* ArenaProtocolWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArenaProtocolWidgetExtension.entitlements; sourceTree = "<group>"; };
 		CA88FDA72F6816550015A8AB /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
-		5000000000000000000016AB /* ArenaLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaLiveActivityAttributes.swift; sourceTree = "<group>"; };
+		CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArenaProtocolWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -107,10 +115,18 @@
 			);
 			target = CA88FD762F6811D70015A8AB /* ArenaProtocolWidgetExtension */;
 		};
+		CA88FDE32F6837950015A8AB /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CA88FDCD2F6837930015A8AB /* ArenaProtocolWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CA88FD7D2F6811D70015A8AB /* ArenaProtocolWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (CA88FD8E2F6811D80015A8AB /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ArenaProtocolWidget; sourceTree = "<group>"; };
+		CA88FDD12F6837930015A8AB /* ArenaProtocolWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (CA88FDE32F6837950015A8AB /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ArenaProtocolWidget; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -137,6 +153,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CA88FDCB2F6837930015A8AB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA88FDD02F6837930015A8AB /* SwiftUI.framework in Frameworks */,
+				CA88FDCF2F6837930015A8AB /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -148,6 +173,7 @@
 				7000000000000000000003AB /* ArenaProtocol */,
 				7000000000000000000008AB /* Tests/ArenaProtocolTests */,
 				CA88FD7D2F6811D70015A8AB /* ArenaProtocolWidget */,
+				CA88FDD12F6837930015A8AB /* ArenaProtocolWidget */,
 				CA88FD782F6811D70015A8AB /* Frameworks */,
 				7000000000000000000002AB /* Products */,
 			);
@@ -159,6 +185,7 @@
 				4000000000000000000001AB /* ArenaProtocol.app */,
 				4000000000000000000002AB /* ArenaProtocolTests.xctest */,
 				CA88FD772F6811D70015A8AB /* ArenaProtocolWidgetExtension.appex */,
+				CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -171,18 +198,9 @@
 				7000000000000000000004AB /* Models */,
 				7000000000000000000005AB /* Views */,
 				7000000000000000000006AB /* Components */,
-				7000000000000000000009AB /* LiveActivity */,
 				7000000000000000000007AB /* Resources */,
 			);
 			path = ArenaProtocol;
-			sourceTree = "<group>";
-		};
-		7000000000000000000009AB /* LiveActivity */ = {
-			isa = PBXGroup;
-			children = (
-				5000000000000000000016AB /* ArenaLiveActivityAttributes.swift */,
-			);
-			path = LiveActivity;
 			sourceTree = "<group>";
 		};
 		7000000000000000000004AB /* Models */ = {
@@ -265,6 +283,7 @@
 			);
 			dependencies = (
 				CA88FD8C2F6811D80015A8AB /* PBXTargetDependency */,
+				CA88FDE02F6837950015A8AB /* PBXTargetDependency */,
 			);
 			name = ArenaProtocol;
 			productName = ArenaProtocol;
@@ -311,6 +330,28 @@
 			productReference = CA88FD772F6811D70015A8AB /* ArenaProtocolWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		CA88FDCD2F6837930015A8AB /* ArenaProtocolWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CA88FDE42F6837950015A8AB /* Build configuration list for PBXNativeTarget "ArenaProtocolWidgetExtension" */;
+			buildPhases = (
+				CA88FDCA2F6837930015A8AB /* Sources */,
+				CA88FDCB2F6837930015A8AB /* Frameworks */,
+				CA88FDCC2F6837930015A8AB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CA88FDD12F6837930015A8AB /* ArenaProtocolWidget */,
+			);
+			name = ArenaProtocolWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = ArenaProtocolWidgetExtension;
+			productReference = CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -319,7 +360,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2630;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					2000000000000000000001AB = {
 						CreatedOnToolsVersion = 16.2;
@@ -329,6 +370,9 @@
 						TestTargetID = 2000000000000000000001AB;
 					};
 					CA88FD762F6811D70015A8AB = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					CA88FDCD2F6837930015A8AB = {
 						CreatedOnToolsVersion = 26.3;
 					};
 				};
@@ -349,6 +393,7 @@
 				2000000000000000000001AB /* ArenaProtocol */,
 				3000000000000000000001AB /* ArenaProtocolTests */,
 				CA88FD762F6811D70015A8AB /* ArenaProtocolWidgetExtension */,
+				CA88FDCD2F6837930015A8AB /* ArenaProtocolWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -375,6 +420,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CA88FDCC2F6837930015A8AB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -383,7 +435,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				CA88FDA92F6816550015A8AB /* SharedStore.swift in Sources */,
-				6000000000000000000016AB /* ArenaLiveActivityAttributes.swift in Sources */,
 				6000000000000000000001AB /* ArenaProtocolApp.swift in Sources */,
 				6000000000000000000002AB /* DataStore.swift in Sources */,
 				6000000000000000000003AB /* RootView.swift in Sources */,
@@ -422,6 +473,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CA88FDCA2F6837930015A8AB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -434,6 +492,11 @@
 			isa = PBXTargetDependency;
 			target = CA88FD762F6811D70015A8AB /* ArenaProtocolWidgetExtension */;
 			targetProxy = CA88FD8B2F6811D80015A8AB /* PBXContainerItemProxy */;
+		};
+		CA88FDE02F6837950015A8AB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CA88FDCD2F6837930015A8AB /* ArenaProtocolWidgetExtension */;
+			targetProxy = CA88FDDF2F6837950015A8AB /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -496,6 +559,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -551,6 +615,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -719,6 +784,71 @@
 			};
 			name = Release;
 		};
+		CA88FDE12F6837950015A8AB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ArenaProtocolWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3JSC7C9U7N;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ArenaProtocolWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ArenaProtocolWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arenaprotocol.app.ArenaProtocolWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CA88FDE22F6837950015A8AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ArenaProtocolWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3JSC7C9U7N;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ArenaProtocolWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ArenaProtocolWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arenaprotocol.app.ArenaProtocolWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -754,6 +884,15 @@
 			buildConfigurations = (
 				CA88FD902F6811D80015A8AB /* Debug */,
 				CA88FD912F6811D80015A8AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CA88FDE42F6837950015A8AB /* Build configuration list for PBXNativeTarget "ArenaProtocolWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CA88FDE12F6837950015A8AB /* Debug */,
+				CA88FDE22F6837950015A8AB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
