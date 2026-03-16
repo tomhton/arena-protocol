@@ -16,7 +16,10 @@ struct SelectView: View {
 
     private var arenaColor: Color { Color(hex: arena.color) }
     private var effectiveDuration: Int {
-        isCustomActive, let v = Int(customMinutes), v > 0 ? v : selectedDuration
+        if isCustomActive, let v = Int(customMinutes), v > 0 {
+            return v
+        }
+        return selectedDuration
     }
     private var durationValid: Bool {
         !isCustomActive || (Int(customMinutes) ?? 0) > 0
