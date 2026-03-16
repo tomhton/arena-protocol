@@ -115,6 +115,11 @@ struct RootView: View {
                 screen = .checkin
             }
         }
+        .onOpenURL { url in
+            guard url.scheme == "arenaprotocol", url.host == "active",
+                  let session = store.activeSession else { return }
+            screen = .active(session.arena, session.durationMins, session.note)
+        }
     }
 
     private var swipeBackEnabled: Bool {
