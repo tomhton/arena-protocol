@@ -183,8 +183,9 @@ struct ActiveSessionView: View {
                         content: .init(state: contentState, staleDate: endTime),
                         pushType: nil
                     )
+                    print("[LiveActivity] started id=\(liveActivity?.id ?? "nil") icon=\(attrs.arenaIcon) color=\(attrs.arenaColor)")
                 } catch {
-                    print("Live Activity start error: \(error)")
+                    print("[LiveActivity] start error: \(error)")
                 }
             }
             #endif
