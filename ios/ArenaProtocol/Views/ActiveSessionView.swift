@@ -177,6 +177,10 @@ struct ActiveSessionView: View {
                     isPaused: false,
                     pausedRemaining: 0
                 )
+                print("[LiveActivity] arenaColor:  \(normalizedColor)")
+                print("[LiveActivity] arenaIcon:   \(arena.icon.isEmpty ? "◉" : arena.icon)")
+                print("[LiveActivity] arenaLabel:  \(arena.label)")
+                print("[LiveActivity] questNote:   \(note)")
                 do {
                     liveActivity = try Activity<ArenaLiveActivityAttributes>.request(
                         attributes: attrs,

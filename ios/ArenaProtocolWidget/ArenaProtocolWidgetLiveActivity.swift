@@ -38,7 +38,7 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
                 .padding(.vertical, 10)
             }
             .background(Color.black.opacity(0.85))
-            .activityBackgroundTint(Color.black)
+            .activityBackgroundTint(Color.clear)
         } dynamicIsland: { context in
             let arenaColor = Color(hex: context.attributes.arenaColor)
             return DynamicIsland {
@@ -72,13 +72,12 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
                         .foregroundColor(arenaColor)
                 }
             } compactLeading: {
-                Text(context.attributes.arenaIcon.isEmpty ? "◉" : context.attributes.arenaIcon)
-                    .font(.system(size: 16))
-                    .foregroundColor(.white)  // DEBUG: hardcoded white to test rendering
+                Text("X")
+                    .foregroundColor(.red)
             } compactTrailing: {
                 Text("TEST")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)  // DEBUG: hardcoded white to test rendering
+                    .foregroundColor(.white)
             } minimal: {
                 Text(context.attributes.arenaIcon)
                     .font(.system(size: 14))
