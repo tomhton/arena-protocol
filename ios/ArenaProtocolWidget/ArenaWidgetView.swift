@@ -16,7 +16,7 @@ extension Color {
 
 // MARK: - Widget View
 struct ArenaWidgetView: View {
-    let entry: ArenaEntry
+    let entry: SimpleEntry
     @Environment(\.widgetFamily) var family
 
     var arenaColor: Color {
