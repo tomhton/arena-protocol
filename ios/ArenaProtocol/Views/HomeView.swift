@@ -9,6 +9,7 @@ struct HomeView: View {
     @Binding var pendingDrop: EmberDrop?
 
     @State private var editMode = false
+    @State private var showAbandonConfirm = false
 
     private var arenas: [Arena] { store.letteredArenas }
     private var sessions: [Session] { store.sessions }
@@ -35,8 +36,76 @@ struct HomeView: View {
                     .transition(.opacity)
                     .zIndex(999)
             }
+
+            // Minimized timer pill
+            if let active = store.activeSession {
+                VStack {
+                    Spacer()
+                    timerPill(active)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 16)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(100)
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: pendingDrop?.id)
+        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: store.activeSession != nil)
+        .confirmationDialog("Abandon session?", isPresented: $showAbandonConfirm, titleVisibility: .visible) {
+            Button("Abandon", role: .destructive) { store.endSession() }
+            Button("Cancel", role: .cancel) { }
+        }
+    }
+
+    // MARK: - Timer Pill
+
+    private func timerPill(_ active: ActiveSessionState) -> some View {
+        let arenaColor = Color(hex: active.arena.color)
+
+        return HStack(spacing: 0) {
+            // Left: dot + label
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(arenaColor)
+                    .frame(width: 12, height: 12)
+                Text(active.arena.label)
+                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.textPrimary)
+            }
+            .padding(.leading, 16)
+
+            Spacer()
+
+            // Center separator
+            Rectangle()
+                .fill(Color.white.opacity(0.1))
+                .frame(width: 1, height: 24)
+
+            // Right: live countdown
+            Text(active.endTime, style: .timer)
+                .font(.system(size: 14, weight: .medium, design: .monospaced))
+                .foregroundStyle(arenaColor)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 64)
+                .padding(.horizontal, 10)
+        }
+        .frame(width: 280, height: 56)
+        .background(Color.cardBg)
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(arenaColor, lineWidth: 1))
+        .onTapGesture {
+            navigate(.active(active.arena, active.durationMins, active.note))
+        }
+        .overlay(alignment: .trailing) {
+            Button { showAbandonConfirm = true } label: {
+                Text("✕")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.white.opacity(0.3))
+                    .padding(.horizontal, 16)
+                    .frame(height: 56)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     // MARK: - Header

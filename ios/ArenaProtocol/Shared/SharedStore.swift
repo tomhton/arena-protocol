@@ -10,7 +10,7 @@ struct WidgetState: Codable {
 
 // MARK: - SharedStore
 final class SharedStore {
-    private static let suiteName = "group.com.arenaprotocol.app"
+    private static let suiteName = "group.arena.protocol"
     private static let widgetStateKey = "arena_widget_state"
     private static let sessionsKey = "arena_sessions"
 

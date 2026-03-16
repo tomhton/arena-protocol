@@ -122,13 +122,36 @@ struct ActiveSessionView: View {
                 Spacer()
             }
         }
+        .overlay(alignment: .topTrailing) {
+            Button { navigate(.home) } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.white.opacity(0.25))
+                    .padding(20)
+            }
+            .buttonStyle(.plain)
+        }
         .onAppear { setup() }
         .onReceive(timer) { _ in tick() }
         .onDisappear { timer.upstream.connect().cancel() }
     }
 
     private func setup() {
-        endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
+        if let active = store.activeSession, active.arena.id == arena.id {
+            // Returning from home — resume from stored state
+            if active.isPaused {
+                isPaused = true
+                timeLeft = Int(active.pausedRemaining)
+                endTime = Date().addingTimeInterval(active.pausedRemaining)
+            } else {
+                endTime = active.endTime
+                timeLeft = max(0, Int(active.endTime.timeIntervalSinceNow))
+            }
+        } else {
+            // Fresh start — register in DataStore
+            store.startSession(arena: arena, durationMins: duration, note: note)
+            endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
+        }
         if let example = arena.examples.randomElement() { focusHint = example }
         UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
     }
@@ -138,6 +161,7 @@ struct ActiveSessionView: View {
         let remaining = Int(endTime.timeIntervalSinceNow)
         if remaining <= 0 {
             timeLeft = 0
+            store.endSession()
             navigate(.complete(arena, duration, note))
         } else {
             timeLeft = remaining
@@ -146,19 +170,27 @@ struct ActiveSessionView: View {
 
     private func togglePause() {
         isPaused.toggle()
-        if !isPaused {
+        if isPaused {
+            store.activeSession?.isPaused = true
+            store.activeSession?.pausedRemaining = TimeInterval(timeLeft)
+        } else {
             endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
+            store.activeSession?.isPaused = false
+            store.activeSession?.pausedRemaining = 0
+            store.activeSession?.endTime = endTime
             UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
         }
     }
 
     private func finishEarly() {
         cancelNotification(id: "session_1")
+        store.endSession()
         navigate(.complete(arena, duration, note))
     }
 
     private func abandonSession() {
         cancelNotification(id: "session_1")
+        store.endSession()
         navigate(.home)
     }
 }
