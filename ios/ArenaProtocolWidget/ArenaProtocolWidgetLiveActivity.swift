@@ -1,80 +1,108 @@
-//
-//  ArenaProtocolWidgetLiveActivity.swift
-//  ArenaProtocolWidget
-//
-//  Created by Baloo on 3/16/26.
-//
-
 import ActivityKit
-import WidgetKit
 import SwiftUI
+import WidgetKit
 
-struct ArenaProtocolWidgetAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        // Dynamic stateful properties about your activity go here!
-        var emoji: String
+// MARK: - Color hex helper (local to widget target)
+private extension Color {
+    init(hex: String) {
+        let h = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
+        var val: UInt64 = 0
+        Scanner(string: h).scanHexInt64(&val)
+        let r = Double((val >> 16) & 0xFF) / 255
+        let g = Double((val >> 8) & 0xFF) / 255
+        let b = Double(val & 0xFF) / 255
+        self.init(red: r, green: g, blue: b)
     }
-
-    // Fixed non-changing properties about your activity go here!
-    var name: String
 }
 
 struct ArenaProtocolWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
-        ActivityConfiguration(for: ArenaProtocolWidgetAttributes.self) { context in
-            // Lock screen/banner UI goes here
-            VStack {
-                Text("Hello \(context.state.emoji)")
+        ActivityConfiguration(for: ArenaLiveActivityAttributes.self) { context in
+            // Lock screen
+            let arenaColor = Color(hex: context.attributes.arenaColor)
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(arenaColor)
+                    .frame(width: 3)
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(context.attributes.arenaIcon + " " + context.attributes.arenaLabel)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(arenaColor)
+                        Text(context.attributes.questNote)
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.6))
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                    if context.state.isPaused {
+                        Text("PAUSED")
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                            .foregroundColor(arenaColor)
+                    } else {
+                        Text(context.state.endTime, style: .timer)
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundColor(arenaColor)
+                            .monospacedDigit()
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
             }
-            .activityBackgroundTint(Color.cyan)
-            .activitySystemActionForegroundColor(Color.black)
-
+            .background(Color.black.opacity(0.85))
+            .activityBackgroundTint(Color.black)
         } dynamicIsland: { context in
-            DynamicIsland {
-                // Expanded UI goes here.  Compose the expanded UI through
-                // various regions, like leading/trailing/center/bottom
+            let arenaColor = Color(hex: context.attributes.arenaColor)
+            return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Text("Leading")
+                    Text(context.attributes.arenaIcon)
+                        .font(.system(size: 28))
+                        .foregroundColor(arenaColor)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("Trailing")
+                    if context.state.isPaused {
+                        Text("PAUSED")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundColor(arenaColor)
+                    } else {
+                        Text(context.state.endTime, style: .timer)
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundColor(arenaColor)
+                            .monospacedDigit()
+                    }
+                }
+                DynamicIslandExpandedRegion(.center) {
+                    Text(context.attributes.questNote)
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("Bottom \(context.state.emoji)")
-                    // more content
+                    Text(context.attributes.arenaLabel)
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundColor(arenaColor)
                 }
             } compactLeading: {
-                Text("L")
+                Text(context.attributes.arenaIcon)
+                    .font(.system(size: 16))
+                    .foregroundColor(arenaColor)
             } compactTrailing: {
-                Text("T \(context.state.emoji)")
+                if context.state.isPaused {
+                    Text("PAUSED")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundColor(arenaColor)
+                } else {
+                    Text(context.state.endTime, style: .timer)
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(arenaColor)
+                        .monospacedDigit()
+                }
             } minimal: {
-                Text(context.state.emoji)
+                Text(context.attributes.arenaIcon)
+                    .font(.system(size: 14))
+                    .foregroundColor(arenaColor)
             }
-            .widgetURL(URL(string: "http://www.apple.com"))
-            .keylineTint(Color.red)
         }
     }
-}
-
-extension ArenaProtocolWidgetAttributes {
-    fileprivate static var preview: ArenaProtocolWidgetAttributes {
-        ArenaProtocolWidgetAttributes(name: "World")
-    }
-}
-
-extension ArenaProtocolWidgetAttributes.ContentState {
-    fileprivate static var smiley: ArenaProtocolWidgetAttributes.ContentState {
-        ArenaProtocolWidgetAttributes.ContentState(emoji: "😀")
-     }
-     
-     fileprivate static var starEyes: ArenaProtocolWidgetAttributes.ContentState {
-         ArenaProtocolWidgetAttributes.ContentState(emoji: "🤩")
-     }
-}
-
-#Preview("Notification", as: .content, using: ArenaProtocolWidgetAttributes.preview) {
-   ArenaProtocolWidgetLiveActivity()
-} contentStates: {
-    ArenaProtocolWidgetAttributes.ContentState.smiley
-    ArenaProtocolWidgetAttributes.ContentState.starEyes
 }
