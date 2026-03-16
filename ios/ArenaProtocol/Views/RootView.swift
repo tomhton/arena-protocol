@@ -25,6 +25,7 @@ enum Screen: Hashable {
 struct RootView: View {
     @Environment(DataStore.self) private var store
     @State private var screen: Screen = .checkin
+    @State private var screenStack: [Screen] = []
     @State private var pendingDrop: EmberDrop? = nil
     @State private var checkinDismissed: Bool = {
         UserDefaults.standard.string(forKey: "arena_checkin_dismissed") == todayString()
@@ -97,6 +98,16 @@ struct RootView: View {
             }
             .animation(.easeInOut(duration: 0.25), value: "\(screen)")
         }
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 10)
+                .onEnded { value in
+                    guard value.startLocation.x < 44,
+                          value.translation.width > 60,
+                          swipeBackEnabled else { return }
+                    navigateBack()
+                },
+            including: swipeBackEnabled ? .all : .none
+        )
         .onAppear {
             if UserDefaults.standard.string(forKey: "arena_checkin_dismissed") == todayString() {
                 screen = .home
@@ -106,8 +117,26 @@ struct RootView: View {
         }
     }
 
+    private var swipeBackEnabled: Bool {
+        switch screen {
+        case .home, .active, .complete:
+            return false
+        default:
+            return true
+        }
+    }
+
     func navigate(_ s: Screen) {
+        if case .home = s {
+            screenStack.removeAll()
+        } else {
+            screenStack.append(screen)
+        }
         screen = s
+    }
+
+    func navigateBack() {
+        screen = screenStack.popLast() ?? .home
     }
 }
 
