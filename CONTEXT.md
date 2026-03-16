@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-16.
+> Paste this at the start of every Claude session. Last updated: March 16, 2026.
 
 ---
 
@@ -309,14 +309,36 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 
 ---
 
-## Up Next (Feature Queue)
+## Current Sprint: Complete ✅ — WidgetKit
 
-1. **Live Activity / Dynamic Island timer** — ActivityKit extension showing active session countdown on lock screen and Dynamic Island (compact + expanded). Target: iPhone 17 Pro Max layout.
-2. **WidgetKit extensions** — Lock screen widget (countdown + arena name) and small/medium home screen widget (current arena + start button).
-3. **Google Calendar deep integration** — Read the user's calendar blocks for the day, surface them as suggested focus sessions in SelectView. When a calendar block matches an arena (e.g. "gym" → BODY), pre-fill the quest and duration.
-4. **Xcode Cloud → TestFlight pipeline** — Trigger on push to main, auto-sign, auto-deploy to TestFlight internal group.
-5. **iCloud sync** — Migrate from `UserDefaults` to `NSUbiquitousKeyValueStore` or CloudKit.
-6. **Apple Watch companion** — Session timer on wrist via WatchConnectivity.
+### What was built
+- SharedStore.swift — App Group bridge (group.com.arenaprotocol.app) with WidgetState, writeActiveSession, clearActiveSession, readWidgetState
+- ArenaProtocolWidget.swift — TimelineProvider with 60s refresh, StaticConfiguration, supports .accessoryCircular, .accessoryRectangular, .systemSmall
+- ArenaWidgetView.swift — per-family UI, circular Gauge progress ring, rectangular with Text(.timer) countdown, small with accent strip + amber countdown + session count
+- ActiveSessionView.swift — surgical additions: SharedStore write on timer start, clear on end/cancel/abandon
+
+### Xcode wiring completed
+- Widget Extension target: ArenaProtocolWidgetExtension
+- App Groups entitlement on both targets: group.com.arenaprotocol.app
+- SharedStore.swift added to both target memberships
+- Widget files added to ArenaProtocolWidgetExtension target only
+
+### Swift 6 fixes applied during this sprint
+- Arena and ArenaProtocolModel: added Hashable conformance
+- Title and EmberDrop: added Sendable conformance
+- TITLES and EMBER_DROPS globals: marked nonisolated(unsafe)
+- RootView.swift: removed dead recursive opacity() function that caused launch crash
+- DataStore.swift: added @preconcurrency to import UserNotifications
+
+---
+
+## Up Next
+
+- Live Activity / Dynamic Island timer (ActivityKit) ← next blocking feature
+- Haptic feedback on arena entry/exit
+- HealthKit workout write-back
+- Xcode Cloud → TestFlight automation polish
+- Clean up: remove nonisolated(unsafe) from TITLES and EMBER_DROPS (now unnecessary since Sendable conformance added)
 
 ---
 
