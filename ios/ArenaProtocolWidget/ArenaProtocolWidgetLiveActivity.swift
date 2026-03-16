@@ -6,39 +6,11 @@ import WidgetKit
 struct ArenaProtocolWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ArenaLiveActivityAttributes.self) { context in
-            // Lock screen
-            let arenaColor = Color(hex: context.attributes.arenaColor)
-            HStack(spacing: 0) {
-                Rectangle()
-                    .fill(arenaColor)
-                    .frame(width: 3)
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(context.attributes.arenaIcon + " " + context.attributes.arenaLabel)
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(arenaColor)
-                        Text(context.attributes.questNote)
-                            .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.6))
-                            .lineLimit(2)
-                    }
-                    Spacer()
-                    if context.state.isPaused {
-                        Text("PAUSED")
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundColor(arenaColor)
-                    } else {
-                        Text(context.state.endTime, style: .timer)
-                            .font(.system(size: 20, weight: .bold, design: .monospaced))
-                            .foregroundColor(arenaColor)
-                            .monospacedDigit()
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-            }
-            .background(Color.black.opacity(0.85))
-            .activityBackgroundTint(Color.clear)
+            // DEBUG: most aggressive visibility test — if this is not visible the
+            // closure itself is not executing (stale extension binary).
+            Text("ALIVE")
+                .foregroundColor(.red)
+                .background(Color.yellow)
         } dynamicIsland: { context in
             let arenaColor = Color(hex: context.attributes.arenaColor)
             return DynamicIsland {
@@ -70,6 +42,7 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
                     Text(context.attributes.arenaLabel)
                         .font(.system(size: 19, weight: .bold))
                         .foregroundColor(arenaColor)
+                        .widgetURL(URL(string: "arenaprotocol://active")!)
                 }
             } compactLeading: {
                 Text("X")
