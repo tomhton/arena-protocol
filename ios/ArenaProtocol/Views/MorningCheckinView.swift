@@ -23,11 +23,6 @@ struct MorningCheckinView: View {
                         .foregroundStyle(Color.white.opacity(0.25))
                         .kerning(7)
                     HStack(spacing: 0) {
-                        Text("IGNITE THE\n")
-                            .font(.system(size: 26, weight: .bold, design: .monospaced))
-                            .kerning(2)
-                    }
-                    HStack(spacing: 0) {
                         Text("IGNITE THE")
                             .font(.system(size: 26, weight: .bold, design: .monospaced))
                             .kerning(2)
