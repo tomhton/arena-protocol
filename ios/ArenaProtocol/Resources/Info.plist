@@ -10,9 +10,9 @@
     <key>CFBundleDisplayName</key>
     <string>Arena Protocol</string>
     <key>CFBundleVersion</key>
-    <string>2.0.0</string>
+    <string>2.0.3</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.0</string>
+    <string>2.0.3</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleExecutable</key>
@@ -73,6 +73,12 @@
     <!-- Appearance: dark-mode only -->
     <key>UIUserInterfaceStyle</key>
     <string>Dark</string>
+
+    <!-- Live Activities -->
+    <key>NSSupportsLiveActivities</key>
+    <true/>
+    <key>NSSupportsLiveActivitiesFrequentUpdates</key>
+    <true/>
 
     <!-- Launch Screen -->
     <key>UILaunchScreen</key>
