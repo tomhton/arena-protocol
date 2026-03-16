@@ -10,21 +10,22 @@ import SwiftUI
 
 struct Provider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent())
+        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent(), widgetState: WidgetState(activeArenaName: nil, activeArenaColor: nil, timerEndsAt: nil, todaySessionCount: 0))
     }
 
     func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: configuration)
+        SimpleEntry(date: Date(), configuration: configuration, widgetState: SharedStore.readWidgetState())
     }
-    
+
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
         var entries: [SimpleEntry] = []
 
         // Generate a timeline consisting of five entries an hour apart, starting from the current date.
         let currentDate = Date()
+        let widgetState = SharedStore.readWidgetState()
         for hourOffset in 0 ..< 5 {
             let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
+            let entry = SimpleEntry(date: entryDate, configuration: configuration, widgetState: widgetState)
             entries.append(entry)
         }
 
@@ -39,6 +40,7 @@ struct Provider: AppIntentTimelineProvider {
 struct SimpleEntry: TimelineEntry {
     let date: Date
     let configuration: ConfigurationAppIntent
+    let widgetState: WidgetState
 }
 
 struct ArenaProtocolWidgetEntryView : View {
@@ -83,6 +85,6 @@ extension ConfigurationAppIntent {
 #Preview(as: .systemSmall) {
     ArenaProtocolWidget()
 } timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
-    SimpleEntry(date: .now, configuration: .starEyes)
+    SimpleEntry(date: .now, configuration: .smiley, widgetState: WidgetState(activeArenaName: nil, activeArenaColor: nil, timerEndsAt: nil, todaySessionCount: 0))
+    SimpleEntry(date: .now, configuration: .starEyes, widgetState: WidgetState(activeArenaName: nil, activeArenaColor: nil, timerEndsAt: nil, todaySessionCount: 0))
 }
