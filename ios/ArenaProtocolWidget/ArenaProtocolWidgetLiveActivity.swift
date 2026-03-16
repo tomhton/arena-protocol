@@ -2,18 +2,6 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
-// MARK: - Color hex helper (local to widget target)
-private extension Color {
-    init(hex: String) {
-        let h = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
-        var val: UInt64 = 0
-        Scanner(string: h).scanHexInt64(&val)
-        let r = Double((val >> 16) & 0xFF) / 255
-        let g = Double((val >> 8) & 0xFF) / 255
-        let b = Double(val & 0xFF) / 255
-        self.init(red: r, green: g, blue: b)
-    }
-}
 
 struct ArenaProtocolWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
