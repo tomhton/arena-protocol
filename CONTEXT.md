@@ -9,7 +9,7 @@
 **One-liner:** A dark-themed iOS life-management app built around timed focus sessions across four life "arenas" (Body, Spirit, Tribe, Craft) with gamification, habit tracking, and daily rituals.
 **Bundle ID:** `com.arenaprotocol.app`
 **Repo:** `tomhton/arena-protocol`
-**Active branch:** `claude/swift-ios26-conversion-aROXy`
+**Active branch:** `main`
 
 ---
 
@@ -281,16 +281,18 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 - `GrainOverlay` in `RootView.swift` uses `Canvas` with random dots; dots don't change between renders (static noise). Acceptable for v2.0.
 - Deep-link URL schemes in `Info.plist` must be verified against current app versions (Spotify, YouTube URLs may have changed)
 - No iCloud sync — all data is local to device. Multi-device parity not supported.
+- No `.xcodeproj` file — project is SPM-only. Xcode cannot open it for Simulator/device builds or signing without a proper Xcode project file. See Task 2 below.
 
 ---
 
 ## Up Next (Feature Queue)
 
-1. **iCloud sync** — migrate persistence from `UserDefaults` to `NSUbiquitousKeyValueStore` or `CloudKit` so data follows the user across devices
-2. **Xcode project file** (`.xcodeproj`) — currently SPM-only; adding a proper Xcode project enables Simulator live preview and proper signing workflows
-3. **Widget extension** — Today widget showing today's session count + next suggested arena
-4. **Apple Watch companion** — session timer on wrist via `WatchConnectivity`
-5. **Live Activity** — Dynamic Island / Lock Screen showing active session timer
+1. **Live Activity / Dynamic Island timer** — ActivityKit extension showing active session countdown on lock screen, notification banners, and Dynamic Island (compact + expanded). Target: iPhone 17 Pro Max Dynamic Island layout.
+2. **WidgetKit extensions** — Lock screen widget (countdown + arena name) and small/medium home screen widget (current arena + start button).
+3. **Google Calendar deep integration** — Read the user's calendar blocks for the day and surface them as suggested focus sessions in SelectView. When a calendar block matches an arena (e.g. "gym" → BODY), pre-fill the quest and duration. Expand beyond the existing morning habit → 15-min block trigger.
+4. **Xcode Cloud → TestFlight pipeline** — Trigger on push to main, auto-sign, auto-deploy to TestFlight internal group.
+5. **iCloud sync** — Migrate persistence from UserDefaults to NSUbiquitousKeyValueStore or CloudKit so data follows the user across devices.
+6. **Apple Watch companion** — Session timer on wrist via WatchConnectivity.
 
 ---
 
@@ -322,7 +324,7 @@ cd ios && xcodebuild -scheme ArenaProtocol \
   -derivedDataPath build CODE_SIGNING_ALLOWED=NO clean build
 
 # Push to trigger cloud build
-git push origin claude/swift-ios26-conversion-aROXy
+git push origin main
 
 # Watch GitHub Actions build
 gh run list --workflow="build-native-ios.yml" --limit 3
@@ -330,3 +332,9 @@ gh run watch <run-id>
 ```
 
 See `TESTBENCH_SETUP_WIN11.md` for the complete Windows 11 → device install pipeline.
+
+---
+
+## Product Vision
+
+Arena Protocol is one app in a planned suite of lifestyle productivity apps aimed at completely transforming how people manage their time throughout the day. The north star feature is Google Calendar integration synced to live widgets — the user's lock screen and Dynamic Island should always show what they should be focused on right now based on their actual calendar blocks. The app should feel like a mission control for your day, not a timer utility.

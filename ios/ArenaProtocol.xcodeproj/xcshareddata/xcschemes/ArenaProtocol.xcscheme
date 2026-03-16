@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1600"
+   LastUpgradeVersion = "1620"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "EEEE00000000000000000001"
+               BlueprintIdentifier = "2000000000000000000001AB"
                BuildableName = "ArenaProtocol.app"
                BlueprintName = "ArenaProtocol"
                ReferencedContainer = "container:ArenaProtocol.xcodeproj">
@@ -32,7 +32,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "EEEE00000000000000000002"
+               BlueprintIdentifier = "3000000000000000000001AB"
                BuildableName = "ArenaProtocolTests.xctest"
                BlueprintName = "ArenaProtocolTests"
                ReferencedContainer = "container:ArenaProtocol.xcodeproj">
@@ -54,7 +54,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "EEEE00000000000000000001"
+            BlueprintIdentifier = "2000000000000000000001AB"
             BuildableName = "ArenaProtocol.app"
             BlueprintName = "ArenaProtocol"
             ReferencedContainer = "container:ArenaProtocol.xcodeproj">
@@ -71,7 +71,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "EEEE00000000000000000001"
+            BlueprintIdentifier = "2000000000000000000001AB"
             BuildableName = "ArenaProtocol.app"
             BlueprintName = "ArenaProtocol"
             ReferencedContainer = "container:ArenaProtocol.xcodeproj">
