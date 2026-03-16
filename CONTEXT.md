@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: March 16, 2026.
+> Paste this at the start of every Claude session. Last updated: 2026-03-16.
 
 ---
 
@@ -39,6 +39,13 @@
 | 1.0.0 | pre-2026 | React/Capacitor hybrid app (`src/App.jsx`, 1971 lines) |
 | 2.0.0 | 2026-03-13 | Full native SwiftUI rewrite — 25 Swift files, all features preserved |
 | 2.0.1 | 2026-03-16 | Xcode project added, Swift 6 compile fixes, Info.plist crash fix, confirmed on-device |
+| 2.0.2 | 2026-03-16 | `ActiveSessionState` added to DataStore; minimize-to-pill UX; session survives navigation |
+
+### v2.0.2 Changes
+- `DataStore.swift` — added `ActiveSessionState` struct (transient, not Codable): `arena`, `durationMins`, `note`, `endTime`, `isPaused`, `pausedRemaining`
+- `DataStore.swift` — added `var activeSession: ActiveSessionState? = nil`, `startSession(arena:durationMins:note:)`, and `endSession()`
+- `ActiveSessionView.swift` — `.onAppear` resumes from stored `endTime`/`pausedRemaining` if session already exists; `togglePause()` syncs state back to `store.activeSession`; `endSession()` called on expiry, DONE, and ABANDON (not on minimize); minimize button (`chevron.down`, top-trailing) navigates `.home` while leaving `store.activeSession` intact
+- `HomeView.swift` — floating timer pill (280×56pt capsule, bottom-center) appears when `store.activeSession != nil`; shows arena color dot + label + live `Text(endTime, style: .timer)`; tap returns to session; ✕ button shows `confirmationDialog` → `store.endSession()`; animates in/out with spring transition
 
 ### v2.0.1 Changes
 - `ios/ArenaProtocol.xcodeproj` created — all 19 source files wired, shared schemes, `DEVELOPMENT_TEAM` placeholder
@@ -71,9 +78,9 @@ arena-protocol/
 │   │   │                                     persistence, gamification helpers
 │   │   ├── Views/
 │   │   │   ├── RootView.swift             ← ⭐ Screen router + GrainOverlay + Color extensions
-│   │   │   ├── HomeView.swift             ← Dashboard: arena grid, shortcuts, ember particles
+│   │   │   ├── HomeView.swift             ← Dashboard: arena grid, shortcuts, ember particles, timer pill
 │   │   │   ├── SelectView.swift           ← Session config: quest, sub-arena, duration
-│   │   │   ├── ActiveSessionView.swift    ← Live timer + CompleteView
+│   │   │   ├── ActiveSessionView.swift    ← Live timer + minimize + CompleteView
 │   │   │   ├── ProtocolsView.swift        ← Protocol list/editor + ActiveProtocolView
 │   │   │   ├── MorningCheckinView.swift   ← 15-min morning ritual (3 habits)
 │   │   │   ├── WindDownView.swift         ← Evening: journal + habit check
@@ -159,10 +166,10 @@ To add a new screen: add a case here, add a route in `RootView.body`, create the
 
 | Screen | File | What it does |
 |---|---|---|
-| **Home** | `HomeView.swift` | 2-column arena grid, header with title/streak count, edit toggle, app shortcuts bar, Protocols + I AM STUCK buttons, morning/wind-down footer nav |
+| **Home** | `HomeView.swift` | 2-column arena grid, header with title/streak count, edit toggle, app shortcuts bar, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Floating timer pill (bottom-center capsule) appears when `store.activeSession != nil` — tap to return to session, ✕ to abandon. |
 | **Morning Check-in** | `MorningCheckinView.swift` | 3-step ritual (Reading 5m, Goals 5m, Movement 5m), animated progress bar, skip option. Shows once per day. |
 | **Select** | `SelectView.swift` | Arena detail + quest note textarea, sub-arena pills → example task list, duration picker (5/10/30/60/90/custom), Google Calendar option, launches session |
-| **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon |
+| **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. |
 | **Complete** | `ActiveSessionView.swift` (CompleteView) | Session complete screen with icon pop animation, saves session, triggers ember drop check |
 | **Protocols** | `ProtocolsView.swift` | List of 4 protocols with block strips, edit durations/name/desc, BEGIN PROTOCOL button |
 | **Active Protocol** | `ProtocolsView.swift` (ActiveProtocolView) | Segmented multi-block timer, advances blocks automatically, overall + per-block progress |
@@ -208,6 +215,18 @@ struct Session: Identifiable, Codable {
 }
 ```
 
+### ActiveSessionState (transient — not Codable, not persisted)
+```swift
+struct ActiveSessionState {
+    var arena: Arena
+    var durationMins: Int
+    var note: String
+    var endTime: Date
+    var isPaused: Bool = false
+    var pausedRemaining: TimeInterval = 0
+}
+```
+
 ### ArenaProtocolModel / ProtocolBlock
 ```swift
 struct ArenaProtocolModel: Identifiable, Codable {
@@ -235,20 +254,25 @@ struct HabitLog: Codable {
 ### DataStore (single source of truth)
 ```swift
 @Observable final class DataStore {
-    var arenas:    [Arena]
-    var sessions:  [Session]
-    var habits:    [Habit]
-    var habitLogs: [HabitLog]
-    var journals:  [JournalEntry]
-    var ideas:     [IdeaNote]
-    var settings:  AppSettings        // { windDownTime: "21:30" }
-    var protocols: [ArenaProtocolModel]
-    var seenDrops: [String]           // ember drop ids already shown
-    var checkin:   MorningCheckin     // { date, completed: [habitId] }
+    var arenas:        [Arena]
+    var sessions:      [Session]
+    var habits:        [Habit]
+    var habitLogs:     [HabitLog]
+    var journals:      [JournalEntry]
+    var ideas:         [IdeaNote]
+    var settings:      AppSettings        // { windDownTime: "21:30" }
+    var protocols:     [ArenaProtocolModel]
+    var seenDrops:     [String]           // ember drop ids already shown
+    var checkin:       MorningCheckin     // { date, completed: [habitId] }
+    var activeSession: ActiveSessionState? = nil  // transient — nil when no session running
 
     // Computed
     var letteredArenas: [Arena]       // auto-assigns A/B/C/D letters
     var todaySessions: Int
+
+    // Session lifecycle
+    func startSession(arena: Arena, durationMins: Int, note: String)  // sets activeSession
+    func endSession()                                                   // sets activeSession = nil
 }
 ```
 
@@ -306,39 +330,18 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 - Deep-link URL schemes in `Info.plist` should be verified against current app versions (Spotify, YouTube URLs may have changed)
 - No iCloud sync — all data is local to device, not shared across devices
 - The `Color.opacity(_:)` extension in `RootView.swift` (line 149) shadows the system method with an identical signature — harmless but worth cleaning up
+- `HomeView.swift`: timer pill uses `Text(endTime, style: .timer)` — this counts up after `endTime` passes; ensure session is ended before natural expiry reaches zero to avoid negative display
 
 ---
 
-## Current Sprint: Complete ✅ — WidgetKit
+## Up Next (Feature Queue)
 
-### What was built
-- SharedStore.swift — App Group bridge (group.com.arenaprotocol.app) with WidgetState, writeActiveSession, clearActiveSession, readWidgetState
-- ArenaProtocolWidget.swift — TimelineProvider with 60s refresh, StaticConfiguration, supports .accessoryCircular, .accessoryRectangular, .systemSmall
-- ArenaWidgetView.swift — per-family UI, circular Gauge progress ring, rectangular with Text(.timer) countdown, small with accent strip + amber countdown + session count
-- ActiveSessionView.swift — surgical additions: SharedStore write on timer start, clear on end/cancel/abandon
-
-### Xcode wiring completed
-- Widget Extension target: ArenaProtocolWidgetExtension
-- App Groups entitlement on both targets: group.com.arenaprotocol.app
-- SharedStore.swift added to both target memberships
-- Widget files added to ArenaProtocolWidgetExtension target only
-
-### Swift 6 fixes applied during this sprint
-- Arena and ArenaProtocolModel: added Hashable conformance
-- Title and EmberDrop: added Sendable conformance
-- TITLES and EMBER_DROPS globals: marked nonisolated(unsafe)
-- RootView.swift: removed dead recursive opacity() function that caused launch crash
-- DataStore.swift: added @preconcurrency to import UserNotifications
-
----
-
-## Up Next
-
-- Live Activity / Dynamic Island timer (ActivityKit) ← next blocking feature
-- Haptic feedback on arena entry/exit
-- HealthKit workout write-back
-- Xcode Cloud → TestFlight automation polish
-- Clean up: remove nonisolated(unsafe) from TITLES and EMBER_DROPS (now unnecessary since Sendable conformance added)
+1. **Live Activity / Dynamic Island timer** — ActivityKit extension showing active session countdown on lock screen and Dynamic Island (compact + expanded). Target: iPhone 17 Pro Max layout. ✅ Prerequisite complete: `ActiveSessionState` is now the single source of truth for the running session.
+2. **WidgetKit extensions** — Lock screen widget (countdown + arena name) and small/medium home screen widget (current arena + start button).
+3. **Google Calendar deep integration** — Read the user's calendar blocks for the day, surface them as suggested focus sessions in SelectView. When a calendar block matches an arena (e.g. "gym" → BODY), pre-fill the quest and duration.
+4. **Xcode Cloud → TestFlight pipeline** — Trigger on push to main, auto-sign, auto-deploy to TestFlight internal group.
+5. **iCloud sync** — Migrate from `UserDefaults` to `NSUbiquitousKeyValueStore` or CloudKit.
+6. **Apple Watch companion** — Session timer on wrist via WatchConnectivity.
 
 ---
 
