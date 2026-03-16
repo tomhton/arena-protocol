@@ -7,7 +7,7 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ArenaLiveActivityAttributes.self) { context in
             // Lock screen
-            let arenaColor = Color(hex: context.attributes.arenaColor)
+            let arenaColor = context.attributes.arenaColor.isEmpty ? Color.white : Color(hex: context.attributes.arenaColor)
             HStack(spacing: 0) {
                 Rectangle()
                     .fill(arenaColor)
@@ -40,7 +40,7 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
             .background(Color.black.opacity(0.85))
             .activityBackgroundTint(Color.black)
         } dynamicIsland: { context in
-            let arenaColor = Color(hex: context.attributes.arenaColor)
+            let arenaColor = context.attributes.arenaColor.isEmpty ? Color.white : Color(hex: context.attributes.arenaColor)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Text(context.attributes.arenaIcon)

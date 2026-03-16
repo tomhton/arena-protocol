@@ -15,7 +15,7 @@ final class SharedStore {
     private static let sessionsKey = "arena_sessions"
 
     private static var suite: UserDefaults {
-        UserDefaults(suiteName: suiteName)!
+        UserDefaults(suiteName: suiteName) ?? .standard
     }
 
     // Count today's sessions from App Group defaults
