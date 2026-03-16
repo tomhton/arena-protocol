@@ -139,8 +139,10 @@ struct ActiveSessionView: View {
     }
 
     private func setup() {
+        let isFreshStart: Bool
         if let active = store.activeSession, active.arena.id == arena.id {
             // Returning from home — resume from stored state
+            isFreshStart = false
             if active.isPaused {
                 isPaused = true
                 timeLeft = Int(active.pausedRemaining)
@@ -151,33 +153,45 @@ struct ActiveSessionView: View {
             }
         } else {
             // Fresh start — register in DataStore
+            isFreshStart = true
             store.startSession(arena: arena, durationMins: duration, note: note)
             endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
         }
         if let example = arena.examples.randomElement() { focusHint = example }
         UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
         #if canImport(ActivityKit)
-        if ActivityAuthorizationInfo().areActivitiesEnabled, let session = store.activeSession {
-            let attrs = ArenaLiveActivityAttributes(
-                arenaId: session.arena.id,
-                arenaLabel: session.arena.label,
-                arenaColor: session.arena.color,
-                arenaIcon: session.arena.icon,
-                questNote: session.note
-            )
-            let contentState = ArenaLiveActivityAttributes.ContentState(
-                endTime: session.endTime,
-                isPaused: false,
-                pausedRemaining: 0
-            )
-            do {
-                liveActivity = try Activity<ArenaLiveActivityAttributes>.request(
-                    attributes: attrs,
-                    content: .init(state: contentState, staleDate: session.endTime),
-                    pushType: nil
+        if ActivityAuthorizationInfo().areActivitiesEnabled {
+            if isFreshStart, let session = store.activeSession {
+                // Normalize color — ensure non-empty with # prefix
+                let rawColor = session.arena.color
+                let arenaColorStr: String = {
+                    if rawColor.isEmpty { return "#C0392B" }
+                    return rawColor.hasPrefix("#") ? rawColor : "#\(rawColor)"
+                }()
+                let attrs = ArenaLiveActivityAttributes(
+                    arenaId: session.arena.id,
+                    arenaLabel: session.arena.label,
+                    arenaColor: arenaColorStr,
+                    arenaIcon: session.arena.icon,
+                    questNote: session.note
                 )
-            } catch {
-                print("Live Activity start error: \(error)")
+                let contentState = ArenaLiveActivityAttributes.ContentState(
+                    endTime: session.endTime,
+                    isPaused: false,
+                    pausedRemaining: 0
+                )
+                do {
+                    liveActivity = try Activity<ArenaLiveActivityAttributes>.request(
+                        attributes: attrs,
+                        content: .init(state: contentState, staleDate: session.endTime),
+                        pushType: nil
+                    )
+                } catch {
+                    print("Live Activity start error: \(error)")
+                }
+            } else {
+                // Returning to existing session — reattach to running Live Activity
+                liveActivity = Activity<ArenaLiveActivityAttributes>.activities.first
             }
         }
         #endif

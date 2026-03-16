@@ -5,6 +5,10 @@ import SwiftUI
 extension Color {
     init(hex: String) {
         let h = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        guard !h.isEmpty else {
+            self.init(red: 0.75, green: 0.22, blue: 0.17) // fallback: #C0392B
+            return
+        }
         var int: UInt64 = 0
         Scanner(string: h).scanHexInt64(&int)
         let r = Double((int >> 16) & 0xFF) / 255
