@@ -337,4 +337,4 @@ See `TESTBENCH_SETUP_WIN11.md` for the complete Windows 11 → device install pi
 
 ## Product Vision
 
-<!-- NOTE: Content for this section was not received — please fill in. -->
+Arena Protocol is one app in a planned suite of lifestyle productivity apps aimed at completely transforming how people manage their time throughout the day. The north star feature is Google Calendar integration synced to live widgets — the user's lock screen and Dynamic Island should always show what they should be focused on right now based on their actual calendar blocks. The app should feel like a mission control for your day, not a timer utility.
