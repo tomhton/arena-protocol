@@ -146,7 +146,6 @@ extension Color {
         self.init(red: r, green: g, blue: b)
     }
 
-    func opacity(_ pct: Double) -> Color { self.opacity(pct) }
 }
 
 extension Color {

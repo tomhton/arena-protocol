@@ -286,9 +286,10 @@ struct ArenaEditorView: View {
             id: arena?.id ?? uid(),
             label: label.trimmingCharacters(in: .whitespaces).uppercased(),
             letter: arena?.letter ?? "?",
-            color: color, icon: icon,
+            color: color,
             subtitle: subtitle.trimmingCharacters(in: .whitespaces),
             description: description.trimmingCharacters(in: .whitespaces),
+            icon: icon,
             examples: examplesList,
             subArenas: arena?.subArenas ?? [:]
         )

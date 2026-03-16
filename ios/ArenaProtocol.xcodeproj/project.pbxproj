@@ -30,6 +30,8 @@
 		CA88FD7A2F6811D70015A8AB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD792F6811D70015A8AB /* WidgetKit.framework */; };
 		CA88FD7C2F6811D70015A8AB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */; };
 		CA88FD8D2F6811D80015A8AB /* ArenaProtocolWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CA88FD772F6811D70015A8AB /* ArenaProtocolWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CA88FDA82F6816550015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
+		CA88FDA92F6816550015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -91,6 +93,8 @@
 		CA88FD792F6811D70015A8AB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		CA88FD952F6812A70015A8AB /* ArenaProtocol.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArenaProtocol.entitlements; sourceTree = "<group>"; };
+		CA88FDA62F6815EC0015A8AB /* ArenaProtocolWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArenaProtocolWidgetExtension.entitlements; sourceTree = "<group>"; };
+		CA88FDA72F6816550015A8AB /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -137,6 +141,8 @@
 		7000000000000000000001AB = {
 			isa = PBXGroup;
 			children = (
+				CA88FDA72F6816550015A8AB /* SharedStore.swift */,
+				CA88FDA62F6815EC0015A8AB /* ArenaProtocolWidgetExtension.entitlements */,
 				7000000000000000000003AB /* ArenaProtocol */,
 				7000000000000000000008AB /* Tests/ArenaProtocolTests */,
 				CA88FD7D2F6811D70015A8AB /* ArenaProtocolWidget */,
@@ -365,6 +371,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA88FDA92F6816550015A8AB /* SharedStore.swift in Sources */,
 				6000000000000000000001AB /* ArenaProtocolApp.swift in Sources */,
 				6000000000000000000002AB /* DataStore.swift in Sources */,
 				6000000000000000000003AB /* RootView.swift in Sources */,
@@ -399,6 +406,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA88FDA82F6816550015A8AB /* SharedStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -639,6 +647,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ArenaProtocolWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3JSC7C9U7N;
@@ -670,6 +679,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ArenaProtocolWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3JSC7C9U7N;

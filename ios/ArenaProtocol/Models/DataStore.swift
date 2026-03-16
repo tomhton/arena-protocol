@@ -8,7 +8,7 @@ import Observation
 
 // MARK: - Models
 
-struct Arena: Identifiable, Codable, Equatable {
+struct Arena: Identifiable, Codable, Equatable, Hashable {
     var id: String
     var label: String
     var letter: String
@@ -37,7 +37,7 @@ struct Session: Identifiable, Codable {
     var ts: Double             // epoch ms
 }
 
-struct ArenaProtocolModel: Identifiable, Codable {
+struct ArenaProtocolModel: Identifiable, Codable, Hashable {
     var id: String
     var name: String
     var glyph: String
@@ -46,7 +46,7 @@ struct ArenaProtocolModel: Identifiable, Codable {
     var blocks: [ProtocolBlock]
 }
 
-struct ProtocolBlock: Codable, Equatable {
+struct ProtocolBlock: Codable, Hashable {
     var arenaId: String
     var label: String
     var duration: Int
@@ -239,11 +239,11 @@ func getForgeMarkForArena(arenaId: String, sessions: [Session]) -> ForgeMark? {
     return nil
 }
 
-struct Title {
+struct Title: Sendable {
     let id: String
     let label: String
     let arenaId: String?
-    let condition: ([Session]) -> Bool
+    let condition: @Sendable ([Session]) -> Bool
 }
 
 let TITLES: [Title] = [
@@ -270,11 +270,11 @@ let TITLES: [Title] = [
     })
 ]
 
-struct EmberDrop: Identifiable {
+struct EmberDrop: Identifiable, Sendable {
     let id: String
     let message: String
     let glyph: String
-    let trigger: ([Session]) -> Bool
+    let trigger: @Sendable ([Session]) -> Bool
 }
 
 let EMBER_DROPS: [EmberDrop] = [
