@@ -4,7 +4,7 @@
 
 import Foundation
 import Observation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 // MARK: - Models
 
