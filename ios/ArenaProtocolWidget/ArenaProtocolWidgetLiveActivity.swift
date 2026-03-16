@@ -72,20 +72,13 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
                         .foregroundColor(arenaColor)
                 }
             } compactLeading: {
-                Text(context.attributes.arenaIcon)
+                Text(context.attributes.arenaIcon.isEmpty ? "◉" : context.attributes.arenaIcon)
                     .font(.system(size: 16))
-                    .foregroundColor(arenaColor)
+                    .foregroundColor(.white)  // DEBUG: hardcoded white to test rendering
             } compactTrailing: {
-                if context.state.isPaused {
-                    Text("PAUSED")
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                        .foregroundColor(arenaColor)
-                } else {
-                    Text(context.state.endTime, style: .timer)
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(arenaColor)
-                        .monospacedDigit()
-                }
+                Text("TEST")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)  // DEBUG: hardcoded white to test rendering
             } minimal: {
                 Text(context.attributes.arenaIcon)
                     .font(.system(size: 14))
