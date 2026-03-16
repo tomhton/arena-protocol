@@ -140,7 +140,7 @@ struct ActiveSessionView: View {
 
     private func setup() {
         if let active = store.activeSession, active.arena.id == arena.id {
-            // Returning from home — resume from stored state
+            // Returning from minimize — resume from stored state
             if active.isPaused {
                 isPaused = true
                 timeLeft = Int(active.pausedRemaining)
@@ -149,38 +149,47 @@ struct ActiveSessionView: View {
                 endTime = active.endTime
                 timeLeft = max(0, Int(active.endTime.timeIntervalSinceNow))
             }
+            // Reattach to existing Live Activity — do NOT start a new one
+            #if canImport(ActivityKit)
+            liveActivity = Activity<ArenaLiveActivityAttributes>.activities.first
+            #endif
         } else {
-            // Fresh start — register in DataStore
+            // Fresh start
             store.startSession(arena: arena, durationMins: duration, note: note)
             endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
+            UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
+
+            #if canImport(ActivityKit)
+            if ActivityAuthorizationInfo().areActivitiesEnabled {
+                let normalizedColor: String = {
+                    let c = arena.color.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return c.hasPrefix("#") ? c : "#\(c)"
+                }()
+                let attrs = ArenaLiveActivityAttributes(
+                    arenaId: arena.id,
+                    arenaLabel: arena.label,
+                    arenaColor: normalizedColor,
+                    arenaIcon: arena.icon.isEmpty ? "◉" : arena.icon,
+                    questNote: note
+                )
+                let contentState = ArenaLiveActivityAttributes.ContentState(
+                    endTime: endTime,
+                    isPaused: false,
+                    pausedRemaining: 0
+                )
+                do {
+                    liveActivity = try Activity<ArenaLiveActivityAttributes>.request(
+                        attributes: attrs,
+                        content: .init(state: contentState, staleDate: endTime),
+                        pushType: nil
+                    )
+                } catch {
+                    print("Live Activity start error: \(error)")
+                }
+            }
+            #endif
         }
         if let example = arena.examples.randomElement() { focusHint = example }
-        UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
-        #if canImport(ActivityKit)
-        if ActivityAuthorizationInfo().areActivitiesEnabled, let session = store.activeSession {
-            let attrs = ArenaLiveActivityAttributes(
-                arenaId: session.arena.id,
-                arenaLabel: session.arena.label,
-                arenaColor: session.arena.color,
-                arenaIcon: session.arena.icon,
-                questNote: session.note
-            )
-            let contentState = ArenaLiveActivityAttributes.ContentState(
-                endTime: session.endTime,
-                isPaused: false,
-                pausedRemaining: 0
-            )
-            do {
-                liveActivity = try Activity<ArenaLiveActivityAttributes>.request(
-                    attributes: attrs,
-                    content: .init(state: contentState, staleDate: session.endTime),
-                    pushType: nil
-                )
-            } catch {
-                print("Live Activity start error: \(error)")
-            }
-        }
-        #endif
     }
 
     private func tick() {
