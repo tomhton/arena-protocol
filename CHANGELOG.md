@@ -1,4 +1,8 @@
 # Changelog — Arena Protocol
+## v2.0.3 — 2026-03-16
+### Added
+- Edge-swipe-to-go-back gesture in `RootView.swift` — swipe right from the leading 44pt edge to navigate back; disabled on `.home`, `.active`, and `.complete` screens
+
 ## v2.0.2 — 2026-03-16
 ### Fixed
 - Removed duplicate "IGNITE THE" HStack in `MorningCheckinView.swift` — title now renders correctly
