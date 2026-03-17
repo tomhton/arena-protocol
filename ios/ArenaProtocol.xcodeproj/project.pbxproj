@@ -22,6 +22,7 @@
 		600000000000000000000DAB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500000000000000000000DAB /* SettingsView.swift */; };
 		600000000000000000000EAB /* StuckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500000000000000000000EAB /* StuckView.swift */; };
 		600000000000000000000FAB /* ArenaEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500000000000000000000FAB /* ArenaEditorView.swift */; };
+		6000000000000000000016AB /* IntervalTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000016AB /* IntervalTimerView.swift */; };
 		6000000000000000000010AB /* ArenaCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000010AB /* ArenaCardView.swift */; };
 		6000000000000000000011AB /* CircularTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000011AB /* CircularTimerView.swift */; };
 		6000000000000000000012AB /* AppShortcutsBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000012AB /* AppShortcutsBar.swift */; };
@@ -99,6 +100,7 @@
 		500000000000000000000DAB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		500000000000000000000EAB /* StuckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StuckView.swift; sourceTree = "<group>"; };
 		500000000000000000000FAB /* ArenaEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaEditorView.swift; sourceTree = "<group>"; };
+		5000000000000000000016AB /* IntervalTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalTimerView.swift; sourceTree = "<group>"; };
 		5000000000000000000010AB /* ArenaCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaCardView.swift; sourceTree = "<group>"; };
 		5000000000000000000011AB /* CircularTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularTimerView.swift; sourceTree = "<group>"; };
 		5000000000000000000012AB /* AppShortcutsBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcutsBar.swift; sourceTree = "<group>"; };
@@ -216,6 +218,7 @@
 				500000000000000000000DAB /* SettingsView.swift */,
 				500000000000000000000EAB /* StuckView.swift */,
 				500000000000000000000FAB /* ArenaEditorView.swift */,
+				5000000000000000000016AB /* IntervalTimerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -407,6 +410,7 @@
 				600000000000000000000DAB /* SettingsView.swift in Sources */,
 				600000000000000000000EAB /* StuckView.swift in Sources */,
 				600000000000000000000FAB /* ArenaEditorView.swift in Sources */,
+				6000000000000000000016AB /* IntervalTimerView.swift in Sources */,
 				6000000000000000000010AB /* ArenaCardView.swift in Sources */,
 				6000000000000000000011AB /* CircularTimerView.swift in Sources */,
 				6000000000000000000012AB /* AppShortcutsBar.swift in Sources */,

@@ -22,6 +22,7 @@ enum Screen: Hashable {
     case editArena(Arena)
     case newArena
     case stuck
+    case interval(String, Int)
 }
 
 // MARK: - Root
@@ -129,6 +130,9 @@ struct RootView: View {
             ArenaEditorView(arena: nil)
         case .stuck:
             StuckView(navigate: navigate)
+        case .interval(let label, let mins):
+            IntervalTimerView(label: label, minutes: mins, navigate: navigate)
+                .navigationBarBackButtonHidden(true)
         }
     }
 

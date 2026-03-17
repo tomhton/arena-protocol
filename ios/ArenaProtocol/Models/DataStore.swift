@@ -84,6 +84,12 @@ struct AppSettings: Codable {
     var windDownTime: String = "21:30"
 }
 
+struct JointArenaEntry: Identifiable {
+    let id = UUID()
+    let arena: Arena
+    let minutes: Int
+}
+
 struct ActiveSessionState {
     var arena: Arena
     var durationMins: Int
@@ -93,6 +99,7 @@ struct ActiveSessionState {
     var isPaused: Bool = false
     var pausedRemaining: TimeInterval = 0
     var jointArenas: [Arena] = []
+    var jointEntries: [JointArenaEntry] = []
 }
 
 struct MorningCheckin: Codable {
@@ -227,6 +234,21 @@ let ARENA_COLORS = ["#E8C547", "#4ECDC4", "#A8E6A3", "#FF8FA3", "#B794F4", "#F4A
                     "#60A5FA", "#F87171", "#34D399", "#A78BFA", "#FB923C", "#38BDF8",
                     "#E879F9", "#4ADE80"]
 let DURATIONS = [5, 10, 30, 60, 90]
+
+struct IntervalPreset {
+    let label: String
+    let icon: String
+    let minutes: Int
+}
+
+let INTERVAL_PRESETS: [IntervalPreset] = [
+    IntervalPreset(label: "FLOW",     icon: "〜", minutes: 5),
+    IntervalPreset(label: "DRIFT",    icon: "◌",  minutes: 10),
+    IntervalPreset(label: "WALK",     icon: "◎",  minutes: 20),
+    IntervalPreset(label: "BREATHE",  icon: "◉",  minutes: 4),
+    IntervalPreset(label: "REST",     icon: "△",  minutes: 15),
+    IntervalPreset(label: "RESET",    icon: "⬡",  minutes: 30),
+]
 
 // MARK: - Forge / Reward
 

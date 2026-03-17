@@ -5,6 +5,24 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.3.0 — 2026-03-17
+
+**Multi-timer brainwork redesign. Mindless/interval periods.**
+
+### Features
+- **Arena breakdown card** — once a session starts, the area between the header and timer ring shows a breakdown card: one row per arena (primary + joints), each with a colored left strip, arena label, proportional time bar, `+Xm` duration label, and a × remove button. A total row appears at the bottom when joints are present. The "ADD ARENA" button lives inside this card.
+- **Joint arena picker redesign** — redesigned from icon-only to a full labeled picker: horizontal arena chip scroll + horizontal duration presets (5 / 10 / 15 / 25 / 30 / 45 / 60 / other min) + CONFIRM button. Adding a joint extends `endTime` and `totalTime` live. Removing a joint contracts them.
+- **Mindless/interval periods row** — horizontal scroll row on HomeView between `AppShortcutsBar` and the protocol button. Six presets: FLOW (5m), DRIFT (10m), WALK (20m), BREATHE (4m), REST (15m), RESET (30m). Teal `#4ECDC4` accent.
+- **`IntervalTimerView`** — new screen. No-arena countdown timer: circular progress ring + big minute:second number + PAUSE / RESUME / DONE controls. Auto-navigates home on completion. Does not log to DataStore.
+
+### Internal
+- `DataStore.swift` — `JointArenaEntry: Identifiable` struct (`arena: Arena`, `minutes: Int`); `IntervalPreset` struct; `INTERVAL_PRESETS` constant.
+- `ActiveSessionView.swift` — `jointEntries: [JointArenaEntry]` replaces `jointArenas: [Arena]`; `@State var totalTime: Int` (mutable); `addJoint(arena:minutes:)` / `removeJoint(_:)` extend/contract `endTime` and `totalTime`.
+- `RootView.swift` — `case interval(String, Int)` added to `Screen` enum; routes to `IntervalTimerView`.
+- `project.pbxproj` — `IntervalTimerView.swift` registered as source file.
+
+---
+
 ## v2.2.0 — 2026-03-17
 
 **Joint arenas. Drag-to-reorder. Color wheel.**

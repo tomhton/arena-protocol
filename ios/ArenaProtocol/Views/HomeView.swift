@@ -25,6 +25,7 @@ struct HomeView: View {
                     editToggle
                     arenaGrid
                     AppShortcutsBar()
+                    intervalsSection
                     bottomButtons
                     footer
                 }
@@ -322,6 +323,51 @@ struct HomeView: View {
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
         .animation(.spring(response: 0.4), value: editMode)
+    }
+
+    // MARK: - Intervals Section
+
+    private var intervalsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("INTERVALS")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.22))
+                    .kerning(6)
+                Text("— mindless periods")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.12))
+            }
+            .padding(.horizontal, 14)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(INTERVAL_PRESETS, id: \.label) { preset in
+                        Button { navigate(.interval(preset.label, preset.minutes)) } label: {
+                            VStack(spacing: 4) {
+                                Text(preset.icon)
+                                    .font(.system(size: 18))
+                                Text(preset.label)
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color(hex: "#4ECDC4"))
+                                    .kerning(2)
+                                Text("\(preset.minutes)m")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.3))
+                            }
+                            .frame(width: 68, height: 72)
+                            .background(Color(hex: "#4ECDC4").opacity(0.05))
+                            .overlay(RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color(hex: "#4ECDC4").opacity(0.18), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 14)
+            }
+        }
+        .padding(.bottom, 10)
     }
 
     // MARK: - Bottom Buttons
