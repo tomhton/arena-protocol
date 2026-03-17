@@ -111,67 +111,71 @@ struct MorningCheckin: Codable {
 
 let DEFAULT_ARENAS: [Arena] = [
     Arena(
-        id: "body", label: "BODY", letter: "A", color: "#C0392B",
-        subtitle: "move · fuel · rest",
-        description: "The instrument. Without it, nothing else functions. Move it, fuel it, rest it.",
+        id: "alignment", label: "ALIGNMENT & PLANNING", letter: "A", color: "#60A5FA",
+        subtitle: "vision · strategy · clarity",
+        description: "The compass. Where you're going and why. Set direction, define the day, close the loop.",
+        icon: "◎",
+        examples: ["Write today's single most important task", "Review goals for 10 min",
+                   "Plan tomorrow the night before", "Weekly review — what worked, what didn't",
+                   "Clarify one ambiguous project", "Define your ideal outcome for today",
+                   "Identify one thing to stop doing", "Write your 3 priorities for the week"],
+        subArenas: [
+            "VISION": ["Review long-term goals", "Visualize the ideal outcome",
+                       "Write your 3 priorities for the week", "Identify one thing to stop doing"],
+            "STRATEGY": ["Plan tomorrow the night before", "Clarify one ambiguous project",
+                         "Weekly review — what worked, what didn't", "Map out the next 3 steps"],
+            "CLARITY": ["Write today's single most important task", "Define your ideal outcome for today",
+                        "Eliminate one decision from tomorrow", "Capture all open loops"]
+        ]
+    ),
+    Arena(
+        id: "execution", label: "EXECUTION & MASTERY", letter: "B", color: "#E8C547",
+        subtitle: "deep work · build · ship",
+        description: "The output. Ideas are worthless until built. Show up, do the work, ship the thing.",
+        icon: "◆",
+        examples: ["25 min deep work session", "Ship one thing — however small",
+                   "Work on the hardest task first", "Write 200 words",
+                   "Complete one work task end-to-end", "Learn one skill for 20 min",
+                   "Do one thing you've been avoiding", "Build a system for a repeated task"],
+        subArenas: [
+            "DEEP WORK": ["25 min deep work session", "Work on the hardest task first",
+                          "Write 200 words", "Build a system for a repeated task"],
+            "BUILD": ["Ship one thing — however small", "Complete one work task end-to-end",
+                      "Sketch a prototype or outline", "Build one thing, start to finish"],
+            "MASTERY": ["Learn one skill for 20 min", "Study something outside your comfort zone",
+                        "Practice deliberately for 15 min", "Teach what you learned today"]
+        ]
+    ),
+    Arena(
+        id: "health", label: "HEALTH & RECOVERY", letter: "C", color: "#34D399",
+        subtitle: "move · fuel · restore",
+        description: "The foundation. Performance without recovery is just debt. Move, eat well, rest hard.",
         icon: "◉",
-        examples: ["10 min walk", "20 pushups", "Cold shower", "Cook a real meal",
-                   "Sleep before midnight", "5 min breathwork", "Stretch for 10 min", "Drink 2L of water"],
+        examples: ["10 min walk", "20 pushups", "Cook a real meal",
+                   "Sleep before midnight", "5 min breathwork", "Stretch for 10 min",
+                   "Drink 2L of water", "Cold shower", "20 min nap", "No screens 1hr before bed"],
         subArenas: [
             "MOVE": ["10 min walk", "20 pushups", "Cold shower", "Stretch for 10 min"],
             "FUEL": ["Cook a real meal", "Drink 2L of water", "Prep meals for tomorrow", "No sugar today"],
-            "REST": ["Sleep before midnight", "5 min breathwork", "20 min nap", "Legs up the wall 10 min"]
+            "RESTORE": ["Sleep before midnight", "5 min breathwork", "20 min nap", "No screens 1hr before bed"]
         ]
     ),
     Arena(
-        id: "spirit", label: "SPIRIT", letter: "B", color: "#D4A017",
-        subtitle: "reflect · read · meditate",
-        description: "The inner fire. Who you are beneath the noise. Purpose, identity, the story you tell yourself.",
-        icon: "★",
-        examples: ["Write 3 things you're grateful for", "Journal one page", "Read 10 pages",
-                   "Meditate 10 min", "Define today's one intention", "Review your goals",
-                   "Visualize your future self", "Name one lie depression told you today"],
-        subArenas: [
-            "REFLECT": ["Write 3 things you're grateful for", "Journal one page",
-                        "Define today's one intention", "Name one lie depression told you today"],
-            "READ": ["Read 10 pages", "Review your goals",
-                     "Read one article that challenges you", "Reread a passage that matters"],
-            "MEDITATE": ["Meditate 10 min", "Visualize your future self",
-                         "4-7-8 breathing for 5 min", "Sit in silence for 5 min"]
-        ]
-    ),
-    Arena(
-        id: "tribe", label: "TRIBE", letter: "C", color: "#B87333",
-        subtitle: "reach out · show up · plan",
-        description: "The hearth. You exist because of others. Show up for them — and let them show up for you.",
+        id: "connection", label: "CONNECTION & COMMUNITY", letter: "D", color: "#B794F4",
+        subtitle: "reach out · show up · give",
+        description: "The network. You are the people around you. Invest in them deliberately.",
         icon: "◇",
-        examples: ["Send one meaningful text", "Call someone you've been avoiding",
-                   "Plan something with a friend", "Reply to a message you've been ignoring",
-                   "Tell someone you appreciate them", "Check in on family", "Accept an invitation"],
+        examples: ["Send one meaningful message", "Call someone you've been meaning to",
+                   "Plan something with a friend", "Tell someone you appreciate them",
+                   "Check in on family", "Accept an invitation", "Be fully present — no phone",
+                   "Do something kind without being asked"],
         subArenas: [
-            "REACH OUT": ["Send one meaningful text", "Call someone you've been avoiding",
+            "REACH OUT": ["Send one meaningful message", "Call someone you've been meaning to",
                           "Tell someone you appreciate them", "Reply to a message you've been ignoring"],
             "SHOW UP": ["Check in on family", "Accept an invitation",
-                        "Be present — no phone for one hour", "Do something kind without being asked"],
-            "PLAN": ["Plan something with a friend", "Schedule a catch-up call",
-                     "Suggest a date or activity", "Book something you'll look forward to"]
-        ]
-    ),
-    Arena(
-        id: "craft", label: "CRAFT", letter: "D", color: "#708090",
-        subtitle: "deep work · admin · build",
-        description: "The work. What you are building in the world — your output, your mastery, your mark.",
-        icon: "△",
-        examples: ["Send one important email", "Complete one work task",
-                   "Work on a side project for 25 min", "Research one lead",
-                   "Write 200 words", "Outline one idea", "Do one thing you've been avoiding"],
-        subArenas: [
-            "DEEP WORK": ["Work on a side project for 25 min", "Write 200 words",
-                          "Outline one idea", "Build one thing, start to finish"],
-            "ADMIN": ["Send one important email", "Update one key metric",
-                      "Clear your inbox", "Do one thing you've been avoiding"],
-            "BUILD": ["Research one lead", "Sketch a system or process",
-                      "Define the next milestone", "Learn one thing relevant to your craft"]
+                        "Be fully present — no phone", "Do something kind without being asked"],
+            "GIVE": ["Plan something with a friend", "Offer help without being asked",
+                     "Celebrate someone else's win", "Share something useful with your network"]
         ]
     )
 ]
@@ -229,7 +233,18 @@ let STUCK_PROMPTS = [
     "The timer ends. You move. No negotiation."
 ]
 
-let ARENA_ICONS = ["◈", "◎", "⬡", "◇", "△", "○", "◉", "◆", "▲", "★", "⬟", "⬠", "⊕", "⊗", "⊘", "❋", "✦", "⟡"]
+let ARENA_ICONS = [
+    // Geometric
+    "◈", "◎", "⬡", "◇", "△", "○", "◉", "◆", "▲", "★", "⬟", "⬠", "⊕", "⊗", "⊘", "❋", "✦", "⟡",
+    // Emoji — focus & work
+    "🎯", "⚡️", "🔥", "💡", "🧠", "🛠", "📐", "🗂",
+    // Emoji — health
+    "💪", "🏃", "🧘", "🥗", "💤", "🌿", "🫀", "🌊",
+    // Emoji — connection
+    "🤝", "💬", "🌐", "🏡", "❤️", "🫂", "👁", "🌱",
+    // Emoji — misc
+    "🎲", "🌙", "☀️", "🗺", "🔑", "⚙️", "🎵", "📖"
+]
 let ARENA_COLORS = ["#E8C547", "#4ECDC4", "#A8E6A3", "#FF8FA3", "#B794F4", "#F4A261",
                     "#60A5FA", "#F87171", "#34D399", "#A78BFA", "#FB923C", "#38BDF8",
                     "#E879F9", "#4ADE80"]

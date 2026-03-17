@@ -1,5 +1,5 @@
 // ArenaEditorView.swift — Arena Protocol
-// Create and edit arenas: name, subtitle, icon, color, description, examples
+// Create and edit arenas: name, subtitle, icon, color, description, examples, sub-arenas
 
 import SwiftUI
 
@@ -74,22 +74,35 @@ struct ArenaListEditorView: View {
     }
 }
 
+// MARK: - Sub-arena row model (local to editor)
+
+private struct SubArenaRow: Identifiable {
+    let id = UUID()
+    var name: String
+    var examples: String   // newline-separated
+}
+
+// MARK: - Arena Editor
+
 struct ArenaEditorView: View {
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     var arena: Arena?   // nil = new arena
 
-    @State private var label       = ""
-    @State private var subtitle    = ""
-    @State private var icon        = "◈"
-    @State private var color       = "#E8C547"
-    @State private var description = ""
-    @State private var examples    = ""
+    @State private var label        = ""
+    @State private var subtitle     = ""
+    @State private var icon         = "◈"
+    @State private var customIcon   = ""          // free-text override
+    @State private var color        = "#E8C547"
+    @State private var description  = ""
+    @State private var examples     = ""
     @State private var pickerColor: Color = Color(hex: "#E8C547")
-    @State private var persistedId: String? = nil   // tracks generated ID for new arenas
+    @State private var subArenaRows: [SubArenaRow] = []
+    @State private var persistedId: String? = nil
 
     private var isNew: Bool { arena == nil }
     private var selectedColor: Color { Color(hex: color) }
+    private var displayIcon: String { customIcon.isEmpty ? icon : customIcon }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -111,16 +124,20 @@ struct ArenaEditorView: View {
                     .padding(.bottom, 4)
 
                 // Live preview
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(label.isEmpty ? "UNTITLED" : label.uppercased())
-                        .font(.system(size: 24, weight: .bold, design: .monospaced))
-                        .foregroundStyle(selectedColor)
-                        .kerning(2)
-                    if !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(selectedColor.opacity(0.6))
-                            .kerning(1)
+                HStack(spacing: 12) {
+                    Text(displayIcon)
+                        .font(.system(size: 28))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(label.isEmpty ? "UNTITLED" : label.uppercased())
+                            .font(.system(size: 22, weight: .bold, design: .monospaced))
+                            .foregroundStyle(selectedColor)
+                            .kerning(2)
+                        if !subtitle.isEmpty {
+                            Text(subtitle)
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(selectedColor.opacity(0.6))
+                                .kerning(1)
+                        }
                     }
                 }
                 .padding(.bottom, 28)
@@ -139,38 +156,72 @@ struct ArenaEditorView: View {
 
                 // Subtitle
                 fieldSection("SUBTITLE", optional: true) {
-                    TextField("e.g. move · fuel · rest", text: $subtitle)
+                    TextField("e.g. vision · build · restore", text: $subtitle)
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(selectedColor.opacity(0.8))
                         .padding(12)
                         .background(Color.white.opacity(0.04))
                         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
-                    Text("SHOWS AS A HINT LINE BELOW THE ARENA NAME ON THE CARD")
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.18))
-                        .kerning(2)
-                        .padding(.top, 6)
                 }
 
                 // Icon
                 fieldSection("ICON") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 9), spacing: 8) {
-                        ForEach(ARENA_ICONS, id: \.self) { ic in
-                            Button { icon = ic } label: {
-                                Text(ic)
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(icon == ic ? selectedColor : Color.white.opacity(0.4))
-                                    .frame(width: 40, height: 40)
-                                    .background(icon == ic ? selectedColor.opacity(0.2) : Color.clear)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .strokeBorder(icon == ic ? selectedColor : Color.white.opacity(0.1), lineWidth: icon == ic ? 2 : 1)
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    VStack(spacing: 12) {
+                        // Free-text / emoji input
+                        HStack(spacing: 10) {
+                            Text("CUSTOM")
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.3))
+                                .kerning(4)
+                            TextField("any emoji or symbol", text: $customIcon)
+                                .font(.system(size: 22))
+                                .multilineTextAlignment(.center)
+                                .frame(width: 52, height: 44)
+                                .background(customIcon.isEmpty ? Color.white.opacity(0.04) : selectedColor.opacity(0.15))
+                                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(
+                                    customIcon.isEmpty ? Color.white.opacity(0.1) : selectedColor, lineWidth: customIcon.isEmpty ? 1 : 2))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .onChange(of: customIcon) { _, v in
+                                    // Keep only the last character/emoji entered
+                                    if v.count > 2 { customIcon = String(v.suffix(1)) }
+                                }
+                            if !customIcon.isEmpty {
+                                Button {
+                                    customIcon = ""
+                                } label: {
+                                    Text("CLEAR")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.3))
+                                        .kerning(3)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
-                            .animation(.easeInOut(duration: 0.15), value: icon)
+                            Spacer()
+                        }
+
+                        // Preset grid
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 9), spacing: 8) {
+                            ForEach(ARENA_ICONS, id: \.self) { ic in
+                                Button {
+                                    icon = ic
+                                    customIcon = ""
+                                } label: {
+                                    Text(ic)
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(icon == ic && customIcon.isEmpty ? selectedColor : Color.white.opacity(0.4))
+                                        .frame(width: 36, height: 36)
+                                        .background(icon == ic && customIcon.isEmpty ? selectedColor.opacity(0.2) : Color.clear)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .strokeBorder(icon == ic && customIcon.isEmpty ? selectedColor : Color.white.opacity(0.1),
+                                                              lineWidth: icon == ic && customIcon.isEmpty ? 2 : 1)
+                                        )
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                                .buttonStyle(.plain)
+                                .animation(.easeInOut(duration: 0.15), value: icon)
+                            }
                         }
                     }
                 }
@@ -178,7 +229,6 @@ struct ArenaEditorView: View {
                 // Color
                 fieldSection("COLOR") {
                     VStack(spacing: 12) {
-                        // Native color wheel
                         HStack {
                             Text("CUSTOM")
                                 .font(.system(size: 9, design: .monospaced))
@@ -194,7 +244,6 @@ struct ArenaEditorView: View {
                         }
                         .padding(.horizontal, 4)
 
-                        // Preset swatches
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
                             ForEach(ARENA_COLORS, id: \.self) { c in
                                 Button {
@@ -238,7 +287,7 @@ struct ArenaEditorView: View {
                 }
 
                 // Examples
-                fieldSection("EXAMPLES", subLabel: "— ONE PER LINE") {
+                fieldSection("QUICK EXAMPLES", subLabel: "— ONE PER LINE") {
                     ZStack(alignment: .topLeading) {
                         if examples.isEmpty {
                             Text("Example task 1\nExample task 2")
@@ -258,6 +307,39 @@ struct ArenaEditorView: View {
                     .background(Color.white.opacity(0.04))
                     .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
+                // Sub-arenas
+                fieldSection("SUB-ARENAS", optional: true) {
+                    VStack(spacing: 10) {
+                        Text("CATEGORIES THAT APPEAR IN THE SESSION QUEST PICKER")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.18))
+                            .kerning(2)
+
+                        ForEach($subArenaRows) { $row in
+                            SubArenaRowView(row: $row, accentColor: selectedColor) {
+                                subArenaRows.removeAll { $0.id == row.id }
+                            }
+                        }
+
+                        Button {
+                            subArenaRows.append(SubArenaRow(name: "", examples: ""))
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("ADD CATEGORY")
+                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                    .kerning(3)
+                            }
+                            .foregroundStyle(selectedColor.opacity(0.7))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(selectedColor.opacity(0.3), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 // Save button
@@ -296,6 +378,8 @@ struct ArenaEditorView: View {
         .onDisappear { persist() }
     }
 
+    // MARK: - Helpers
+
     private func fieldSection<Content: View>(_ label: String, subLabel: String = "", optional: Bool = false, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -316,20 +400,39 @@ struct ArenaEditorView: View {
 
     private func populate() {
         guard let a = arena else { return }
-        label       = a.label
-        subtitle    = a.subtitle
-        icon        = a.icon
-        color       = a.color
-        pickerColor = Color(hex: a.color)
-        description = a.description
-        examples    = a.examples.joined(separator: "\n")
+        label        = a.label
+        subtitle     = a.subtitle
+        icon         = a.icon
+        color        = a.color
+        pickerColor  = Color(hex: a.color)
+        description  = a.description
+        examples     = a.examples.joined(separator: "\n")
+        subArenaRows = a.subArenas.map { key, vals in
+            SubArenaRow(name: key, examples: vals.joined(separator: "\n"))
+        }.sorted { $0.name < $1.name }
+        // If icon isn't in presets, treat it as custom
+        if !ARENA_ICONS.contains(a.icon) {
+            customIcon = a.icon
+        }
     }
 
     private func persist() {
         guard !label.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         let resolvedId = arena?.id ?? persistedId ?? uid()
         persistedId = resolvedId
-        let examplesList = examples.split(separator: "\n").map { String($0.trimmingCharacters(in: .whitespaces)) }.filter { !$0.isEmpty }
+        let resolvedIcon = customIcon.isEmpty ? icon : customIcon
+        let examplesList = examples.split(separator: "\n")
+            .map { String($0.trimmingCharacters(in: .whitespaces)) }
+            .filter { !$0.isEmpty }
+        var builtSubArenas: [String: [String]] = [:]
+        for row in subArenaRows {
+            let name = row.name.trimmingCharacters(in: .whitespaces).uppercased()
+            guard !name.isEmpty else { continue }
+            let rowExamples = row.examples.split(separator: "\n")
+                .map { String($0.trimmingCharacters(in: .whitespaces)) }
+                .filter { !$0.isEmpty }
+            builtSubArenas[name] = rowExamples
+        }
         let updated = Arena(
             id: resolvedId,
             label: label.trimmingCharacters(in: .whitespaces).uppercased(),
@@ -337,9 +440,9 @@ struct ArenaEditorView: View {
             color: color,
             subtitle: subtitle.trimmingCharacters(in: .whitespaces),
             description: description.trimmingCharacters(in: .whitespaces),
-            icon: icon,
+            icon: resolvedIcon,
             examples: examplesList,
-            subArenas: arena?.subArenas ?? [:]
+            subArenas: builtSubArenas
         )
         if let idx = store.arenas.firstIndex(where: { $0.id == resolvedId }) {
             store.arenas[idx] = updated
@@ -359,5 +462,68 @@ struct ArenaEditorView: View {
         store.arenas.removeAll { $0.id == a.id }
         store.saveArenas()
         dismiss()
+    }
+}
+
+// MARK: - Sub-arena row view
+
+private struct SubArenaRowView: View {
+    @Binding var row: SubArenaRow
+    let accentColor: Color
+    let onDelete: () -> Void
+
+    @State private var expanded = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                TextField("CATEGORY NAME", text: $row.name)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(accentColor)
+                    .textInputAutocapitalization(.characters)
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() }
+                } label: {
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.white.opacity(0.3))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                Button { onDelete() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.red.opacity(0.5))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            if expanded {
+                Divider().background(Color.white.opacity(0.06))
+                ZStack(alignment: .topLeading) {
+                    if row.examples.isEmpty {
+                        Text("Example task 1\nExample task 2")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.18))
+                            .padding(12)
+                    }
+                    TextEditor(text: $row.examples)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.7))
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                        .scrollDisabled(true)
+                        .frame(minHeight: 70)
+                        .padding(8)
+                }
+            }
+        }
+        .background(Color.white.opacity(0.04))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(accentColor.opacity(0.2), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
