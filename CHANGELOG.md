@@ -5,6 +5,16 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.3.1 — 2026-03-17
+
+**State persistence across navigation.**
+
+### Bug Fixes
+- `ActiveSessionView` — joint arenas survive swipe-out and back: `addJoint`/`removeJoint` sync `jointEntries` + `endTime` to `store.activeSession`; `setup()` restores them on re-entry
+- `ArenaEditorView` — swipe-back now auto-saves: `persist()` split from `handleSave()`; `onDisappear` calls `persist()`; new arenas use a stable `persistedId` to prevent duplicates
+
+---
+
 ## v2.3.0 — 2026-03-17
 
 **Multi-timer brainwork redesign. Mindless/interval periods.**
