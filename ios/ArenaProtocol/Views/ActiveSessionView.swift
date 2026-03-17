@@ -204,7 +204,6 @@ struct ActiveSessionView: View {
         }
         .sheet(isPresented: $showJointPicker) {
             JointArenaPicker(
-                current: [arena] + jointEntries.map { $0.arena },
                 allArenas: store.letteredArenas
             ) { pickedArena, pickedMinutes in
                 addJoint(arena: pickedArena, minutes: pickedMinutes)
@@ -284,11 +283,30 @@ struct ActiveSessionView: View {
 
     private func addJoint(arena: Arena, minutes: Int) {
         jointEntries.append(JointArenaEntry(arena: arena, minutes: minutes))
+        let start = endTime   // this joint block starts where the current timer ends
         endTime = endTime.addingTimeInterval(TimeInterval(minutes * 60))
         totalTime += minutes * 60
         store.activeSession?.jointEntries = jointEntries
         store.activeSession?.endTime = endTime
         showJointPicker = false
+        addToGCal(arena: arena, start: start, end: endTime)
+    }
+
+    private func addToGCal(arena: Arena, start: Date, end: Date) {
+        let fmt: (Date) -> String = { d in
+            let f = DateFormatter()
+            f.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+            f.timeZone = TimeZone(identifier: "UTC")
+            return f.string(from: d)
+        }
+        let title = "[\(arena.label)] Focus Block"
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let dates = "\(fmt(start))/\(fmt(end))"
+        let details = arena.description
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "https://calendar.google.com/calendar/render?action=TEMPLATE&text=\(title)&dates=\(dates)&details=\(details)") {
+            UIApplication.shared.open(url)
+        }
     }
 
     private func setup() {
@@ -523,7 +541,6 @@ struct CompleteView: View {
 // MARK: - Joint Arena Picker
 
 private struct JointArenaPicker: View {
-    let current: [Arena]
     let allArenas: [Arena]
     let onAdd: (Arena, Int) -> Void
 
@@ -533,10 +550,6 @@ private struct JointArenaPicker: View {
     @State private var customText = ""
 
     private let presets = [5, 10, 15, 25, 30, 45, 60]
-
-    var available: [Arena] {
-        allArenas.filter { a in !current.contains(where: { $0.id == a.id }) }
-    }
 
     var effectiveMinutes: Int {
         isCustom ? (Int(customText) ?? 0) : minutes
@@ -555,7 +568,7 @@ private struct JointArenaPicker: View {
             // Arena selection
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(available) { arena in
+                    ForEach(allArenas) { arena in
                         let isSelected = selected?.id == arena.id
                         let c = Color(hex: arena.color)
                         Button { selected = arena } label: {
