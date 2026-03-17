@@ -169,6 +169,21 @@ struct GrainOverlay: View {
     }
 }
 
+// MARK: - Swipe-back fix
+// When .toolbar(.hidden) is set, UIKit disables the interactive pop gesture.
+// Resetting the delegate to nil restores default behavior (pop when depth > 1).
+
+extension UINavigationController: @retroactive UIGestureRecognizerDelegate {
+    override open func viewDidLoad() {
+        super.viewDidLoad()
+        interactivePopGestureRecognizer?.delegate = self
+    }
+
+    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        viewControllers.count > 1
+    }
+}
+
 // MARK: - Color extensions
 
 extension Color {

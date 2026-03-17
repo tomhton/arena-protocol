@@ -130,9 +130,9 @@ private struct CompactLeadingView: View {
                 Circle()
                     .stroke(arenaColor.opacity(0.3), lineWidth: 2)
                     .frame(width: 22, height: 22)
-                Text(context.attributes.arenaIcon)
-                    .font(.system(size: 9))
-                    .foregroundColor(arenaColor.opacity(0.5))
+                Text("II")
+                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .foregroundColor(arenaColor.opacity(0.6))
             }
         } else {
             ProgressView(
@@ -141,9 +141,11 @@ private struct CompactLeadingView: View {
             ) {
                 EmptyView()
             } currentValueLabel: {
-                Text(context.attributes.arenaIcon)
-                    .font(.system(size: 9))
+                Text(context.state.endTime, style: .timer)
+                    .font(.system(size: 6, weight: .bold, design: .monospaced))
                     .foregroundColor(arenaColor)
+                    .minimumScaleFactor(0.5)
+                    .multilineTextAlignment(.center)
             }
             .progressViewStyle(.circular)
             .tint(arenaColor)
@@ -161,13 +163,13 @@ private struct CompactTrailingView: View {
         let arenaColor = Color(hex: context.attributes.arenaColor)
 
         if context.state.isPaused {
-            Text("—")
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                .foregroundColor(arenaColor)
+            Text("PAUSED")
+                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                .foregroundColor(arenaColor.opacity(0.7))
                 .fixedSize()
         } else {
             Text(context.state.endTime, style: .timer)
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .foregroundColor(arenaColor)
                 .monospacedDigit()
                 .frame(maxWidth: 60)
