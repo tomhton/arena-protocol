@@ -5,6 +5,16 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.1.1 — 2026-03-17
+
+**Swipe-back restored. Dynamic Island now shows countdown number inside ring.**
+
+### Bug Fixes
+- `RootView.swift` — `UINavigationController` extension resets `interactivePopGestureRecognizer?.delegate` to re-enable native left-edge swipe-back after hiding the toolbar (UIKit disables it when toolbar is hidden)
+- `ArenaProtocolWidgetLiveActivity.swift` — compact leading `currentValueLabel` now shows live `Text(endTime, style: .timer)` countdown inside the progress ring instead of the static arena icon; paused state shows `II`; compact trailing timer bumped to 14pt bold; paused label changed to `PAUSED` text
+
+---
+
 ## v2.1.0 — 2026-03-17
 
 **Full SwiftUI navigation reform. Native iOS transitions. Scroll works everywhere.**
