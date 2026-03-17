@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-16.
+> Paste this at the start of every Claude session. Last updated: 2026-03-17.
 
 ---
 
@@ -41,6 +41,13 @@
 | 2.0.1 | 2026-03-16 | Xcode project added, Swift 6 compile fixes, Info.plist crash fix, confirmed on-device |
 | 2.0.2 | 2026-03-16 | `ActiveSessionState` added to DataStore; minimize-to-pill UX; session survives navigation |
 | 2.0.3 | 2026-03-16 | Live Activity fully working on device — Dynamic Island compact/expanded, lock screen banner, tap deeplink. Fixed deployment target, GENERATE_INFOPLIST, CFBundleName, SharedStore crash, fresh-start gate. Debug test code cleaned up. |
+| 2.0.4 | 2026-03-17 | Live Activity regression fix — widget was using wrong attributes type (black Island). Compact slot sizing. Expanded layout polish. |
+
+### v2.0.4 Changes
+- `ArenaProtocolWidgetLiveActivity.swift` — removed inline `ArenaActivityAttributes` (wrong type — caused black Dynamic Island); now uses shared `ArenaLiveActivityAttributes`
+- `ArenaProtocolWidgetLiveActivity.swift` — static fields (`arenaLabel`, `arenaColor`, `arenaIcon`, `questNote`) moved to `context.attributes.*`; dynamic fields (`endTime`, `isPaused`) remain `context.state.*`
+- `ArenaProtocolWidgetLiveActivity.swift` — compact leading fixed to `frame(width: 20, height: 20)`; compact trailing capped at `frame(maxWidth: 60)`
+- `ArenaProtocolWidgetLiveActivity.swift` — expanded regions use `frame(maxWidth: .infinity, alignment:)` with consistent `padding(.horizontal, 12).padding(.vertical, 8)`
 
 ### v2.0.3 Changes
 - `ActiveSessionView.swift` — added fresh-start gate; on minimize return, reattaches to existing Activity via `Activity.activities.first` instead of requesting a new one
@@ -251,21 +258,27 @@ struct ActiveSessionState {
 }
 ```
 
-### ArenaActivityAttributes (ActivityKit — widget extension)
+### ArenaLiveActivityAttributes (ActivityKit — shared by app + widget extension)
 ```swift
-struct ArenaActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable {
-        var arenaLabel: String
-        var arenaColor: String      // hex e.g. "#C0392B"
-        var arenaIcon: String       // single unicode char e.g. "◉"
-        var questNote: String
+struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
+    // Static (set once at Activity.request — never changes during session)
+    let arenaId: String
+    let arenaLabel: String
+    let arenaColor: String      // hex e.g. "#C0392B"
+    let arenaIcon: String       // single unicode char e.g. "◉"
+    let questNote: String
+
+    static let appGroupID = "group.arena.protocol"
+
+    // Dynamic (updated via Activity.update on pause/resume)
+    struct ContentState: Codable, Hashable, Sendable {
         var endTime: Date
         var isPaused: Bool
         var pausedRemaining: TimeInterval
     }
-    var arenaId: String
 }
 ```
+Defined in `ArenaProtocol/ArenaLiveActivityAttributes.swift` — compiled into **both** the main app target and the widget extension target.
 
 ### ArenaProtocolModel / ProtocolBlock
 ```swift

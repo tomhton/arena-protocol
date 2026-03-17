@@ -5,6 +5,23 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.0.4 — 2026-03-17
+
+**Live Activity regression fixed. Compact Island sizing. Expanded layout polish.**
+
+### Bug Fixes
+1. `ArenaProtocolWidgetLiveActivity.swift` — removed inline `ArenaActivityAttributes` struct that diverged from the app's `ArenaLiveActivityAttributes`; widget was registered for the wrong type so ActivityKit couldn't match the running activity (black Dynamic Island)
+2. `ArenaProtocolWidgetLiveActivity.swift` — all view structs changed from `ActivityViewContext<ArenaActivityAttributes>` to `ActivityViewContext<ArenaLiveActivityAttributes>`
+3. `ArenaProtocolWidgetLiveActivity.swift` — `arenaLabel`, `arenaColor`, `arenaIcon`, `questNote` moved from `context.state.*` reads to `context.attributes.*` to match actual struct layout
+
+### Polish
+- Compact leading constrained to `.frame(width: 20, height: 20)` — prevents crowding system clock
+- Compact trailing timer capped at `.frame(maxWidth: 60)`; paused dash uses `.fixedSize()`
+- Expanded leading/trailing use `.frame(maxWidth: .infinity, alignment:)` instead of padding hacks; consistent `.padding(.horizontal, 12).padding(.vertical, 8)` on all expanded regions
+- Expanded bottom: `lineLimit(1)`, `.foregroundColor(.secondary)`, `.padding(.horizontal, 16)`
+
+---
+
 ## v2.0.3 — 2026-03-16
 
 **Live Activity shipped. Debug code cleaned. Ten build/crash fixes.**
