@@ -106,7 +106,7 @@ struct RootView: View {
                           swipeBackEnabled else { return }
                     navigateBack()
                 },
-            including: swipeBackEnabled ? .all : .none
+            including: swipeBackEnabled ? .gesture : .none
         )
         .onAppear {
             if UserDefaults.standard.string(forKey: "arena_checkin_dismissed") == todayString() {

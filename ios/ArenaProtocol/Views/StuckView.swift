@@ -109,6 +109,7 @@ struct StuckView: View {
                             .foregroundStyle(intention.isEmpty ? Color.white.opacity(0.3) : Color(hex: "#FF8FA3"))
                             .scrollContentBackground(.hidden)
                             .background(Color.clear)
+                            .scrollDisabled(true)
                             .frame(minHeight: 70)
                             .padding(10)
                     }
@@ -306,41 +307,44 @@ struct StuckView: View {
     // MARK: - Pick Arena
 
     private var pickArenaView: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 8) {
-                Text("⚡")
-                    .font(.system(size: 28))
-                    .foregroundStyle(Color(hex: "#FF8FA3"))
-                    .shadow(color: Color(hex: "#FF8FA3"), radius: 12)
-                Text("TIME IS UP")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.25))
-                    .kerning(7)
-                Text("PICK AN ARENA")
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    .kerning(3)
-                if !intention.isEmpty {
-                    Text("\"\(intention)\"")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color(hex: "#FF8FA3").opacity(0.6))
-                        .italic()
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 4)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                VStack(spacing: 8) {
+                    Text("⚡")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color(hex: "#FF8FA3"))
+                        .shadow(color: Color(hex: "#FF8FA3"), radius: 12)
+                    Text("TIME IS UP")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.25))
+                        .kerning(7)
+                    Text("PICK AN ARENA")
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .kerning(3)
+                    if !intention.isEmpty {
+                        Text("\"\(intention)\"")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color(hex: "#FF8FA3").opacity(0.6))
+                            .italic()
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 4)
+                    }
                 }
-            }
-            .padding(.top, 52)
-            .padding(.bottom, 28)
+                .padding(.top, 52)
+                .padding(.bottom, 28)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                ForEach(arenas.indices, id: \.self) { i in
-                    ArenaCardView(
-                        arena: arenas[i], sessCount: 0, streak: 0, editMode: false,
-                        onTap: { navigate(.select(arenas[i])) },
-                        sessions: store.sessions
-                    )
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    ForEach(arenas.indices, id: \.self) { i in
+                        ArenaCardView(
+                            arena: arenas[i], sessCount: 0, streak: 0, editMode: false,
+                            onTap: { navigate(.select(arenas[i])) },
+                            sessions: store.sessions
+                        )
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 20)
         }
     }
 

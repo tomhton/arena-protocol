@@ -18,6 +18,7 @@ struct WindDownView: View {
     private var progress: Double { Double(step) / Double(max(totalSteps - 1, 1)) }
 
     var body: some View {
+        ScrollView(showsIndicators: false) {
         VStack(alignment: .leading, spacing: 0) {
             Button { navigate(.home) } label: {
                 Text("← BACK")
@@ -87,6 +88,7 @@ struct WindDownView: View {
                 habitStep(habit)
             }
         }
+        } // ScrollView
     }
 
     // MARK: - Journal Step
@@ -117,6 +119,7 @@ struct WindDownView: View {
                     .foregroundStyle(Color.white.opacity(0.8))
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
+                    .scrollDisabled(true)
                     .frame(minHeight: 100)
                     .padding(10)
             }

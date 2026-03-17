@@ -8,37 +8,34 @@ struct ArenaListEditorView: View {
     var navigate: (Screen) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Button { navigate(.home) } label: {
-                Text("← BACK")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.35))
-                    .kerning(4)
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 52)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 28)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                Button { navigate(.home) } label: {
+                    Text("← BACK")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.35))
+                        .kerning(4)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 52)
+                .padding(.bottom, 28)
 
-            Text("CUSTOMIZE")
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(Color.white.opacity(0.25))
-                .kerning(7)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 4)
-            HStack(spacing: 6) {
-                Text("YOUR")
-                    .font(.system(size: 26, weight: .bold, design: .monospaced))
-                    .kerning(2)
-                Text("ARENAS")
-                    .font(.system(size: 26, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color(hex: "#E8C547"))
-                    .kerning(2)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 20)
+                Text("CUSTOMIZE")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.25))
+                    .kerning(7)
+                    .padding(.bottom, 4)
+                HStack(spacing: 6) {
+                    Text("YOUR")
+                        .font(.system(size: 26, weight: .bold, design: .monospaced))
+                        .kerning(2)
+                    Text("ARENAS")
+                        .font(.system(size: 26, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(hex: "#E8C547"))
+                        .kerning(2)
+                }
+                .padding(.bottom, 20)
 
-            ScrollView(showsIndicators: false) {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 9) {
                     ForEach(store.letteredArenas) { arena in
                         ArenaCardView(
@@ -49,9 +46,9 @@ struct ArenaListEditorView: View {
                     }
                     AddArenaCardView { navigate(.newArena) }
                 }
-                .padding(.horizontal, 20)
                 .padding(.bottom, 32)
             }
+            .padding(.horizontal, 20)
         }
     }
 }
@@ -186,6 +183,7 @@ struct ArenaEditorView: View {
                             .foregroundStyle(Color.white.opacity(0.8))
                             .scrollContentBackground(.hidden)
                             .background(Color.clear)
+                            .scrollDisabled(true)
                             .frame(minHeight: 60)
                             .padding(10)
                     }
@@ -208,6 +206,7 @@ struct ArenaEditorView: View {
                             .foregroundStyle(Color.white.opacity(0.8))
                             .scrollContentBackground(.hidden)
                             .background(Color.clear)
+                            .scrollDisabled(true)
                             .frame(minHeight: 90)
                             .padding(10)
                     }
