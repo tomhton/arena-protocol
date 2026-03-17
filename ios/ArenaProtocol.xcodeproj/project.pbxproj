@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA3792392F685EA700A87FC1 /* ArenaProtocolWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6000000000000000000001AB /* ArenaProtocolApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000001AB /* ArenaProtocolApp.swift */; };
 		6000000000000000000002AB /* DataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000002AB /* DataStore.swift */; };
 		6000000000000000000003AB /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000003AB /* RootView.swift */; };
@@ -59,6 +60,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				CA3792392F685EA700A87FC1 /* ArenaProtocolWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
