@@ -278,12 +278,16 @@ struct ActiveSessionView: View {
         jointEntries.removeAll { $0.id == entry.id }
         endTime = endTime.addingTimeInterval(-TimeInterval(entry.minutes * 60))
         totalTime -= entry.minutes * 60
+        store.activeSession?.jointEntries = jointEntries
+        store.activeSession?.endTime = endTime
     }
 
     private func addJoint(arena: Arena, minutes: Int) {
         jointEntries.append(JointArenaEntry(arena: arena, minutes: minutes))
         endTime = endTime.addingTimeInterval(TimeInterval(minutes * 60))
         totalTime += minutes * 60
+        store.activeSession?.jointEntries = jointEntries
+        store.activeSession?.endTime = endTime
         showJointPicker = false
     }
 
@@ -298,6 +302,10 @@ struct ActiveSessionView: View {
                 endTime = active.endTime
                 timeLeft = max(0, Int(active.endTime.timeIntervalSinceNow))
             }
+            // Restore joint arenas
+            jointEntries = active.jointEntries
+            let jointSecs = active.jointEntries.reduce(0) { $0 + $1.minutes * 60 }
+            totalTime = duration * 60 + jointSecs
             // Reattach to existing Live Activity — do NOT start a new one
             #if canImport(ActivityKit)
             liveActivity = Activity<ArenaLiveActivityAttributes>.activities.first

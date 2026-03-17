@@ -86,6 +86,7 @@ struct ArenaEditorView: View {
     @State private var description = ""
     @State private var examples    = ""
     @State private var pickerColor: Color = Color(hex: "#E8C547")
+    @State private var persistedId: String? = nil   // tracks generated ID for new arenas
 
     private var isNew: Bool { arena == nil }
     private var selectedColor: Color { Color(hex: color) }
@@ -292,6 +293,7 @@ struct ArenaEditorView: View {
             .padding(.horizontal, 22)
         }
         .onAppear { populate() }
+        .onDisappear { persist() }
     }
 
     private func fieldSection<Content: View>(_ label: String, subLabel: String = "", optional: Bool = false, @ViewBuilder content: () -> Content) -> some View {
@@ -323,11 +325,13 @@ struct ArenaEditorView: View {
         examples    = a.examples.joined(separator: "\n")
     }
 
-    private func handleSave() {
+    private func persist() {
         guard !label.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let resolvedId = arena?.id ?? persistedId ?? uid()
+        persistedId = resolvedId
         let examplesList = examples.split(separator: "\n").map { String($0.trimmingCharacters(in: .whitespaces)) }.filter { !$0.isEmpty }
         let updated = Arena(
-            id: arena?.id ?? uid(),
+            id: resolvedId,
             label: label.trimmingCharacters(in: .whitespaces).uppercased(),
             letter: arena?.letter ?? "?",
             color: color,
@@ -337,12 +341,16 @@ struct ArenaEditorView: View {
             examples: examplesList,
             subArenas: arena?.subArenas ?? [:]
         )
-        if let existing = arena, let idx = store.arenas.firstIndex(where: { $0.id == existing.id }) {
+        if let idx = store.arenas.firstIndex(where: { $0.id == resolvedId }) {
             store.arenas[idx] = updated
         } else {
             store.arenas.append(updated)
         }
         store.saveArenas()
+    }
+
+    private func handleSave() {
+        persist()
         dismiss()
     }
 
