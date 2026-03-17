@@ -196,18 +196,22 @@ struct ActiveSessionView: View {
                     isPaused: false,
                     pausedRemaining: 0
                 )
-                print("[LiveActivity] arenaColor:  \(normalizedColor)")
-                print("[LiveActivity] arenaIcon:   \(arena.icon.isEmpty ? "◉" : arena.icon)")
-                print("[LiveActivity] arenaLabel:  \(arena.label)")
-                print("[LiveActivity] questNote:   \(note)")
-                do {
-                    liveActivity = try Activity<ArenaLiveActivityAttributes>.request(
-                        attributes: attrs,
-                        content: .init(state: contentState, staleDate: endTime),
-                        pushType: nil
-                    )
-                } catch {
-                    print("Live Activity start error: \(error)")
+                // End any stale activities before requesting — handles schema changes between builds
+                Task {
+                    for stale in Activity<ArenaLiveActivityAttributes>.activities {
+                        await stale.end(nil, dismissalPolicy: .immediate)
+                    }
+                    do {
+                        let activity = try Activity<ArenaLiveActivityAttributes>.request(
+                            attributes: attrs,
+                            content: .init(state: contentState, staleDate: endTime),
+                            pushType: nil
+                        )
+                        await MainActor.run { liveActivity = activity }
+                        print("[LiveActivity] started: \(activity.id)")
+                    } catch {
+                        print("[LiveActivity] REQUEST FAILED: \(error)")
+                    }
                 }
             }
             #endif
