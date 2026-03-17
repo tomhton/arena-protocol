@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-17 (v2.3.1).
+> Paste this at the start of every Claude session. Last updated: 2026-03-17 (v2.4.0).
 
 ---
 
@@ -48,6 +48,7 @@
 | 2.2.0 | 2026-03-17 | Joint arenas (+ button, gradient ring, multi-session log). Drag-to-reorder arena grid. Color wheel in arena editor. |
 | 2.3.0 | 2026-03-17 | Multi-timer brainwork redesign. Arena breakdown card with proportional bars. Mindless/interval periods row on HomeView. `IntervalTimerView` screen. |
 | 2.3.1 | 2026-03-17 | State persistence: joint arenas survive navigation; arena editor auto-saves on swipe-back. |
+| 2.4.0 | 2026-03-17 | New default arenas (Alignment & Planning, Execution & Mastery, Health & Recovery, Connection & Community). Arena editor: free-text/emoji icon input, expanded icon grid, sub-arenas category editor. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order

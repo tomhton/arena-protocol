@@ -5,6 +5,18 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.4.0 — 2026-03-17
+
+**New default arenas. Expanded arena editor.**
+
+### Features
+- **New default arenas** — Alignment & Planning (blue `#60A5FA`, ◎), Execution & Mastery (gold `#E8C547`, ◆), Health & Recovery (green `#34D399`, ◉), Connection & Community (purple `#B794F4`, ◇). Each has curated subtitles, descriptions, examples, and sub-arena categories.
+- **Free-text icon input** — arena editor now has a text field above the icon grid; type any emoji or Unicode character as the arena icon. CLEAR button reverts to grid selection.
+- **Expanded icon grid** — `ARENA_ICONS` extended with emoji rows for focus/work, health, connection, and misc (32 → 50 icons).
+- **Sub-arenas editor** — add/remove/rename sub-arena categories inline in the arena editor. Each category row expands to reveal an examples text field. Changes persist to `subArenas: [String: [String]]` on save.
+
+---
+
 ## v2.3.1 — 2026-03-17
 
 **State persistence across navigation.**
