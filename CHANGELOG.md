@@ -5,6 +5,30 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.1.0 — 2026-03-17
+
+**Full SwiftUI navigation reform. Native iOS transitions. Scroll works everywhere.**
+
+### Architecture
+- `RootView.swift` — replaced `ZStack + switch screen` pattern with `NavigationStack(path:)`. Root is always `HomeView`; all other screens pushed via `path.append(Screen)`. `navigate(.home)` = `path = NavigationPath()` (pop to root). Natural iOS push/pop slide transitions. Built-in edge-swipe-back on all screens. No more root-level `highPriorityGesture` that was blocking scroll gestures app-wide.
+- `Screen` enum — `.home` retained as a sentinel value (handled in `navigate()`, never pushed as a destination); all other cases unchanged
+- `ArenaEditorView` — removed `navigate` parameter, now uses `@Environment(\.dismiss)` for back/save/delete. `ArenaListEditorView` keeps `navigate` closure for forward navigation.
+- Active session and complete screens get `.navigationBarBackButtonHidden(true)` — no accidental pop during a timer
+- Checkin: initial `NavigationPath` pre-populated with `.checkin` if not dismissed today — appears instantly, no animation jank
+- `GrainOverlay` hoisted outside `NavigationStack` in outer `ZStack` — stays full-screen across all transitions
+
+### Bug Fixes (all caused by root gesture conflict)
+- Scrolling now works on every page: ArenaEditor, ArenaListEditor, WindDown, StuckView, HabitManager, History, Notes, Settings
+- TextEditor fields in ArenaEditor/WindDown/StuckView no longer block outer scroll (`.scrollDisabled(true)` retained)
+- Swipe-back from left edge works natively; no custom gesture code needed
+
+### Up Next
+- App redirects (Shortcuts / deep-link URLs for each screen)
+- Google Calendar feed integration (read blocks → suggest sessions in SelectView)
+- Forge System DataStore models + drop engine
+
+---
+
 ## v2.0.5 — 2026-03-17
 
 **Forge system foundation. Widget overhaul. Stash & stack sessions. Dynamic Island circle clock.**

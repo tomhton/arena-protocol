@@ -55,8 +55,8 @@ struct ArenaListEditorView: View {
 
 struct ArenaEditorView: View {
     @Environment(DataStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     var arena: Arena?   // nil = new arena
-    var navigate: (Screen) -> Void
 
     @State private var label       = ""
     @State private var subtitle    = ""
@@ -71,7 +71,7 @@ struct ArenaEditorView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                Button { navigate(.arenaEditor) } label: {
+                Button { dismiss() } label: {
                     Text("← BACK")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.35))
@@ -298,13 +298,13 @@ struct ArenaEditorView: View {
             store.arenas.append(updated)
         }
         store.saveArenas()
-        navigate(.arenaEditor)
+        dismiss()
     }
 
     private func handleDelete() {
         guard let a = arena else { return }
         store.arenas.removeAll { $0.id == a.id }
         store.saveArenas()
-        navigate(.arenaEditor)
+        dismiss()
     }
 }

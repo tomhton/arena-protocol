@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-17 (v2.0.5).
+> Paste this at the start of every Claude session. Last updated: 2026-03-17 (v2.1.0).
 
 ---
 
@@ -43,6 +43,7 @@
 | 2.0.3 | 2026-03-16 | Live Activity fully working on device — Dynamic Island compact/expanded, lock screen banner, tap deeplink. Fixed deployment target, GENERATE_INFOPLIST, CFBundleName, SharedStore crash, fresh-start gate. Debug test code cleaned up. |
 | 2.0.4 | 2026-03-17 | Live Activity regression fix — widget was using wrong attributes type (black Island). Compact slot sizing. Expanded layout polish. |
 | 2.0.5 | 2026-03-17 | Forge system foundation. Dynamic Island circle clock. Lock screen redesign. Home screen widgets rebuilt. Stash & stack sessions. Keyboard fix. |
+| 2.1.0 | 2026-03-17 | Full SwiftUI navigation reform. `NavigationStack` replaces ZStack+switch. Native iOS transitions. All scroll issues resolved. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -175,11 +176,18 @@ arena-protocol/
 
 ## Navigation System
 
-Navigation is a `Screen` enum in `RootView.swift` and a `navigate(_ screen: Screen)` closure passed to all views. There is **no NavigationStack** — all routing is a single `switch screen` in `RootView.body`.
+Navigation uses `NavigationStack(path: $path)` in `RootView.swift`. A `navigate(_ screen: Screen)` closure is passed to all views.
+
+- `navigate(.home)` → `path = NavigationPath()` — pops to root (HomeView)
+- `navigate(.anyOtherScreen)` → `path.append(screen)` — pushes with native iOS slide transition
+- Built-in edge-swipe-back on all screens (no custom gesture code)
+- `.active` and `.complete` screens have `.navigationBarBackButtonHidden(true)` — no accidental pop during a timer
+- Checkin screen: pre-pushed onto initial path if not dismissed today
+- `ArenaEditorView` uses `@Environment(\.dismiss)` instead of `navigate` (no forward nav needed)
 
 ```swift
 enum Screen: Hashable {
-    case home
+    case home       // sentinel — navigate(.home) pops to root, never pushed
     case checkin
     case select(Arena)
     case active(Arena, Int, String)         // arena, durationMins, note
@@ -403,13 +411,13 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 
 ## Up Next (Feature Queue)
 
-1. **Forge System — DataStore models** — Add `InventoryEgg`, `InventoryItem`, `RebirthState`, `PlayerProfile` to DataStore and wire to UserDefaults. Full spec in `FORGE_SYSTEM_ROADMAP.md`.
-2. **Forge System — Drop engine** — Expand `checkAndClaimEmberDrop` into a `ForgeEngine` evaluating streak tiers, forge milestones, stacked-arena bonuses, and rebirth gates after every session end.
-3. **Forge System — InventoryView** — Incubating eggs with session progress bars, hatched items grid, "WHAT IS POSSIBLE" locked preview section.
-4. **Google Calendar deep integration** — Read calendar blocks, surface as suggested sessions in SelectView. North star feature per Product Vision.
-5. **Xcode Cloud → TestFlight pipeline** — Auto-sign, auto-deploy on push to main.
-6. **iCloud sync** — Migrate from `UserDefaults` to CloudKit.
-7. **Apple Watch companion** — WatchConnectivity session timer.
+1. **App redirects** — URL scheme deep links for every screen (`arenaprotocol://select?arena=body`, `arenaprotocol://history`, etc.). Expose as Shortcuts actions.
+2. **Google Calendar feed** — Read user's calendar blocks via EventKit / Google Calendar API; surface current/next block as suggested arena + duration in SelectView. North star feature.
+3. **Forge System — DataStore models** — Add `InventoryEgg`, `InventoryItem`, `RebirthState`, `PlayerProfile` to DataStore. Full spec in `FORGE_SYSTEM_ROADMAP.md`.
+4. **Forge System — Drop engine** — Expand `checkAndClaimEmberDrop` into a `ForgeEngine` evaluating streak tiers, milestones, stacked-arena bonuses.
+5. **Forge System — InventoryView** — Incubating eggs, hatched items, "WHAT IS POSSIBLE" locked preview.
+6. **Xcode Cloud → TestFlight pipeline** — Auto-sign, auto-deploy on push to main.
+7. **iCloud sync** — Migrate from `UserDefaults` to CloudKit.
 
 ✅ **Completed:** Live Activity / Dynamic Island (v2.0.3–2.0.5) — compact circle clock, lock screen banner, expanded layout, tap deeplink, pause/resume, stash & stack sessions, WidgetKit home screen widgets, keyboard fix.
 
