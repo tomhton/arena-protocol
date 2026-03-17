@@ -5,6 +5,29 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.0.5 — 2026-03-17
+
+**Forge system foundation. Widget overhaul. Stash & stack sessions. Dynamic Island circle clock.**
+
+### Features
+- **Stash & Stack** — swipe down on active session to stash timer to background; supports multiple concurrent arenas running simultaneously; EGG BONUS ACTIVE badge appears on home screen when ≥2 arenas are stacked (hooks into Forge System egg drop multiplier)
+- **Dynamic Island circle clock** — compact leading slot now shows a live `ProgressView(timerInterval:)` circular arc depleting in real time with arena icon inside; minimal slot shows the ring alone; replaces the plain static icon
+- **Lock screen banner redesigned** — 40pt circular progress ring with arena icon replaces plain text icon; 4pt colored left strip retained; layout: ring → label+quest → countdown timer
+- **Home screen widgets rebuilt** — `systemSmall` shows arena name + live countdown or session count; `systemMedium` two-column layout with arena info + timer; smart refresh (1 min when active, 15 min idle); both deep-link to active session or home
+- **WidgetKit integration** — `ActiveSessionView` now calls `SharedStore.writeActiveSession` + `WidgetCenter.reloadAllTimelines()` on session start and end; widgets stay in sync with app state
+- **"ENTER THE ARENA" header enlarged** — 28pt (was 22pt), removed broken `navigate(.home)` button wrapper
+
+### Forge System (foundation)
+- `FORGE_SYSTEM_ROADMAP.md` added — full spec for streak stages, egg incubation, Rebirth Island 1–10, inventory screen, 4-phase multiplayer architecture, and data model definitions
+- `DataStore` — `stackedSessions: [ActiveSessionState]` added; `stashSession()`, `unstashSession(arenaId:)`, `abandonStackedSession(arenaId:)` added
+- `ActiveSessionState` — `startTime: Date` added (used for progress ring math and future Forge drop timing)
+- `ArenaLiveActivityAttributes` — `startTime: Date` added as static attribute
+
+### Bug Fixes
+- `SelectView.swift` — custom duration `numberPad` keyboard trap fixed: `@FocusState` + keyboard toolbar DONE button + `scrollDismissesKeyboard(.interactively)`; "other" button auto-focuses the field
+
+---
+
 ## v2.0.4 — 2026-03-17
 
 **Live Activity regression fixed. Compact Island sizing. Expanded layout polish.**

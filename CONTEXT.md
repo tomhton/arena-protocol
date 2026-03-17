@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-17.
+> Paste this at the start of every Claude session. Last updated: 2026-03-17 (v2.0.5).
 
 ---
 
@@ -42,6 +42,17 @@
 | 2.0.2 | 2026-03-16 | `ActiveSessionState` added to DataStore; minimize-to-pill UX; session survives navigation |
 | 2.0.3 | 2026-03-16 | Live Activity fully working on device — Dynamic Island compact/expanded, lock screen banner, tap deeplink. Fixed deployment target, GENERATE_INFOPLIST, CFBundleName, SharedStore crash, fresh-start gate. Debug test code cleaned up. |
 | 2.0.4 | 2026-03-17 | Live Activity regression fix — widget was using wrong attributes type (black Island). Compact slot sizing. Expanded layout polish. |
+| 2.0.5 | 2026-03-17 | Forge system foundation. Dynamic Island circle clock. Lock screen redesign. Home screen widgets rebuilt. Stash & stack sessions. Keyboard fix. |
+
+### v2.0.5 Changes
+- `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
+- `DataStore.swift` — `stackedSessions: [ActiveSessionState]` + `stashSession()` / `unstashSession(arenaId:)` / `abandonStackedSession(arenaId:)`; `ActiveSessionState` gains `startTime: Date`
+- `ArenaLiveActivityAttributes.swift` — `startTime: Date` added to static attributes
+- `ArenaProtocolWidgetLiveActivity.swift` — compact leading uses `ProgressView(timerInterval:)` circular ring with arena icon; minimal slot uses ring only; lock screen banner redesigned with 40pt circular progress replacing plain icon
+- `ArenaProtocolWidget.swift` — full rewrite: real `SmallWidgetView` + `MediumWidgetView`; smart timeline refresh; deep links to active session or home
+- `ActiveSessionView.swift` — `import WidgetKit`; `SharedStore.writeActiveSession` + `WidgetCenter.reloadAllTimelines()` on start/end; swipe-down gesture stashes session; `stashSession()` function; "↓ swipe to stack" hint
+- `HomeView.swift` — "ENTER THE ARENA" enlarged to 28pt, removed broken navigate(.home); session tray handles foreground + stacked pills; EGG BONUS ACTIVE badge when ≥2 arenas stacked
+- `SelectView.swift` — keyboard trap fixed: `@FocusState` + toolbar DONE button + `scrollDismissesKeyboard(.interactively)`
 
 ### v2.0.4 Changes
 - `ArenaProtocolWidgetLiveActivity.swift` — removed inline `ArenaActivityAttributes` (wrong type — caused black Dynamic Island); now uses shared `ArenaLiveActivityAttributes`
@@ -252,11 +263,13 @@ struct ActiveSessionState {
     var arena: Arena
     var durationMins: Int
     var note: String
+    var startTime: Date          // recorded at session start — used for progress ring + Forge drop timing
     var endTime: Date
     var isPaused: Bool = false
     var pausedRemaining: TimeInterval = 0
 }
 ```
+`DataStore` also holds `stackedSessions: [ActiveSessionState]` — arenas stashed via swipe-down. Multiple stacked arenas activate an EGG BONUS multiplier in the Forge System.
 
 ### ArenaLiveActivityAttributes (ActivityKit — shared by app + widget extension)
 ```swift
@@ -390,13 +403,15 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 
 ## Up Next (Feature Queue)
 
-1. **WidgetKit extensions** — Lock screen widget (countdown + arena name) and small/medium home screen widget (current arena + start button). `ArenaProtocolWidget.swift` is the existing placeholder target.
-2. **Google Calendar deep integration** — Read the user's calendar blocks for the day, surface them as suggested focus sessions in SelectView. When a calendar block matches an arena (e.g. "gym" → BODY), pre-fill the quest and duration.
-3. **Xcode Cloud → TestFlight pipeline** — Trigger on push to main, auto-sign, auto-deploy to TestFlight internal group.
-4. **iCloud sync** — Migrate from `UserDefaults` to `NSUbiquitousKeyValueStore` or CloudKit.
-5. **Apple Watch companion** — Session timer on wrist via WatchConnectivity.
+1. **Forge System — DataStore models** — Add `InventoryEgg`, `InventoryItem`, `RebirthState`, `PlayerProfile` to DataStore and wire to UserDefaults. Full spec in `FORGE_SYSTEM_ROADMAP.md`.
+2. **Forge System — Drop engine** — Expand `checkAndClaimEmberDrop` into a `ForgeEngine` evaluating streak tiers, forge milestones, stacked-arena bonuses, and rebirth gates after every session end.
+3. **Forge System — InventoryView** — Incubating eggs with session progress bars, hatched items grid, "WHAT IS POSSIBLE" locked preview section.
+4. **Google Calendar deep integration** — Read calendar blocks, surface as suggested sessions in SelectView. North star feature per Product Vision.
+5. **Xcode Cloud → TestFlight pipeline** — Auto-sign, auto-deploy on push to main.
+6. **iCloud sync** — Migrate from `UserDefaults` to CloudKit.
+7. **Apple Watch companion** — WatchConnectivity session timer.
 
-✅ **Completed:** Live Activity / Dynamic Island timer (v2.0.3) — compact/expanded Dynamic Island, lock screen banner, tap deeplink, pause/resume state sync, clean dismiss on done/abandon.
+✅ **Completed:** Live Activity / Dynamic Island (v2.0.3–2.0.5) — compact circle clock, lock screen banner, expanded layout, tap deeplink, pause/resume, stash & stack sessions, WidgetKit home screen widgets, keyboard fix.
 
 ---
 
