@@ -40,6 +40,20 @@
 | 2.0.0 | 2026-03-13 | Full native SwiftUI rewrite — 25 Swift files, all features preserved |
 | 2.0.1 | 2026-03-16 | Xcode project added, Swift 6 compile fixes, Info.plist crash fix, confirmed on-device |
 | 2.0.2 | 2026-03-16 | `ActiveSessionState` added to DataStore; minimize-to-pill UX; session survives navigation |
+| 2.0.3 | 2026-03-16 | Live Activity fully working on device — Dynamic Island compact/expanded, lock screen banner, tap deeplink. Fixed deployment target, GENERATE_INFOPLIST, CFBundleName, SharedStore crash, fresh-start gate. Debug test code cleaned up. |
+
+### v2.0.3 Changes
+- `ActiveSessionView.swift` — added fresh-start gate; on minimize return, reattaches to existing Activity via `Activity.activities.first` instead of requesting a new one
+- `project.pbxproj` — widget extension `IPHONEOS_DEPLOYMENT_TARGET` fixed from `26.2` → `18.6`
+- `project.pbxproj` — widget extension `GENERATE_INFOPLIST_FILE` fixed from `YES` → `NO`
+- `project.pbxproj` — widget extension `SWIFT_VERSION` fixed from `5.0` → `6.0`
+- `SharedStore.swift` — removed force unwrap on `UserDefaults(suiteName:)!` → `?? .standard`
+- `ArenaProtocolWidget.swift` — removed force unwrap on `Calendar.current.date(...)!` → `?? currentDate`
+- `ArenaProtocolWidgetLiveActivity.swift` — `activityBackgroundTint` changed to `Color.clear`
+- `ArenaProtocolWidgetLiveActivity.swift` — added `widgetURL` for tap deeplink (`arenaprotocol://active`)
+- `ArenaProtocolWidgetLiveActivity.swift` — debug test code removed; all layouts restored to production (compact leading: arena icon in arena color; compact trailing: countdown timer or PAUSED in arena color; lock screen banner: colored left strip + arena icon + label + quest note + timer/PAUSED)
+- `RootView.swift` — added `onOpenURL` handler routing `arenaprotocol://active` to active session screen
+- `ArenaProtocolWidget/Info.plist` — added `CFBundleName` and `CFBundleInfoDictionaryVersion`
 
 ### v2.0.2 Changes
 - `DataStore.swift` — added `ActiveSessionState` struct (transient, not Codable): `arena`, `durationMins`, `note`, `endTime`, `isPaused`, `pausedRemaining`
@@ -60,6 +74,7 @@
 ```
 arena-protocol/
 ├── CONTEXT.md                              ← YOU ARE HERE — paste at session start
+├── CHANGELOG.md                            ← versioned change log
 ├── TESTBENCH_SETUP_WIN11.md                ← Windows 11 build/install guide
 ├── codemagic.yaml                          ← CI: native-swift-ios + legacy workflows
 ├── .github/workflows/build-native-ios.yml ← GitHub Actions build
@@ -77,10 +92,10 @@ arena-protocol/
 │   │   │   └── DataStore.swift            ← ⭐ MOST IMPORTANT — all models, defaults,
 │   │   │                                     persistence, gamification helpers
 │   │   ├── Views/
-│   │   │   ├── RootView.swift             ← ⭐ Screen router + GrainOverlay + Color extensions
+│   │   │   ├── RootView.swift             ← ⭐ Screen router + GrainOverlay + Color extensions + onOpenURL deeplink handler
 │   │   │   ├── HomeView.swift             ← Dashboard: arena grid, shortcuts, ember particles, timer pill
 │   │   │   ├── SelectView.swift           ← Session config: quest, sub-arena, duration
-│   │   │   ├── ActiveSessionView.swift    ← Live timer + minimize + CompleteView
+│   │   │   ├── ActiveSessionView.swift    ← Live timer + minimize + CompleteView + Live Activity management
 │   │   │   ├── ProtocolsView.swift        ← Protocol list/editor + ActiveProtocolView
 │   │   │   ├── MorningCheckinView.swift   ← 15-min morning ritual (3 habits)
 │   │   │   ├── WindDownView.swift         ← Evening: journal + habit check
@@ -97,6 +112,11 @@ arena-protocol/
 │   │   │   └── EmberDropModal.swift       ← Achievement popup overlay
 │   │   └── Resources/
 │   │       └── Info.plist                 ← Bundle config, URL schemes, dark mode
+│   ├── ArenaProtocolWidget/               ← Widget + Live Activity extension target
+│   │   ├── ArenaProtocolWidget.swift      ← WidgetKit placeholder (home screen widget — next up)
+│   │   ├── ArenaProtocolWidgetLiveActivity.swift ← ✅ Live Activity: Dynamic Island + lock screen
+│   │   ├── SharedStore.swift              ← App Group UserDefaults bridge (suite name shared with main app)
+│   │   └── Info.plist                    ← Widget extension bundle config (CFBundleName required)
 │   └── Tests/
 │       └── ArenaProtocolTests/
 │           └── ArenaProtocolTests.swift   ← 30+ unit tests (Swift Testing)
@@ -124,6 +144,8 @@ arena-protocol/
 | `Components/*.swift` | Only if modifying shared UI (timer ring, arena card, shortcut bar) |
 | `ArenaProtocol.xcodeproj/project.pbxproj` | Only when adding new Swift source files to the project |
 | `Package.swift` | Only if adding a Swift Package dependency |
+| `ArenaProtocolWidget/ArenaProtocolWidgetLiveActivity.swift` | Live Activity layout changes |
+| `ArenaProtocolWidget/SharedStore.swift` | App Group data bridge for widgets |
 
 ### Do not touch
 | File | Why |
@@ -160,6 +182,8 @@ enum Screen: Hashable {
 
 To add a new screen: add a case here, add a route in `RootView.body`, create the view file, add it to `project.pbxproj`.
 
+The app also handles the `arenaprotocol://active` deep link via `.onOpenURL` in `RootView.swift`, which routes to the active session screen when tapped from the Dynamic Island or lock screen Live Activity.
+
 ---
 
 ## Screen Inventory
@@ -169,7 +193,7 @@ To add a new screen: add a case here, add a route in `RootView.body`, create the
 | **Home** | `HomeView.swift` | 2-column arena grid, header with title/streak count, edit toggle, app shortcuts bar, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Floating timer pill (bottom-center capsule) appears when `store.activeSession != nil` — tap to return to session, ✕ to abandon. |
 | **Morning Check-in** | `MorningCheckinView.swift` | 3-step ritual (Reading 5m, Goals 5m, Movement 5m), animated progress bar, skip option. Shows once per day. |
 | **Select** | `SelectView.swift` | Arena detail + quest note textarea, sub-arena pills → example task list, duration picker (5/10/30/60/90/custom), Google Calendar option, launches session |
-| **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. |
+| **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. Manages Live Activity lifecycle (start on session begin, update on pause/resume, end on done/abandon). Tapping the Dynamic Island or lock screen banner deep-links to this screen via `arenaprotocol://active`. |
 | **Complete** | `ActiveSessionView.swift` (CompleteView) | Session complete screen with icon pop animation, saves session, triggers ember drop check |
 | **Protocols** | `ProtocolsView.swift` | List of 4 protocols with block strips, edit durations/name/desc, BEGIN PROTOCOL button |
 | **Active Protocol** | `ProtocolsView.swift` (ActiveProtocolView) | Segmented multi-block timer, advances blocks automatically, overall + per-block progress |
@@ -224,6 +248,22 @@ struct ActiveSessionState {
     var endTime: Date
     var isPaused: Bool = false
     var pausedRemaining: TimeInterval = 0
+}
+```
+
+### ArenaActivityAttributes (ActivityKit — widget extension)
+```swift
+struct ArenaActivityAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        var arenaLabel: String
+        var arenaColor: String      // hex e.g. "#C0392B"
+        var arenaIcon: String       // single unicode char e.g. "◉"
+        var questNote: String
+        var endTime: Date
+        var isPaused: Bool
+        var pausedRemaining: TimeInterval
+    }
+    var arenaId: String
 }
 ```
 
@@ -330,18 +370,20 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 - Deep-link URL schemes in `Info.plist` should be verified against current app versions (Spotify, YouTube URLs may have changed)
 - No iCloud sync — all data is local to device, not shared across devices
 - The `Color.opacity(_:)` extension in `RootView.swift` (line 149) shadows the system method with an identical signature — harmless but worth cleaning up
-- `HomeView.swift`: timer pill uses `Text(endTime, style: .timer)` — this counts up after `endTime` passes; ensure session is ended before natural expiry reaches zero to avoid negative display
+- `HomeView.swift`: timer pill uses `Text(endTime, style: .timer)` — counts up after `endTime` passes; ensure `store.endSession()` is called before natural expiry reaches zero to avoid negative display
+- `ArenaProtocolWidgetLiveActivity.swift`: `Color(hex:)` helper is duplicated from `RootView.swift` because widget extensions don't share the main app module — intentional, keep in sync if palette changes
 
 ---
 
 ## Up Next (Feature Queue)
 
-1. **Live Activity / Dynamic Island timer** — ActivityKit extension showing active session countdown on lock screen and Dynamic Island (compact + expanded). Target: iPhone 17 Pro Max layout. ✅ Prerequisite complete: `ActiveSessionState` is now the single source of truth for the running session.
-2. **WidgetKit extensions** — Lock screen widget (countdown + arena name) and small/medium home screen widget (current arena + start button).
-3. **Google Calendar deep integration** — Read the user's calendar blocks for the day, surface them as suggested focus sessions in SelectView. When a calendar block matches an arena (e.g. "gym" → BODY), pre-fill the quest and duration.
-4. **Xcode Cloud → TestFlight pipeline** — Trigger on push to main, auto-sign, auto-deploy to TestFlight internal group.
-5. **iCloud sync** — Migrate from `UserDefaults` to `NSUbiquitousKeyValueStore` or CloudKit.
-6. **Apple Watch companion** — Session timer on wrist via WatchConnectivity.
+1. **WidgetKit extensions** — Lock screen widget (countdown + arena name) and small/medium home screen widget (current arena + start button). `ArenaProtocolWidget.swift` is the existing placeholder target.
+2. **Google Calendar deep integration** — Read the user's calendar blocks for the day, surface them as suggested focus sessions in SelectView. When a calendar block matches an arena (e.g. "gym" → BODY), pre-fill the quest and duration.
+3. **Xcode Cloud → TestFlight pipeline** — Trigger on push to main, auto-sign, auto-deploy to TestFlight internal group.
+4. **iCloud sync** — Migrate from `UserDefaults` to `NSUbiquitousKeyValueStore` or CloudKit.
+5. **Apple Watch companion** — Session timer on wrist via WatchConnectivity.
+
+✅ **Completed:** Live Activity / Dynamic Island timer (v2.0.3) — compact/expanded Dynamic Island, lock screen banner, tap deeplink, pause/resume state sync, clean dismiss on done/abandon.
 
 ---
 
@@ -359,7 +401,7 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 | Background | `#080810` | App background (near-black) |
 | Text primary | `#E8E8E8` | Body text |
 
-`Color(hex:)` initialiser and semantic aliases (`Color.background`, `.textPrimary`, `.textMuted`, `.cardBg`, `.cardBorder`) are defined in `RootView.swift`.
+`Color(hex:)` initialiser and semantic aliases (`Color.background`, `.textPrimary`, `.textMuted`, `.cardBg`, `.cardBorder`) are defined in `RootView.swift`. A duplicate `Color(hex:)` helper exists in `ArenaProtocolWidgetLiveActivity.swift` for widget extension scope.
 
 ---
 
@@ -387,6 +429,8 @@ gh run watch <run-id>
 ```
 
 See `ios/README_XCODE_SETUP.md` for Team ID, device pairing, and first-run steps.
+
+> **Note:** Live Activity / Dynamic Island requires a physical device — iOS Simulator does not support Live Activities. Always test widget changes on device.
 
 ---
 
