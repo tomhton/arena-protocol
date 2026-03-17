@@ -37,13 +37,44 @@ struct HomeView: View {
                     .zIndex(999)
             }
 
-            // Minimized timer pill
-            if let active = store.activeSession {
+            // Session tray — foreground pill + stashed pills
+            if store.activeSession != nil || !store.stackedSessions.isEmpty {
                 VStack {
                     Spacer()
-                    timerPill(active)
-                        .frame(maxWidth: .infinity)
-                        .padding(.bottom, 16)
+                    VStack(spacing: 6) {
+                        // Egg bonus badge when multiple arenas stacked
+                        if store.stackedSessions.count >= 1 {
+                            HStack(spacing: 6) {
+                                Text("◆")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Color(hex: "#E8C547"))
+                                Text("EGG BONUS ACTIVE — \(store.stackedSessions.count + (store.activeSession != nil ? 1 : 0)) ARENAS")
+                                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(hex: "#E8C547").opacity(0.8))
+                                    .kerning(2)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(Color(hex: "#E8C547").opacity(0.08))
+                            .overlay(Capsule().strokeBorder(Color(hex: "#E8C547").opacity(0.25), lineWidth: 1))
+                            .clipShape(Capsule())
+                            .transition(.scale.combined(with: .opacity))
+                        }
+
+                        // Stashed sessions (shown above foreground)
+                        ForEach(store.stackedSessions, id: \.arena.id) { stashed in
+                            stackedPill(stashed)
+                                .frame(maxWidth: .infinity)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+
+                        // Foreground session pill
+                        if let active = store.activeSession {
+                            timerPill(active)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.bottom, 16)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(100)
@@ -51,6 +82,7 @@ struct HomeView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: pendingDrop?.id)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: store.activeSession != nil)
+        .animation(.spring(response: 0.35, dampingFraction: 0.75), value: store.stackedSessions.count)
         .confirmationDialog("Abandon session?", isPresented: $showAbandonConfirm, titleVisibility: .visible) {
             Button("Abandon", role: .destructive) { store.endSession() }
             Button("Cancel", role: .cancel) { }
@@ -108,6 +140,52 @@ struct HomeView: View {
         }
     }
 
+    private func stackedPill(_ session: ActiveSessionState) -> some View {
+        let arenaColor = Color(hex: session.arena.color)
+        return HStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(arenaColor.opacity(0.5))
+                    .frame(width: 8, height: 8)
+                Text(session.arena.label)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.5))
+            }
+            .padding(.leading, 16)
+
+            Spacer()
+
+            Text(session.endTime, style: .timer)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(arenaColor.opacity(0.6))
+                .monospacedDigit()
+                .frame(width: 64)
+                .padding(.horizontal, 10)
+        }
+        .frame(width: 280, height: 42)
+        .background(Color.cardBg.opacity(0.7))
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(arenaColor.opacity(0.35), lineWidth: 1))
+        .onTapGesture {
+            store.unstashSession(arenaId: session.arena.id)
+            if let active = store.activeSession {
+                navigate(.active(active.arena, active.durationMins, active.note))
+            }
+        }
+        .overlay(alignment: .trailing) {
+            Button {
+                store.abandonStackedSession(arenaId: session.arena.id)
+            } label: {
+                Text("✕")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.white.opacity(0.25))
+                    .padding(.horizontal, 14)
+                    .frame(height: 42)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     // MARK: - Header
 
     private var headerSection: some View {
@@ -118,18 +196,16 @@ struct HomeView: View {
                     .foregroundStyle(Color.white.opacity(0.25))
                     .kerning(6)
 
-                Button { navigate(.home) } label: {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("ENTER THE")
-                            .font(.system(size: 22, weight: .bold, design: .monospaced))
-                            .kerning(2)
-                        Text("ARENA")
-                            .font(.system(size: 22, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color(hex: "#E8C547"))
-                            .kerning(2)
-                    }
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("ENTER THE")
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.9))
+                        .kerning(2)
+                    Text("ARENA")
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(hex: "#E8C547"))
+                        .kerning(2)
                 }
-                .buttonStyle(.plain)
 
                 if let title = getActiveTitle(sessions: sessions) {
                     let titleColor = title.arenaId != nil

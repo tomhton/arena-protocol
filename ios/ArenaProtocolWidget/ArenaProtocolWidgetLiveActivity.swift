@@ -24,10 +24,8 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
                     ExpandedBottomView(context: context)
                 }
             } compactLeading: {
-                // ── Compact Leading: arena icon in arena color ────────────────
                 CompactLeadingView(context: context)
             } compactTrailing: {
-                // ── Compact Trailing: countdown timer or PAUSED ───────────────
                 CompactTrailingView(context: context)
             } minimal: {
                 MinimalView(context: context)
@@ -50,26 +48,46 @@ private struct LockScreenBannerView: View {
             // Colored left strip
             Rectangle()
                 .fill(arenaColor)
-                .frame(width: 6)
+                .frame(width: 4)
 
             HStack(spacing: 12) {
-                // Arena icon
-                Text(context.attributes.arenaIcon)
-                    .font(.system(size: 22))
-                    .foregroundColor(arenaColor)
+                // Circular progress clock with icon inside
+                if context.state.isPaused {
+                    ZStack {
+                        Circle()
+                            .stroke(arenaColor.opacity(0.25), lineWidth: 2)
+                            .frame(width: 40, height: 40)
+                        Text(context.attributes.arenaIcon)
+                            .font(.system(size: 18))
+                            .foregroundColor(arenaColor.opacity(0.5))
+                    }
+                } else {
+                    ProgressView(
+                        timerInterval: context.attributes.startTime...context.state.endTime,
+                        countsDown: true
+                    ) {
+                        EmptyView()
+                    } currentValueLabel: {
+                        Text(context.attributes.arenaIcon)
+                            .font(.system(size: 16))
+                            .foregroundColor(arenaColor)
+                    }
+                    .progressViewStyle(.circular)
+                    .tint(arenaColor)
+                    .frame(width: 40, height: 40)
+                }
 
+                // Text block
                 VStack(alignment: .leading, spacing: 2) {
-                    // Arena label
                     Text(context.attributes.arenaLabel)
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
                         .tracking(1.5)
 
-                    // Quest note (truncated to one line)
                     if !context.attributes.questNote.isEmpty {
                         Text(context.attributes.questNote)
                             .font(.system(size: 11, weight: .regular))
-                            .foregroundColor(.white.opacity(0.65))
+                            .foregroundColor(.white.opacity(0.55))
                             .lineLimit(1)
                     }
                 }
@@ -79,34 +97,58 @@ private struct LockScreenBannerView: View {
                 // Timer or PAUSED
                 if context.state.isPaused {
                     Text("PAUSED")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                        .foregroundColor(arenaColor)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(arenaColor.opacity(0.6))
                 } else {
                     Text(context.state.endTime, style: .timer)
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundColor(arenaColor)
                         .monospacedDigit()
                         .multilineTextAlignment(.trailing)
+                        .frame(minWidth: 56, alignment: .trailing)
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
         }
-        .background(Color(red: 0.031, green: 0.031, blue: 0.063))  // #080810
+        .background(Color(red: 0.031, green: 0.031, blue: 0.063))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
 // MARK: - Compact Leading (Dynamic Island)
+// Circular progress ring with arena icon — updates continuously like .timer Text
 
 private struct CompactLeadingView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        Text(context.attributes.arenaIcon)
-            .font(.system(size: 14))
-            .foregroundColor(Color(hex: context.attributes.arenaColor))
-            .frame(width: 20, height: 20)
+        let arenaColor = Color(hex: context.attributes.arenaColor)
+
+        if context.state.isPaused {
+            ZStack {
+                Circle()
+                    .stroke(arenaColor.opacity(0.3), lineWidth: 2)
+                    .frame(width: 22, height: 22)
+                Text(context.attributes.arenaIcon)
+                    .font(.system(size: 9))
+                    .foregroundColor(arenaColor.opacity(0.5))
+            }
+        } else {
+            ProgressView(
+                timerInterval: context.attributes.startTime...context.state.endTime,
+                countsDown: true
+            ) {
+                EmptyView()
+            } currentValueLabel: {
+                Text(context.attributes.arenaIcon)
+                    .font(.system(size: 9))
+                    .foregroundColor(arenaColor)
+            }
+            .progressViewStyle(.circular)
+            .tint(arenaColor)
+            .frame(width: 22, height: 22)
+        }
     }
 }
 
@@ -139,9 +181,19 @@ private struct MinimalView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        Text(context.attributes.arenaIcon)
-            .font(.system(size: 12))
-            .foregroundColor(Color(hex: context.attributes.arenaColor))
+        let arenaColor = Color(hex: context.attributes.arenaColor)
+
+        ProgressView(
+            timerInterval: context.attributes.startTime...context.state.endTime,
+            countsDown: true
+        ) {
+            EmptyView()
+        } currentValueLabel: {
+            EmptyView()
+        }
+        .progressViewStyle(.circular)
+        .tint(arenaColor)
+        .frame(width: 16, height: 16)
     }
 }
 
@@ -210,3 +262,5 @@ private struct ExpandedBottomView: View {
         }
     }
 }
+
+// Color(hex:) is defined in ArenaWidgetView.swift for the widget extension scope.

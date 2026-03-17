@@ -8,6 +8,7 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
     let arenaColor: String
     let arenaIcon: String
     let questNote: String
+    let startTime: Date          // session start — used for circular progress ring
 
     static let appGroupID = "group.arena.protocol"
 

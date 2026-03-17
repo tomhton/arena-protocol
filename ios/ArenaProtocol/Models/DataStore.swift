@@ -88,6 +88,7 @@ struct ActiveSessionState {
     var arena: Arena
     var durationMins: Int
     var note: String
+    var startTime: Date
     var endTime: Date
     var isPaused: Bool = false
     var pausedRemaining: TimeInterval = 0
@@ -450,6 +451,7 @@ final class DataStore {
     }()
 
     var activeSession: ActiveSessionState? = nil
+    var stackedSessions: [ActiveSessionState] = []
 
     var letteredArenas: [Arena] { Arena.reletter(arenas) }
     var todaySessions:  Int    { sessions.filter { $0.date == todayString() }.count }
@@ -468,16 +470,39 @@ final class DataStore {
 
     // Active session lifecycle
     func startSession(arena: Arena, durationMins: Int, note: String) {
+        let now = Date.now
         activeSession = ActiveSessionState(
             arena: arena,
             durationMins: durationMins,
             note: note,
-            endTime: Date.now + TimeInterval(durationMins * 60)
+            startTime: now,
+            endTime: now + TimeInterval(durationMins * 60)
         )
     }
 
     func endSession() {
         activeSession = nil
+    }
+
+    // Move foreground session to stash (allows starting a new session)
+    func stashSession() {
+        guard let active = activeSession else { return }
+        stackedSessions.append(active)
+        activeSession = nil
+    }
+
+    // Bring a stashed session back to foreground
+    func unstashSession(arenaId: String) {
+        guard let idx = stackedSessions.firstIndex(where: { $0.arena.id == arenaId }) else { return }
+        if let current = activeSession {
+            stackedSessions.append(current)
+        }
+        activeSession = stackedSessions.remove(at: idx)
+    }
+
+    // Abandon a specific stashed session without touching the foreground
+    func abandonStackedSession(arenaId: String) {
+        stackedSessions.removeAll { $0.arena.id == arenaId }
     }
 
     // Session management

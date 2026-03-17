@@ -2,6 +2,7 @@
 // Live focus timer with pause/resume, circular progress, completion
 
 import ActivityKit
+import WidgetKit
 import SwiftUI
 
 struct ActiveSessionView: View {
@@ -121,6 +122,13 @@ struct ActiveSessionView: View {
                 }
                 .buttonStyle(.plain)
 
+                // Swipe hint
+                Text("↓  swipe to stack")
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.12))
+                    .kerning(3)
+                    .padding(.bottom, 8)
+
                 Spacer()
             }
         }
@@ -136,6 +144,14 @@ struct ActiveSessionView: View {
         .onAppear { setup() }
         .onReceive(timer) { _ in tick() }
         .onDisappear { timer.upstream.connect().cancel() }
+        .gesture(
+            DragGesture()
+                .onEnded { val in
+                    if val.translation.height > 80 && abs(val.translation.width) < 50 {
+                        stashSession()
+                    }
+                }
+        )
     }
 
     private func setup() {
@@ -158,6 +174,8 @@ struct ActiveSessionView: View {
             store.startSession(arena: arena, durationMins: duration, note: note)
             endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
             UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
+            SharedStore.writeActiveSession(arenaName: arena.label, arenaColor: arena.color, endsAt: endTime)
+            WidgetCenter.shared.reloadAllTimelines()
 
             #if canImport(ActivityKit)
             if ActivityAuthorizationInfo().areActivitiesEnabled {
@@ -170,7 +188,8 @@ struct ActiveSessionView: View {
                     arenaLabel: arena.label,
                     arenaColor: normalizedColor,
                     arenaIcon: arena.icon.isEmpty ? "◉" : arena.icon,
-                    questNote: note
+                    questNote: note,
+                    startTime: endTime.addingTimeInterval(-TimeInterval(timeLeft))
                 )
                 let contentState = ArenaLiveActivityAttributes.ContentState(
                     endTime: endTime,
@@ -253,6 +272,8 @@ struct ActiveSessionView: View {
             )
         }
         #endif
+        SharedStore.clearActiveSession()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func finishEarly() {
@@ -266,6 +287,11 @@ struct ActiveSessionView: View {
         cancelNotification(id: "session_1")
         endLiveActivity()
         store.endSession()
+        navigate(.home)
+    }
+
+    private func stashSession() {
+        store.stashSession()
         navigate(.home)
     }
 }
