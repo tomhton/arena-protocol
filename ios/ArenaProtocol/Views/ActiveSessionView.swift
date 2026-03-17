@@ -249,7 +249,7 @@ struct ActiveSessionView: View {
             )
             await activity?.end(
                 ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .immediate
+                dismissalPolicy: .default
             )
         }
         #endif

@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CA3792392F685EA700A87FC1 /* ArenaProtocolWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6000000000000000000001AB /* ArenaProtocolApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000001AB /* ArenaProtocolApp.swift */; };
 		6000000000000000000002AB /* DataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000002AB /* DataStore.swift */; };
 		6000000000000000000003AB /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000003AB /* RootView.swift */; };
@@ -30,9 +29,12 @@
 		6000000000000000000014AB /* ArenaProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000015AB /* ArenaProtocolTests.swift */; };
 		CA3792362F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA3792352F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift */; };
 		CA3792372F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA3792352F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift */; };
+		CA3792392F685EA700A87FC1 /* ArenaProtocolWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CA6DE84D2F68E95400CBDDFF /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */; };
+		CA6DE84E2F68E95400CBDDFF /* SwiftUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CA6DE8502F68E95500CBDDFF /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD792F6811D70015A8AB /* WidgetKit.framework */; };
+		CA6DE8512F68E95500CBDDFF /* WidgetKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD792F6811D70015A8AB /* WidgetKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CA88FDA92F6816550015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
-		CA88FDCF2F6837930015A8AB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD792F6811D70015A8AB /* WidgetKit.framework */; };
-		CA88FDD02F6837930015A8AB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */; };
 		CA88FE572F68515D0015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
 /* End PBXBuildFile section */
 
@@ -54,6 +56,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		CA6DE84F2F68E95400CBDDFF /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				CA6DE84E2F68E95400CBDDFF /* SwiftUI.framework in Embed Frameworks */,
+				CA6DE8512F68E95500CBDDFF /* WidgetKit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CA88FD922F6811D80015A8AB /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -133,8 +147,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CA88FDD02F6837930015A8AB /* SwiftUI.framework in Frameworks */,
-				CA88FDCF2F6837930015A8AB /* WidgetKit.framework in Frameworks */,
+				CA6DE84D2F68E95400CBDDFF /* SwiftUI.framework in Frameworks */,
+				CA6DE8502F68E95500CBDDFF /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -289,6 +303,7 @@
 				CA88FDCA2F6837930015A8AB /* Sources */,
 				CA88FDCB2F6837930015A8AB /* Frameworks */,
 				CA88FDCC2F6837930015A8AB /* Resources */,
+				CA6DE84F2F68E95400CBDDFF /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -661,7 +676,7 @@
 				DEVELOPMENT_TEAM = 3JSC7C9U7N;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ArenaProtocolWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ArenaProtocolWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = ArenaProtocolWidgetExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -693,7 +708,7 @@
 				DEVELOPMENT_TEAM = 3JSC7C9U7N;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ArenaProtocolWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ArenaProtocolWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = ArenaProtocolWidgetExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
