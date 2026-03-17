@@ -333,7 +333,7 @@ struct ActiveProtocolView: View {
             .padding(.bottom, 8)
 
             // Timer ring
-            CircularTimerView(timeLeft: timeLeft, totalTime: currentBlock.duration * 60, color: blockColor, size: 200)
+            CircularTimerView(timeLeft: timeLeft, totalTime: currentBlock.duration * 60, colors: [blockColor], size: 200)
                 .padding(.bottom, 24)
 
             // Controls

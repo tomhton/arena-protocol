@@ -5,6 +5,22 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.2.0 — 2026-03-17
+
+**Joint arenas. Drag-to-reorder. Color wheel.**
+
+### Features
+- **Joint arenas** — while a session is active, tap the `+` button next to the arena name to add a second (or third) arena to the session. Joint arena icons appear inline. The circular progress ring renders a full `AngularGradient` sweeping through all joined arena colors. On session end, sessions are logged for every arena in the joint.
+- **Drag-to-reorder arenas** — in the arena list editor, long-press any card and drag it to a new position. Order is persisted immediately. The `letter` (A/B/C/D) auto-reassigns based on new position. Drop target dims to 60% opacity for visual feedback.
+- **Color wheel** — arena editor COLOR section now has a native `ColorPicker` (full HSB wheel + sliders) above the preset swatches. Selecting a custom color via the wheel updates the live preview instantly. Preset swatches still sync back to the wheel when tapped.
+
+### Internal
+- `CircularTimerView` — signature changed from `color: Color` to `colors: [Color]`. Single-color case renders identically. Multi-color case uses `AngularGradient`. All callers updated (`ActiveSessionView`, `ProtocolsView`).
+- `ActiveSessionState` — added `jointArenas: [Arena] = []` field.
+- `Color.toHex()` extension added to `RootView.swift` for `ColorPicker` → hex conversion.
+
+---
+
 ## v2.1.1 — 2026-03-17
 
 **Swipe-back restored. Dynamic Island now shows countdown number inside ring.**

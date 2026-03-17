@@ -17,10 +17,15 @@ struct ActiveSessionView: View {
     @State private var focusHint = ""
     @State private var endTime: Date = Date()
     @State private var liveActivity: Activity<ArenaLiveActivityAttributes>? = nil
+    @State private var jointArenas: [Arena] = []
+    @State private var showJointPicker = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private var arenaColor: Color { Color(hex: arena.color) }
     private var totalTime: Int { duration * 60 }
+    private var ringColors: [Color] {
+        ([arena] + jointArenas).map { Color(hex: $0.color) }
+    }
 
     init(arena: Arena, duration: Int, note: String, navigate: @escaping (Screen) -> Void) {
         self.arena = arena
@@ -48,10 +53,24 @@ struct ActiveSessionView: View {
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.25))
                         .kerning(7)
-                    Text(arena.label)
-                        .font(.system(size: 22, weight: .bold, design: .monospaced))
-                        .foregroundStyle(arenaColor)
-                        .kerning(5)
+                    HStack(spacing: 8) {
+                        Text(arena.label)
+                            .font(.system(size: 22, weight: .bold, design: .monospaced))
+                            .foregroundStyle(arenaColor)
+                            .kerning(5)
+                        // joint arena icons
+                        ForEach(jointArenas, id: \.id) { ja in
+                            Text(ja.icon)
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color(hex: ja.color))
+                        }
+                        Button { showJointPicker = true } label: {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.white.opacity(0.28))
+                        }
+                        .buttonStyle(.plain)
+                    }
                     if !note.isEmpty {
                         Text(note)
                             .font(.system(size: 11))
@@ -61,7 +80,7 @@ struct ActiveSessionView: View {
                 }
 
                 // Timer ring
-                CircularTimerView(timeLeft: timeLeft, totalTime: totalTime, color: arenaColor, size: 220)
+                CircularTimerView(timeLeft: timeLeft, totalTime: totalTime, colors: ringColors, size: 220)
 
                 // Focus hint
                 if !focusHint.isEmpty {
@@ -140,6 +159,19 @@ struct ActiveSessionView: View {
                     .padding(20)
             }
             .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showJointPicker) {
+            JointArenaPicker(
+                current: [arena] + jointArenas,
+                allArenas: store.letteredArenas
+            ) { picked in
+                if !jointArenas.contains(where: { $0.id == picked.id }) {
+                    jointArenas.append(picked)
+                }
+                showJointPicker = false
+            }
+            .presentationDetents([.medium])
+            .presentationBackground(Color(hex: "#080810"))
         }
         .onAppear { setup() }
         .onReceive(timer) { _ in tick() }
@@ -225,6 +257,11 @@ struct ActiveSessionView: View {
         if remaining <= 0 {
             timeLeft = 0
             endLiveActivity()
+            for ja in jointArenas {
+                store.addSession(Session(arenaId: ja.id, duration: duration,
+                                         date: todayString(), note: note,
+                                         ts: Date().timeIntervalSince1970 * 1000))
+            }
             store.endSession()
             navigate(.complete(arena, duration, note))
         } else {
@@ -283,6 +320,11 @@ struct ActiveSessionView: View {
     private func finishEarly() {
         cancelNotification(id: "session_1")
         endLiveActivity()
+        for ja in jointArenas {
+            store.addSession(Session(arenaId: ja.id, duration: duration,
+                                     date: todayString(), note: note,
+                                     ts: Date().timeIntervalSince1970 * 1000))
+        }
         store.endSession()
         navigate(.complete(arena, duration, note))
     }
@@ -366,5 +408,76 @@ struct CompleteView: View {
             }
         }
         .onAppear { cancelNotification(id: "session_1") }
+    }
+}
+
+// MARK: - Joint Arena Picker
+
+private struct JointArenaPicker: View {
+    let current: [Arena]
+    let allArenas: [Arena]
+    let onPick: (Arena) -> Void
+
+    var available: [Arena] {
+        allArenas.filter { a in !current.contains(where: { $0.id == a.id }) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("JOIN ARENA")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(Color.white.opacity(0.25))
+                .kerning(7)
+                .padding(.top, 28)
+                .padding(.horizontal, 22)
+                .padding(.bottom, 4)
+            Text("Stack another arena to this session.")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.white.opacity(0.45))
+                .padding(.horizontal, 22)
+                .padding(.bottom, 24)
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 10) {
+                    ForEach(available) { arena in
+                        Button { onPick(arena) } label: {
+                            HStack(spacing: 14) {
+                                Text(arena.icon)
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color(hex: arena.color))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(arena.label)
+                                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color(hex: arena.color))
+                                        .kerning(2)
+                                    if !arena.subtitle.isEmpty {
+                                        Text(arena.subtitle)
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(Color.white.opacity(0.35))
+                                    }
+                                }
+                                Spacer()
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundStyle(Color(hex: arena.color).opacity(0.6))
+                            }
+                            .padding(16)
+                            .background(Color(hex: arena.color).opacity(0.07))
+                            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: arena.color).opacity(0.25), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if available.isEmpty {
+                        Text("All arenas are already in this session.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.white.opacity(0.3))
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 20)
+                    }
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 32)
+            }
+        }
     }
 }

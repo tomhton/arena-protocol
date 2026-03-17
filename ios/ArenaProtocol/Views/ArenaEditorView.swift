@@ -7,6 +7,18 @@ struct ArenaListEditorView: View {
     @Environment(DataStore.self) private var store
     var navigate: (Screen) -> Void
 
+    @State private var dragTarget: String? = nil
+
+    private func moveArena(from dragId: String, to dropId: String) {
+        guard dragId != dropId,
+              let fromIdx = store.arenas.firstIndex(where: { $0.id == dragId }),
+              let toIdx   = store.arenas.firstIndex(where: { $0.id == dropId })
+        else { return }
+        store.arenas.move(fromOffsets: IndexSet(integer: fromIdx),
+                          toOffset: toIdx > fromIdx ? toIdx + 1 : toIdx)
+        store.saveArenas()
+    }
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
@@ -43,6 +55,15 @@ struct ArenaListEditorView: View {
                             onTap: { navigate(.editArena(arena)) },
                             sessions: store.sessions
                         )
+                        .draggable(arena.id)
+                        .dropDestination(for: String.self) { items, _ in
+                            guard let id = items.first else { return false }
+                            withAnimation { moveArena(from: id, to: arena.id) }
+                            return true
+                        } isTargeted: { over in
+                            dragTarget = over ? arena.id : nil
+                        }
+                        .opacity(dragTarget == arena.id ? 0.6 : 1.0)
                     }
                     AddArenaCardView { navigate(.newArena) }
                 }
@@ -64,6 +85,7 @@ struct ArenaEditorView: View {
     @State private var color       = "#E8C547"
     @State private var description = ""
     @State private var examples    = ""
+    @State private var pickerColor: Color = Color(hex: "#E8C547")
 
     private var isNew: Bool { arena == nil }
     private var selectedColor: Color { Color(hex: color) }
@@ -154,17 +176,39 @@ struct ArenaEditorView: View {
 
                 // Color
                 fieldSection("COLOR") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-                        ForEach(ARENA_COLORS, id: \.self) { c in
-                            Button { color = c } label: {
-                                Circle()
-                                    .fill(Color(hex: c))
-                                    .frame(width: 32, height: 32)
-                                    .overlay(Circle().strokeBorder(color == c ? Color.white : Color.clear, lineWidth: 3))
-                                    .shadow(color: color == c ? Color(hex: c) : .clear, radius: 8)
+                    VStack(spacing: 12) {
+                        // Native color wheel
+                        HStack {
+                            Text("CUSTOM")
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.3))
+                                .kerning(4)
+                            Spacer()
+                            ColorPicker("", selection: $pickerColor, supportsOpacity: false)
+                                .labelsHidden()
+                                .frame(width: 36, height: 36)
+                                .onChange(of: pickerColor) { _, c in
+                                    color = c.toHex()
+                                }
+                        }
+                        .padding(.horizontal, 4)
+
+                        // Preset swatches
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
+                            ForEach(ARENA_COLORS, id: \.self) { c in
+                                Button {
+                                    color = c
+                                    pickerColor = Color(hex: c)
+                                } label: {
+                                    Circle()
+                                        .fill(Color(hex: c))
+                                        .frame(width: 32, height: 32)
+                                        .overlay(Circle().strokeBorder(color == c ? Color.white : Color.clear, lineWidth: 3))
+                                        .shadow(color: color == c ? Color(hex: c) : .clear, radius: 8)
+                                }
+                                .buttonStyle(.plain)
+                                .animation(.easeInOut(duration: 0.15), value: color)
                             }
-                            .buttonStyle(.plain)
-                            .animation(.easeInOut(duration: 0.15), value: color)
                         }
                     }
                 }
@@ -274,6 +318,7 @@ struct ArenaEditorView: View {
         subtitle    = a.subtitle
         icon        = a.icon
         color       = a.color
+        pickerColor = Color(hex: a.color)
         description = a.description
         examples    = a.examples.joined(separator: "\n")
     }

@@ -6,13 +6,15 @@ import SwiftUI
 struct CircularTimerView: View {
     let timeLeft: Int
     let totalTime: Int
-    let color: Color
+    let colors: [Color]
     let size: CGFloat
 
     private var progress: Double {
         guard totalTime > 0 else { return 0 }
         return 1.0 - Double(timeLeft) / Double(totalTime)
     }
+
+    private var primaryColor: Color { colors.first ?? .white }
 
     var body: some View {
         ZStack {
@@ -21,21 +23,38 @@ struct CircularTimerView: View {
                 .stroke(Color.white.opacity(0.05), lineWidth: 6)
 
             // Progress arc
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    color,
-                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
-                )
-                .shadow(color: color.opacity(0.6), radius: 8)
-                .rotationEffect(.degrees(-90))
-                .animation(.linear(duration: 1), value: progress)
+            if colors.count > 1 {
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        AngularGradient(
+                            colors: colors + [colors[0]],
+                            center: .center,
+                            startAngle: .degrees(-90),
+                            endAngle: .degrees(270)
+                        ),
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                    )
+                    .shadow(color: primaryColor.opacity(0.6), radius: 8)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.linear(duration: 1), value: progress)
+            } else {
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        primaryColor,
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                    )
+                    .shadow(color: primaryColor.opacity(0.6), radius: 8)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.linear(duration: 1), value: progress)
+            }
 
             // Time label
             VStack(spacing: 4) {
                 Text(formatTime(timeLeft))
                     .font(.system(size: size * 0.21, weight: .bold, design: .monospaced))
-                    .foregroundStyle(color)
+                    .foregroundStyle(primaryColor)
                     .monospacedDigit()
 
                 Text("REMAINING")
@@ -49,6 +68,6 @@ struct CircularTimerView: View {
 }
 
 #Preview {
-    CircularTimerView(timeLeft: 1234, totalTime: 1500, color: .red, size: 220)
+    CircularTimerView(timeLeft: 1234, totalTime: 1500, colors: [.red], size: 220)
         .preferredColorScheme(.dark)
 }

@@ -92,6 +92,7 @@ struct ActiveSessionState {
     var endTime: Date
     var isPaused: Bool = false
     var pausedRemaining: TimeInterval = 0
+    var jointArenas: [Arena] = []
 }
 
 struct MorningCheckin: Codable {

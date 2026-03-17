@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-17 (v2.1.1).
+> Paste this at the start of every Claude session. Last updated: 2026-03-17 (v2.2.0).
 
 ---
 
@@ -45,6 +45,7 @@
 | 2.0.5 | 2026-03-17 | Forge system foundation. Dynamic Island circle clock. Lock screen redesign. Home screen widgets rebuilt. Stash & stack sessions. Keyboard fix. |
 | 2.1.0 | 2026-03-17 | Full SwiftUI navigation reform. `NavigationStack` replaces ZStack+switch. Native iOS transitions. All scroll issues resolved. |
 | 2.1.1 | 2026-03-17 | Swipe-back restored via UINavigationController extension. Dynamic Island compact ring now shows live countdown number. |
+| 2.2.0 | 2026-03-17 | Joint arenas (+ button, gradient ring, multi-session log). Drag-to-reorder arena grid. Color wheel in arena editor. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
