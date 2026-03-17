@@ -13,6 +13,7 @@ struct SelectView: View {
     @State private var isCustomActive = false
     @State private var customMinutes = ""
     @State private var activeSubArena: String? = nil
+    @FocusState private var customFocused: Bool
 
     private var arenaColor: Color { Color(hex: arena.color) }
     private var effectiveDuration: Int {
@@ -32,6 +33,7 @@ struct SelectView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
+            // swipe-up on the scroll view dismisses keyboard
             VStack(alignment: .leading, spacing: 0) {
                 backButton
                 arenaHeader
@@ -43,6 +45,7 @@ struct SelectView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     // MARK: - Back
@@ -237,7 +240,7 @@ struct SelectView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                Button { isCustomActive = true } label: {
+                Button { isCustomActive = true; customFocused = true } label: {
                     Text("other")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(isCustomActive ? arenaColor : Color.white.opacity(0.4))
@@ -259,6 +262,7 @@ struct SelectView: View {
                 HStack(spacing: 10) {
                     TextField("min", text: $customMinutes)
                         .keyboardType(.numberPad)
+                        .focused($customFocused)
                         .font(.system(size: 16, design: .monospaced))
                         .foregroundStyle(arenaColor)
                         .padding(12)
@@ -266,6 +270,14 @@ struct SelectView: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(arenaColor, lineWidth: 1))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .frame(maxWidth: 120)
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("DONE") { customFocused = false }
+                                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(arenaColor)
+                            }
+                        }
                     Text("MINUTES")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.35))
