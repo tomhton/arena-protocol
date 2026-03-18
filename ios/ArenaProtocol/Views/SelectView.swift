@@ -2,6 +2,7 @@
 // Session configuration: quest note, sub-arena, duration, launch
 
 import SwiftUI
+import EventKit
 
 struct SelectView: View {
     @Environment(DataStore.self) private var store
@@ -13,6 +14,7 @@ struct SelectView: View {
     @State private var isCustomActive = false
     @State private var customMinutes = ""
     @State private var activeSubArena: String? = nil
+    @State private var calEvents: [EKEvent] = []
     @FocusState private var customFocused: Bool
 
     private var arenaColor: Color { Color(hex: arena.color) }
@@ -39,6 +41,7 @@ struct SelectView: View {
                 arenaHeader
                 questField
                 if !subArenaKeys.isEmpty { subArenaSection }
+                if !calEvents.isEmpty { calFeedSection }
                 durationSection
                 launchSection
             }
@@ -46,6 +49,7 @@ struct SelectView: View {
             .padding(.bottom, 32)
         }
         .scrollDismissesKeyboard(.interactively)
+        .onAppear { calEvents = CalendarManager.shared.upcomingEvents(hours: 8) }
     }
 
     // MARK: - Back
@@ -208,6 +212,92 @@ struct SelectView: View {
         .padding(.bottom, 20)
     }
 
+    // MARK: - Calendar Feed
+
+    private var calFeedSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Text("📅")
+                    .font(.system(size: 10))
+                Text("FROM YOUR CALENDAR")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.22))
+                    .kerning(5)
+            }
+            .padding(.bottom, 10)
+
+            VStack(spacing: 6) {
+                ForEach(calEvents.prefix(4), id: \.eventIdentifier) { event in
+                    let dur  = event.startDate.minutesUntil(event.endDate)
+                    let when = event.startDate.relativeShort()
+                    let matched = CalendarManager.shared.matchArena(for: event, arenas: store.arenas)
+                    let isThisArena = matched?.id == arena.id
+                    let accent: Color = matched.map { Color(hex: $0.color) } ?? arenaColor.opacity(0.5)
+
+                    Button {
+                        // Pre-fill note with event title; set duration to match event length
+                        note = event.title ?? ""
+                        let snapped = [5, 10, 15, 25, 30, 45, 60, 90].min(by: { abs($0 - dur) < abs($1 - dur) }) ?? dur
+                        if DURATIONS.contains(snapped) {
+                            selectedDuration = snapped
+                            isCustomActive = false
+                        } else {
+                            isCustomActive = true
+                            customMinutes = "\(dur)"
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            // Color strip
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(accent)
+                                .frame(width: 3, height: 36)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(event.title ?? "Untitled")
+                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(isThisArena ? accent : Color.white.opacity(0.7))
+                                    .lineLimit(1)
+                                HStack(spacing: 6) {
+                                    Text(when)
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.3))
+                                    Text("·")
+                                        .foregroundStyle(Color.white.opacity(0.2))
+                                    Text("\(dur)m")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.3))
+                                    if let m = matched {
+                                        Text("·")
+                                            .foregroundStyle(Color.white.opacity(0.2))
+                                        Text(m.label)
+                                            .font(.system(size: 8, design: .monospaced))
+                                            .foregroundStyle(accent.opacity(0.7))
+                                            .kerning(1)
+                                    }
+                                }
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "arrow.up.left")
+                                .font(.system(size: 10))
+                                .foregroundStyle(accent.opacity(0.5))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(isThisArena ? accent.opacity(0.07) : Color.white.opacity(0.02))
+                        .overlay(RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(isThisArena ? accent.opacity(0.3) : Color.white.opacity(0.06), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .animation(.easeInOut(duration: 0.15), value: note)
+                }
+            }
+        }
+        .padding(.bottom, 20)
+    }
+
     // MARK: - Duration
 
     private var durationSection: some View {
@@ -292,46 +382,22 @@ struct SelectView: View {
     // MARK: - Launch
 
     private var launchSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("ADD TO GOOGLE CALENDAR?")
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(Color.white.opacity(0.22))
-                .kerning(5)
-                .padding(.bottom, 4)
-
-            HStack(spacing: 10) {
-                Button { if durationValid { startSession(gcal: true) } } label: {
-                    Text("YES")
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(durationValid ? arenaColor : Color.white.opacity(0.2))
+        VStack(spacing: 8) {
+            Button { if durationValid { startSession() } } label: {
+                HStack(spacing: 10) {
+                    Text(arena.icon).font(.system(size: 16))
+                    Text("ENTER THE ARENA")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .kerning(4)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(durationValid ? arenaColor : Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
-                .disabled(!durationValid)
-
-                Button { if durationValid { startSession(gcal: false) } } label: {
-                    Text("NO")
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(durationValid ? Color.white.opacity(0.55) : Color.white.opacity(0.2))
-                        .kerning(4)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(durationValid ? Color.white.opacity(0.2) : Color.white.opacity(0.07), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-                .disabled(!durationValid)
+                .foregroundStyle(durationValid ? Color(hex: "#080810") : Color.white.opacity(0.2))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(durationValid ? arenaColor : Color.white.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
+            .buttonStyle(.plain)
+            .disabled(!durationValid)
 
             if !durationValid {
                 Text("ENTER A DURATION FIRST")
@@ -339,34 +405,26 @@ struct SelectView: View {
                     .foregroundStyle(Color.white.opacity(0.25))
                     .kerning(2)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 6)
+            }
+
+            if CalendarManager.shared.isWriteAuthorized {
+                Text("📅 session will be logged to Arena Protocol calendar")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.18))
+                    .kerning(1)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
     }
 
     // MARK: - Actions
 
-    private func startSession(gcal: Bool) {
+    private func startSession() {
         let dur = effectiveDuration
         guard dur > 0 else { return }
         scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
                              body: "Your focus block has ended.",
                              secondsFromNow: TimeInterval(dur * 60))
-        if gcal {
-            let now = Date()
-            let end = now.addingTimeInterval(TimeInterval(dur * 60))
-            let fmt: (Date) -> String = { d in
-                let f = DateFormatter(); f.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
-                f.timeZone = TimeZone(identifier: "UTC")
-                return f.string(from: d)
-            }
-            let title = "[\(arena.label)] Focus Block".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            let dates = "\(fmt(now))/\(fmt(end))"
-            let details = arena.description.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            if let url = URL(string: "https://calendar.google.com/calendar/render?action=TEMPLATE&text=\(title)&dates=\(dates)&details=\(details)") {
-                UIApplication.shared.open(url)
-            }
-        }
         navigate(.active(arena, dur, note))
     }
 }

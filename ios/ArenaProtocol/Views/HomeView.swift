@@ -2,6 +2,7 @@
 // Main dashboard with arena grid, shortcuts, and navigation
 
 import SwiftUI
+import EventKit
 
 struct HomeView: View {
     @Environment(DataStore.self) private var store
@@ -10,6 +11,7 @@ struct HomeView: View {
 
     @State private var editMode = false
     @State private var showAbandonConfirm = false
+    @State private var nextBlock: EKEvent? = nil
 
     private var arenas: [Arena] { store.letteredArenas }
     private var sessions: [Session] { store.sessions }
@@ -22,6 +24,7 @@ struct HomeView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     headerSection
+                    if let event = nextBlock { nextBlockBanner(event: event) }
                     editToggle
                     arenaGrid
                     AppShortcutsBar()
@@ -88,6 +91,63 @@ struct HomeView: View {
             Button("Abandon", role: .destructive) { store.endSession() }
             Button("Cancel", role: .cancel) { }
         }
+        .onAppear { refreshNextBlock() }
+    }
+
+    private func refreshNextBlock() {
+        guard CalendarManager.shared.isReadAuthorized else { nextBlock = nil; return }
+        // Show only events starting within the next 90 minutes or already in progress
+        let upcoming = CalendarManager.shared.upcomingEvents(hours: 2)
+        nextBlock = upcoming.first(where: { event in
+            let minsUntil = Int(event.startDate.timeIntervalSinceNow / 60)
+            return minsUntil <= 90
+        })
+    }
+
+    @ViewBuilder
+    private func nextBlockBanner(event: EKEvent) -> some View {
+        let dur = event.startDate.minutesUntil(event.endDate)
+        let when = event.startDate.relativeShort()
+        let matched = CalendarManager.shared.matchArena(for: event, arenas: store.arenas)
+        let accent: Color = matched.map { Color(hex: $0.color) } ?? Color(hex: "#60A5FA")
+
+        Button {
+            if let arena = matched {
+                navigate(.select(arena))
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Text("📅")
+                    .font(.system(size: 14))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text((event.title ?? "Upcoming Block").uppercased())
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(accent)
+                        .kerning(2)
+                        .lineLimit(1)
+                    Text("\(when)  ·  \(dur)m\(matched != nil ? "  ·  \(matched!.label)" : "")")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.35))
+                        .kerning(1)
+                }
+                Spacer()
+                if matched != nil {
+                    Text("START →")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(accent.opacity(0.7))
+                        .kerning(3)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(accent.opacity(0.07))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(accent.opacity(0.2), lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 10)
+        .disabled(matched == nil)
     }
 
     // MARK: - Timer Pill

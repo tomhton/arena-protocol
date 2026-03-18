@@ -110,14 +110,41 @@ struct SettingsView: View {
                             .foregroundStyle(Color.white.opacity(0.3))
                             .lineSpacing(3)
 
-                        let authorized = calStatus == .writeOnly || calStatus == .fullAccess
-                        if authorized {
+                        if calStatus == .fullAccess {
                             HStack(spacing: 10) {
                                 Circle().fill(Color(hex: "#34D399")).frame(width: 8, height: 8)
-                                Text("ACCESS GRANTED — sessions logged automatically")
+                                Text("FULL ACCESS — write + calendar feed active")
                                     .font(.system(size: 10, design: .monospaced))
                                     .foregroundStyle(Color(hex: "#34D399").opacity(0.8))
                                     .kerning(1)
+                            }
+                        } else if calStatus == .writeOnly {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 10) {
+                                    Circle().fill(Color(hex: "#E8C547")).frame(width: 8, height: 8)
+                                    Text("WRITE ONLY — sessions logged, feed disabled")
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundStyle(Color(hex: "#E8C547").opacity(0.8))
+                                        .kerning(1)
+                                }
+                                Button {
+                                    Task {
+                                        _ = await CalendarManager.shared.requestFullAccess()
+                                        calStatus = EKEventStore.authorizationStatus(for: .event)
+                                        store.settings.calendarEnabled = true
+                                        store.saveSettings()
+                                    }
+                                } label: {
+                                    Text("UPGRADE TO FULL ACCESS (ENABLES FEED)")
+                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color(hex: "#080810"))
+                                        .kerning(2)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(Color(hex: "#60A5FA"))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                                .buttonStyle(.plain)
                             }
                         } else if calStatus == .denied || calStatus == .restricted {
                             HStack(spacing: 10) {
@@ -130,7 +157,7 @@ struct SettingsView: View {
                         } else {
                             Button {
                                 Task {
-                                    let granted = await CalendarManager.shared.requestAccess()
+                                    let granted = await CalendarManager.shared.requestFullAccess()
                                     calStatus = EKEventStore.authorizationStatus(for: .event)
                                     if granted {
                                         store.settings.calendarEnabled = true
