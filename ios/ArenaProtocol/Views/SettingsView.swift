@@ -1,12 +1,15 @@
 // SettingsView.swift — Arena Protocol
-// Wind-down time, habit management, arena management
+// Wind-down time, habit management, arena management, calendar, clock timezone
 
 import SwiftUI
 import UserNotifications
+import EventKit
 
 struct SettingsView: View {
     @Environment(DataStore.self) private var store
     var navigate: (Screen) -> Void
+
+    @State private var calStatus: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
 
     @State private var windDownTime: Date = {
         let parts = (UserDefaults.standard.string(forKey: "arena_settings")
@@ -69,6 +72,87 @@ struct SettingsView: View {
                     .padding(16)
                     .background(Color.white.opacity(0.02))
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.white.opacity(0.07), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                    // Clock Timezone
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("CLOCK TIMEZONE")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.22))
+                            .kerning(5)
+                        Text("End time shown on every active timer")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.white.opacity(0.3))
+                        Picker("", selection: Binding(
+                            get: { store.settings.clockTimezone },
+                            set: { store.settings.clockTimezone = $0; store.saveSettings() }
+                        )) {
+                            ForEach(CLOCK_TIMEZONES) { tz in
+                                Text(tz.label).tag(tz.id)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .colorScheme(.dark)
+                    }
+                    .padding(16)
+                    .background(Color.white.opacity(0.02))
+                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.white.opacity(0.07), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                    // Calendar
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("CALENDAR")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.22))
+                            .kerning(5)
+                        Text("Write focus blocks to an \"Arena Protocol\" calendar in your Calendar app (syncs to Google Calendar if connected)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.white.opacity(0.3))
+                            .lineSpacing(3)
+
+                        let authorized = calStatus == .writeOnly || calStatus == .fullAccess
+                        if authorized {
+                            HStack(spacing: 10) {
+                                Circle().fill(Color(hex: "#34D399")).frame(width: 8, height: 8)
+                                Text("ACCESS GRANTED — sessions logged automatically")
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(Color(hex: "#34D399").opacity(0.8))
+                                    .kerning(1)
+                            }
+                        } else if calStatus == .denied || calStatus == .restricted {
+                            HStack(spacing: 10) {
+                                Circle().fill(Color.red.opacity(0.7)).frame(width: 8, height: 8)
+                                Text("PERMISSION DENIED — enable in iOS Settings → Privacy → Calendars")
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(Color.red.opacity(0.6))
+                                    .kerning(1)
+                            }
+                        } else {
+                            Button {
+                                Task {
+                                    let granted = await CalendarManager.shared.requestAccess()
+                                    calStatus = EKEventStore.authorizationStatus(for: .event)
+                                    if granted {
+                                        store.settings.calendarEnabled = true
+                                        store.saveSettings()
+                                    }
+                                }
+                            } label: {
+                                Text("GRANT CALENDAR ACCESS")
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color(hex: "#080810"))
+                                    .kerning(3)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color(hex: "#60A5FA"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(16)
+                    .background(Color.white.opacity(0.02))
+                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#60A5FA").opacity(0.2), lineWidth: 1))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
                     // Manage Habits

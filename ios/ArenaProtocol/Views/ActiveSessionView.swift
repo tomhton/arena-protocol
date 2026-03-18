@@ -124,6 +124,12 @@ struct ActiveSessionView: View {
                 // Timer ring
                 CircularTimerView(timeLeft: timeLeft, totalTime: totalTime, colors: ringColors, size: 220)
 
+                // End time
+                Text("ends \(endTime.formatted(timezone: store.settings.clockTimezone))")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(arenaColor.opacity(0.5))
+                    .kerning(2)
+
                 // Focus hint
                 if !focusHint.isEmpty {
                     VStack(spacing: 8) {
@@ -293,20 +299,11 @@ struct ActiveSessionView: View {
     }
 
     private func addToGCal(arena: Arena, start: Date, end: Date) {
-        let fmt: (Date) -> String = { d in
-            let f = DateFormatter()
-            f.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
-            f.timeZone = TimeZone(identifier: "UTC")
-            return f.string(from: d)
-        }
-        let title = "[\(arena.label)] Focus Block"
-            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let dates = "\(fmt(start))/\(fmt(end))"
-        let details = arena.description
-            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let url = URL(string: "https://calendar.google.com/calendar/render?action=TEMPLATE&text=\(title)&dates=\(dates)&details=\(details)") {
-            UIApplication.shared.open(url)
-        }
+        CalendarManager.shared.addEvent(
+            title: "[\(arena.label)] Focus Block",
+            start: start, end: end,
+            notes: arena.description
+        )
     }
 
     private func setup() {
@@ -331,10 +328,17 @@ struct ActiveSessionView: View {
         } else {
             // Fresh start
             store.startSession(arena: arena, durationMins: duration, note: note)
-            endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
+            let start = Date()
+            endTime = start.addingTimeInterval(TimeInterval(timeLeft))
             UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
             SharedStore.writeActiveSession(arenaName: arena.label, arenaColor: arena.color, endsAt: endTime)
             WidgetCenter.shared.reloadAllTimelines()
+            // Log primary arena block to "Arena Protocol" calendar
+            CalendarManager.shared.addEvent(
+                title: "[\(arena.label)] Focus Block",
+                start: start, end: endTime,
+                notes: note.isEmpty ? arena.description : note
+            )
 
             #if canImport(ActivityKit)
             if ActivityAuthorizationInfo().areActivitiesEnabled {

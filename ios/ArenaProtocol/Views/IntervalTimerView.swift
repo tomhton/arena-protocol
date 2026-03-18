@@ -4,6 +4,7 @@
 import SwiftUI
 
 struct IntervalTimerView: View {
+    @Environment(DataStore.self) private var store
     let label: String
     let minutes: Int
     var navigate: (Screen) -> Void
@@ -67,6 +68,10 @@ struct IntervalTimerView: View {
                             .font(.system(size: 9, design: .monospaced))
                             .foregroundStyle(Color.white.opacity(0.22))
                             .kerning(3)
+                        Text("ends \(endTime.formatted(timezone: store.settings.clockTimezone))")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(accentColor.opacity(0.45))
+                            .kerning(2)
                     }
                 }
                 .frame(width: 200, height: 200)

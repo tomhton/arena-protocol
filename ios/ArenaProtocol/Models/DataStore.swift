@@ -82,6 +82,8 @@ struct IdeaNote: Identifiable, Codable {
 
 struct AppSettings: Codable {
     var windDownTime: String = "21:30"
+    var clockTimezone: String = "America/Los_Angeles"
+    var calendarEnabled: Bool = false
 }
 
 struct JointArenaEntry: Identifiable {

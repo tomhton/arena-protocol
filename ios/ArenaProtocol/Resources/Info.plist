@@ -59,6 +59,12 @@
     <key>NSUserNotificationUsageDescription</key>
     <string>Arena Protocol sends reminders for wind-down time and completed focus sessions.</string>
 
+    <!-- Calendar permission -->
+    <key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+    <string>Arena Protocol logs your focus blocks to a dedicated "Arena Protocol" calendar so you can review your sessions alongside the rest of your schedule.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Arena Protocol logs your focus blocks to a dedicated "Arena Protocol" calendar so you can review your sessions alongside the rest of your schedule.</string>
+
     <!-- URL Schemes for deep linking into Spotify, YouTube, etc. -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
