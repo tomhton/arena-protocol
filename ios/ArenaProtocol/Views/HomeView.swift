@@ -12,7 +12,6 @@ struct HomeView: View {
     @State private var editMode = false
     @State private var showAbandonConfirm = false
     @State private var nextBlock: EKEvent? = nil
-    @State private var dragTarget: String? = nil
 
     private var arenas: [Arena] { store.letteredArenas }
     private var sessions: [Session] { store.sessions }
@@ -101,16 +100,6 @@ struct HomeView: View {
                 #endif
             }
         }
-    }
-
-    private func moveArena(from dragId: String, to dropId: String) {
-        guard dragId != dropId,
-              let fromIdx = store.arenas.firstIndex(where: { $0.id == dragId }),
-              let toIdx   = store.arenas.firstIndex(where: { $0.id == dropId })
-        else { return }
-        store.arenas.move(fromOffsets: IndexSet(integer: fromIdx),
-                          toOffset: toIdx > fromIdx ? toIdx + 1 : toIdx)
-        store.saveArenas()
     }
 
     private func refreshNextBlock() {
@@ -365,6 +354,70 @@ struct HomeView: View {
     // MARK: - Arena Grid
 
     private var arenaGrid: some View {
+        Group {
+            if editMode {
+                editReorderList
+            } else {
+                twoColumnGrid
+            }
+        }
+        .animation(.spring(response: 0.4), value: editMode)
+    }
+
+    private var editReorderList: some View {
+        VStack(spacing: 0) {
+            List {
+                ForEach(arenas) { arena in
+                    HStack(spacing: 12) {
+                        Text(arena.icon)
+                            .font(.system(size: 20))
+                        Circle()
+                            .fill(Color(hex: arena.color))
+                            .frame(width: 7, height: 7)
+                        Text(arena.label)
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.85))
+                            .kerning(1)
+                        Spacer()
+                        Button { navigate(.editArena(arena)) } label: {
+                            Text("EDIT")
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(Color(hex: arena.color).opacity(0.7))
+                                .kerning(2)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 6)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.03))
+                            .overlay(RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color(hex: arena.color).opacity(0.18), lineWidth: 1))
+                            .padding(.vertical, 2)
+                    )
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 3, leading: 12, bottom: 3, trailing: 12))
+                }
+                .onMove { from, to in
+                    store.arenas.move(fromOffsets: from, toOffset: to)
+                    store.saveArenas()
+                }
+            }
+            .listStyle(.plain)
+            .scrollDisabled(true)
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+            .environment(\.editMode, .constant(.active))
+            .frame(height: CGFloat(arenas.count) * 68)
+
+            AddArenaCardView { navigate(.newArena) }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+        }
+    }
+
+    private var twoColumnGrid: some View {
         let left  = Array(arenas.prefix(Int(ceil(Double(arenas.count) / 2))))
         let right = Array(arenas.suffix(arenas.count - left.count))
 
@@ -375,26 +428,15 @@ struct HomeView: View {
                         arena: arena,
                         sessCount: sessions.filter { $0.arenaId == arena.id && $0.date == todayString() }.count,
                         streak: store.streak(for: arena.id),
-                        editMode: editMode,
-                        onTap: { editMode ? navigate(.editArena(arena)) : navigate(.select(arena)) },
+                        editMode: false,
+                        onTap: { navigate(.select(arena)) },
                         sessions: sessions
                     )
-                    .opacity(dragTarget == arena.id ? 0.5 : 1.0)
-                    .scaleEffect(editMode ? 0.97 : 1.0)
-                    .draggable(arena.id)
-                    .dropDestination(for: String.self) { items, _ in
-                        guard let id = items.first else { return false }
-                        withAnimation { moveArena(from: id, to: arena.id) }
-                        return true
-                    } isTargeted: { over in dragTarget = over ? arena.id : nil }
                     .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
                         withAnimation(.spring(response: 0.3)) { editMode = true }
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     })
                     .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 18)), removal: .opacity))
-                }
-                if editMode {
-                    AddArenaCardView { navigate(.newArena) }
                 }
             }
             VStack(spacing: 10) {
@@ -403,18 +445,10 @@ struct HomeView: View {
                         arena: arena,
                         sessCount: sessions.filter { $0.arenaId == arena.id && $0.date == todayString() }.count,
                         streak: store.streak(for: arena.id),
-                        editMode: editMode,
-                        onTap: { editMode ? navigate(.editArena(arena)) : navigate(.select(arena)) },
+                        editMode: false,
+                        onTap: { navigate(.select(arena)) },
                         sessions: sessions
                     )
-                    .opacity(dragTarget == arena.id ? 0.5 : 1.0)
-                    .scaleEffect(editMode ? 0.97 : 1.0)
-                    .draggable(arena.id)
-                    .dropDestination(for: String.self) { items, _ in
-                        guard let id = items.first else { return false }
-                        withAnimation { moveArena(from: id, to: arena.id) }
-                        return true
-                    } isTargeted: { over in dragTarget = over ? arena.id : nil }
                     .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
                         withAnimation(.spring(response: 0.3)) { editMode = true }
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -425,7 +459,6 @@ struct HomeView: View {
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
-        .animation(.spring(response: 0.4), value: editMode)
     }
 
     // MARK: - Intervals Section
