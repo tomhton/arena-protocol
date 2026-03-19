@@ -5,6 +5,21 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.9.0 — 2026-03-19
+
+**Protocol Live Activity. In-app changelog synced. README rewritten.**
+
+### Features
+- **Protocol Live Activity** — running a protocol now starts a Live Activity on the lock screen and Dynamic Island for each block. Block advances end the old activity and start a new one with the new block's color and label. Pause/resume syncs. Activity ends cleanly on complete, finish early, or abandon.
+- **In-app changelog synced** — `WhatsNewView` updated with v2.7.0–v2.9.0 entries.
+
+### Internal
+- `ProtocolsView.swift` — `startActivityForBlock()` / `endActivity()` / pause update in `togglePause()` / end on abandon; uses `Activity<...>.activities` static collection (avoids Swift 6 sendability issues with stored references)
+- `WhatsNewView.swift` — added v2.7.0, v2.8.0, v2.9.0 entries
+- `README.md` — full rewrite with current stack, features, project structure, and device info
+
+---
+
 ## v2.8.1 — 2026-03-18
 
 **Bug fix: deleted arena reappears.**

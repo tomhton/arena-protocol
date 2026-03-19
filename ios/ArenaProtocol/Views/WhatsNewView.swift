@@ -13,6 +13,35 @@ private struct VersionEntry: Identifiable {
 
 private let CHANGELOG: [VersionEntry] = [
     VersionEntry(
+        version: "v2.9.0", date: "Mar 19, 2026",
+        headline: "Protocol Live Activity",
+        bullets: [
+            "Running a protocol now starts a Live Activity on the lock screen and Dynamic Island",
+            "Each block advance updates the activity with the new block's color and label",
+            "Pause/resume syncs to the Live Activity",
+            "Activity ends cleanly on protocol complete, finish early, or abandon",
+        ]
+    ),
+    VersionEntry(
+        version: "v2.8.0", date: "Mar 18, 2026",
+        headline: "Edit mode + drag-to-reorder fixes",
+        bullets: [
+            "Long-press arena → edit mode now works (simultaneousGesture fix)",
+            "Drag-to-reorder replaced with List + native iOS handles in edit mode",
+            "Deleted arenas no longer reappear after navigating back",
+            "Idle Live Activity no longer shows a 24-hour countdown",
+        ]
+    ),
+    VersionEntry(
+        version: "v2.7.0", date: "Mar 18, 2026",
+        headline: "Idle Live Activity + What's New + edit mode",
+        bullets: [
+            "Lock screen shows ENTER THE ARENA / START THE DAY / LOCK IN / CLOSE THE DAY when no session is running",
+            "In-app What's New screen in Settings with release notes",
+            "Long-press any arena card on home screen to enter edit mode",
+        ]
+    ),
+    VersionEntry(
         version: "v2.6.0", date: "Mar 18, 2026",
         headline: "Google Calendar read feed",
         bullets: [

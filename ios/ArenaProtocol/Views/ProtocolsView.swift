@@ -2,6 +2,9 @@
 // Protocol list + editor + active protocol runner
 
 import SwiftUI
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
 struct ProtocolsView: View {
     @Environment(DataStore.self) private var store
@@ -367,7 +370,12 @@ struct ActiveProtocolView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 12)
 
-            Button { onAbandon() } label: {
+            Button {
+                #if canImport(ActivityKit)
+                endActivity()
+                #endif
+                onAbandon()
+            } label: {
                 Text("ABANDON PROTOCOL")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(Color.white.opacity(0.18))
@@ -421,6 +429,9 @@ struct ActiveProtocolView: View {
     private func startBlock() {
         timeLeft = currentBlock.duration * 60
         endTime  = Date().addingTimeInterval(TimeInterval(timeLeft))
+        #if canImport(ActivityKit)
+        startActivityForBlock()
+        #endif
     }
 
     private func tick() {
@@ -440,6 +451,9 @@ struct ActiveProtocolView: View {
             blockIdx = next
             startBlock()
         } else {
+            #if canImport(ActivityKit)
+            endActivity()
+            #endif
             onComplete(completedBlocks + [currentBlock])
         }
     }
@@ -447,11 +461,57 @@ struct ActiveProtocolView: View {
     private func togglePause() {
         isPaused.toggle()
         if !isPaused { endTime = Date().addingTimeInterval(TimeInterval(timeLeft)) }
+        #if canImport(ActivityKit)
+        let newEnd = isPaused ? Date() : endTime
+        let paused = isPaused
+        let left = timeLeft
+        Task {
+            let state = ArenaLiveActivityAttributes.ContentState(
+                endTime: newEnd, isPaused: paused,
+                pausedRemaining: paused ? TimeInterval(left) : 0, isIdle: false)
+            for a in Activity<ArenaLiveActivityAttributes>.activities where a.attributes.arenaId != "idle" {
+                await a.update(.init(state: state, staleDate: nil))
+            }
+        }
+        #endif
     }
 
     private func finishEarly() {
         let elapsed = max(1, currentBlock.duration - timeLeft / 60)
         var partial = currentBlock; partial.duration = elapsed
+        #if canImport(ActivityKit)
+        endActivity()
+        #endif
         onComplete(completedBlocks + [partial])
     }
+
+    #if canImport(ActivityKit)
+    private func startActivityForBlock() {
+        let block = currentBlock
+        let blockEndTime = endTime
+        let state = ArenaLiveActivityAttributes.ContentState(
+            endTime: blockEndTime, isPaused: false, pausedRemaining: 0, isIdle: false)
+        let attrs = ArenaLiveActivityAttributes(
+            arenaId: block.arenaId, arenaLabel: block.label,
+            arenaColor: block.color, arenaIcon: "◈",
+            questNote: `protocol`.name, startTime: Date())
+        Task {
+            for a in Activity<ArenaLiveActivityAttributes>.activities {
+                await a.end(nil, dismissalPolicy: .immediate)
+            }
+            _ = try? Activity.request(
+                attributes: attrs,
+                content: .init(state: state, staleDate: blockEndTime),
+                pushType: nil)
+        }
+    }
+
+    private func endActivity() {
+        Task {
+            for a in Activity<ArenaLiveActivityAttributes>.activities where a.attributes.arenaId != "idle" {
+                await a.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+    }
+    #endif
 }
