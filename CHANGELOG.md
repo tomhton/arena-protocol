@@ -5,6 +5,22 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.8.0 — 2026-03-18
+
+**Bug fixes: idle Live Activity countdown · long-press edit mode · drag-to-reorder.**
+
+### Bug Fixes
+- **Idle Live Activity no countdown** — idle activity `endTime` was set to `Date() + 86400`, causing a 24-hour countdown to appear on the lock screen even during active sessions. Fixed by setting `endTime` to `Date()` (no countdown rendered in idle state). Also removed redundant `endIdleActivity()` call — the session-start Task already ends all stale activities before requesting a new one.
+- **Long-press edit mode** — `.onLongPressGesture` was being swallowed by the `.draggable()` system recognizer. Fixed by switching to `.simultaneousGesture(LongPressGesture(...))` so both fire correctly.
+- **Drag-to-reorder arenas** — `.draggable()` + `.dropDestination()` (system drag-and-drop API) is unreliable for same-view reordering. Replaced with `List` + `.onMove` in edit mode. In edit mode the grid switches to a compact list with native iOS drag handles; the two-column grid returns when edit mode is exited. Each list row shows the arena icon, color dot, name, and an EDIT shortcut button.
+
+### Internal
+- `HomeView.swift` — `arenaGrid` splits into `editReorderList` (List + .onMove) and `twoColumnGrid`; removed `dragTarget` state, `moveArena()` function, and all `.draggable`/`.dropDestination` modifiers
+- `DataStore.swift` — idle `endTime` changed from `Date() + 86400` to `Date()`
+- `ActiveSessionView.swift` — removed redundant `store.endIdleActivity()` call from fresh-start path
+
+---
+
 ## v2.7.0 — 2026-03-18
 
 **Idle Live Activity · In-app changelog · Long-press edit mode.**
