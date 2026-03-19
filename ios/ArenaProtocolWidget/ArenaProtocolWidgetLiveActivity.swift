@@ -54,11 +54,38 @@ private struct LockScreenBannerView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        if context.state.isIdle {
+        if context.state.isMandatory {
+            mandatoryBanner
+        } else if context.state.isIdle {
             idleBanner
         } else {
             sessionBanner
         }
+    }
+
+    private var mandatoryBanner: some View {
+        HStack(spacing: 14) {
+            Text("⚡")
+                .font(.system(size: 26))
+                .foregroundColor(Color(hex: "#FF8FA3"))
+                .shadow(color: Color(hex: "#FF8FA3").opacity(0.8), radius: 8)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("MANDATORY")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(hex: "#FF8FA3"))
+                    .tracking(2)
+                Text("CHOOSE AN ARENA NOW")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+                    .tracking(1.5)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color(red: 0.031, green: 0.031, blue: 0.063))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private var idleBanner: some View {
@@ -164,7 +191,11 @@ private struct CompactLeadingView: View {
     var body: some View {
         let arenaColor = Color(hex: context.attributes.arenaColor)
 
-        if context.state.isIdle {
+        if context.state.isMandatory {
+            Text("⚡")
+                .font(.system(size: 14))
+                .foregroundColor(Color(hex: "#FF8FA3"))
+        } else if context.state.isIdle {
             Text("◈")
                 .font(.system(size: 14))
                 .foregroundColor(Color(hex: "#E8C547"))
@@ -205,7 +236,12 @@ private struct CompactTrailingView: View {
     var body: some View {
         let arenaColor = Color(hex: context.attributes.arenaColor)
 
-        if context.state.isIdle {
+        if context.state.isMandatory {
+            Text("PICK")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundColor(Color(hex: "#FF8FA3"))
+                .fixedSize()
+        } else if context.state.isIdle {
             Text("BEGIN")
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .foregroundColor(Color(hex: "#E8C547").opacity(0.8))
@@ -278,7 +314,11 @@ private struct ExpandedTrailingView: View {
         let arenaColor = Color(hex: context.attributes.arenaColor)
 
         Group {
-            if context.state.isPaused {
+            if context.state.isMandatory {
+                Text("CHOOSE")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(hex: "#FF8FA3"))
+            } else if context.state.isPaused {
                 Text("PAUSED")
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
                     .foregroundColor(arenaColor)

@@ -288,7 +288,7 @@ struct StuckView: View {
 
             Button {
             #if canImport(ActivityKit)
-            endStuckActivity()
+            transitionToMandatory()
             #endif
             withAnimation { phase = .pickArena }
         } label: {
@@ -309,7 +309,7 @@ struct StuckView: View {
             let remaining = Int(endTime.timeIntervalSinceNow)
             if remaining <= 0 {
                 #if canImport(ActivityKit)
-                endStuckActivity()
+                transitionToMandatory()
                 #endif
                 withAnimation { phase = .pickArena }
             } else { timeLeft = remaining }
@@ -392,6 +392,17 @@ struct StuckView: View {
                 attributes: attrs,
                 content: .init(state: state, staleDate: stuckEnd),
                 pushType: nil)
+        }
+    }
+
+    private func transitionToMandatory() {
+        Task {
+            let mandatoryState = ArenaLiveActivityAttributes.ContentState(
+                endTime: Date(), isPaused: false, pausedRemaining: 0,
+                isIdle: false, isMandatory: true)
+            for a in Activity<ArenaLiveActivityAttributes>.activities where a.attributes.arenaId == "stuck" {
+                await a.update(.init(state: mandatoryState, staleDate: nil))
+            }
         }
     }
 

@@ -17,6 +17,7 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
         var endTime: Date
         var isPaused: Bool
         var pausedRemaining: TimeInterval
-        var isIdle: Bool = false   // true = no session, show motivational text
+        var isIdle: Bool = false        // true = no session, show motivational text
+        var isMandatory: Bool = false   // true = post-stuck grace, must pick an arena
     }
 }
