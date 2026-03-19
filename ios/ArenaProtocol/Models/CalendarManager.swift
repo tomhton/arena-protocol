@@ -58,8 +58,8 @@ final class CalendarManager {
     }
 
     func addEvent(title: String, start: Date, end: Date, notes: String = "") {
-        guard isWriteAuthorized, let cal = arenaCalendar() else {
-            print("[CalendarManager] addEvent skipped — authorized:\(isWriteAuthorized)")
+        guard isReadAuthorized, let cal = arenaCalendar() else {
+            print("[CalendarManager] addEvent skipped — fullAccess:\(isReadAuthorized) cal:\(arenaCalendar() != nil)")
             return
         }
         let event = EKEvent(eventStore: store)

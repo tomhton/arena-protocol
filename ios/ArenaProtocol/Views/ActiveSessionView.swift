@@ -304,8 +304,8 @@ struct ActiveSessionView: View {
             : "[\(arena.label)] \(note.trimmingCharacters(in: .whitespaces))"
         let desc = arena.description
         Task { @MainActor in
-            if !CalendarManager.shared.isWriteAuthorized {
-                _ = await CalendarManager.shared.requestWriteAccess()
+            if !CalendarManager.shared.isReadAuthorized {
+                _ = await CalendarManager.shared.requestFullAccess()
             }
             CalendarManager.shared.addEvent(title: title, start: start, end: end, notes: desc)
         }
