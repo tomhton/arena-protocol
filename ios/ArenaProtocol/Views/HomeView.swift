@@ -381,17 +381,16 @@ struct HomeView: View {
                     )
                     .opacity(dragTarget == arena.id ? 0.5 : 1.0)
                     .scaleEffect(editMode ? 0.97 : 1.0)
-                    .onLongPressGesture(minimumDuration: 0.4) {
-                        withAnimation(.spring(response: 0.3)) { editMode = true }
-                        let gen = UIImpactFeedbackGenerator(style: .medium)
-                        gen.impactOccurred()
-                    }
                     .draggable(arena.id)
                     .dropDestination(for: String.self) { items, _ in
                         guard let id = items.first else { return false }
                         withAnimation { moveArena(from: id, to: arena.id) }
                         return true
                     } isTargeted: { over in dragTarget = over ? arena.id : nil }
+                    .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                        withAnimation(.spring(response: 0.3)) { editMode = true }
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    })
                     .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 18)), removal: .opacity))
                 }
                 if editMode {
@@ -410,17 +409,16 @@ struct HomeView: View {
                     )
                     .opacity(dragTarget == arena.id ? 0.5 : 1.0)
                     .scaleEffect(editMode ? 0.97 : 1.0)
-                    .onLongPressGesture(minimumDuration: 0.4) {
-                        withAnimation(.spring(response: 0.3)) { editMode = true }
-                        let gen = UIImpactFeedbackGenerator(style: .medium)
-                        gen.impactOccurred()
-                    }
                     .draggable(arena.id)
                     .dropDestination(for: String.self) { items, _ in
                         guard let id = items.first else { return false }
                         withAnimation { moveArena(from: id, to: arena.id) }
                         return true
                     } isTargeted: { over in dragTarget = over ? arena.id : nil }
+                    .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                        withAnimation(.spring(response: 0.3)) { editMode = true }
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    })
                     .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 18)), removal: .opacity))
                 }
             }
