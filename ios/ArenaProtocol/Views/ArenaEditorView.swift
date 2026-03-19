@@ -461,6 +461,7 @@ struct ArenaEditorView: View {
         guard let a = arena else { return }
         store.arenas.removeAll { $0.id == a.id }
         store.saveArenas()
+        label = "" // prevent onDisappear persist() from re-adding
         dismiss()
     }
 }
