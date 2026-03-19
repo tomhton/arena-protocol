@@ -38,27 +38,41 @@ final class CalendarManager {
         if let existing = store.calendars(for: .event).first(where: { $0.title == "Arena Protocol" }) {
             return existing
         }
-        let source = store.sources.first(where: { $0.sourceType == .calDAV })
-                  ?? store.sources.first(where: { $0.sourceType == .subscribed })
+        // Use the default calendar's source — this follows wherever the user's primary
+        // calendar lives (Google Calendar via CalDAV, iCloud, Exchange, local, etc.)
+        let source = store.defaultCalendarForNewEvents?.source
+                  ?? store.sources.first(where: { $0.sourceType == .calDAV })
                   ?? store.sources.first(where: { $0.sourceType == .local })
         guard let source else { return nil }
         let cal = EKCalendar(for: .event, eventStore: store)
         cal.title = "Arena Protocol"
         cal.source = source
         cal.cgColor = UIColor(Color(hex: "#E8C547")).cgColor
-        try? store.saveCalendar(cal, commit: true)
-        return cal
+        do {
+            try store.saveCalendar(cal, commit: true)
+            return cal
+        } catch {
+            print("[CalendarManager] saveCalendar failed: \(error)")
+            return nil
+        }
     }
 
     func addEvent(title: String, start: Date, end: Date, notes: String = "") {
-        guard isWriteAuthorized, let cal = arenaCalendar() else { return }
+        guard isWriteAuthorized, let cal = arenaCalendar() else {
+            print("[CalendarManager] addEvent skipped — authorized:\(isWriteAuthorized)")
+            return
+        }
         let event = EKEvent(eventStore: store)
         event.title = title
         event.startDate = start
         event.endDate = end
         if !notes.isEmpty { event.notes = notes }
         event.calendar = cal
-        try? store.save(event, span: .thisEvent, commit: true)
+        do {
+            try store.save(event, span: .thisEvent, commit: true)
+        } catch {
+            print("[CalendarManager] save event failed: \(error)")
+        }
     }
 
     // MARK: - Read feed
