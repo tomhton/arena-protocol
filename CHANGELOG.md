@@ -5,6 +5,28 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.9.1 — 2026-03-19
+
+**Bug fixes: Live Activities for protocols + stuck. Calendar writes fixed.**
+
+### Bug Fixes
+- **I AM STUCK → mandatory Live Activity** — when the stuck grace period expires (or user taps "I'M READY NOW"), the lock screen activity transitions in-place to a pink ⚡ "MANDATORY / CHOOSE AN ARENA NOW" banner. No dismiss/restart gap. `isMandatory: Bool` added to `ContentState`; handled across all Dynamic Island slots and lock screen.
+- **I AM STUCK grace period Live Activity** — starting the stuck timer now starts a Live Activity showing a pink countdown; idle activity is replaced.
+- **Protocol Live Activity** — running a protocol now starts a block-accurate Live Activity (color + label per block, pause sync, ends on complete/abandon).
+- **Calendar event titles** — replaced "[\(arena)] Focus Block" with "[\(arena)] \<task\>" so the actual quest note appears in Google Calendar. Falls back to just "[\(arena)]" when no note is set.
+- **Calendar writes using default source** — `arenaCalendar()` now uses `store.defaultCalendarForNewEvents?.source` so events land in whichever calendar the user has set as default (Google Calendar, iCloud, etc.) rather than guessing by source type. `try?` replaced with `do/catch` so failures are logged instead of silently swallowed.
+- **Calendar permission auto-request** — `addToGCal` now requests write access if not yet granted (handles permission reset after reinstall).
+
+### Internal
+- `ArenaLiveActivityAttributes.ContentState` — added `isMandatory: Bool = false`
+- `ArenaProtocolWidgetLiveActivity.swift` — mandatory branch in lock screen banner, compact leading/trailing, expanded trailing
+- `StuckView.swift` — `startStuckActivity()` on countdown start; `transitionToMandatory()` updates state in-place on timeout/ready; `endStuckActivity()` kept for abandon path
+- `ProtocolsView.swift` — `startActivityForBlock()` / `endActivity()` / pause update; uses `Activity<...>.activities` static collection
+- `CalendarManager.swift` — robust source selection, error logging
+- `ActiveSessionView.swift` — `addToGCal` runs in Task, auto-requests permission, unified for primary + joint arenas
+
+---
+
 ## v2.9.0 — 2026-03-19
 
 **Protocol Live Activity. In-app changelog synced. README rewritten.**
