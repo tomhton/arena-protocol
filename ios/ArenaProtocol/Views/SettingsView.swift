@@ -182,6 +182,28 @@ struct SettingsView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#60A5FA").opacity(0.2), lineWidth: 1))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
+                    // What's New
+                    Button { navigate(.whatsNew) } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("WHAT'S NEW")
+                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color(hex: "#4ECDC4"))
+                                    .kerning(2)
+                                Text("Release notes and recent updates")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.white.opacity(0.3))
+                            }
+                            Spacer()
+                            Text("›").font(.system(size: 18)).foregroundStyle(Color.white.opacity(0.2))
+                        }
+                        .padding(16)
+                        .background(Color.white.opacity(0.02))
+                        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#4ECDC4").opacity(0.2), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+
                     // Manage Habits
                     Button { navigate(.habits) } label: {
                         HStack {

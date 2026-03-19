@@ -5,6 +5,25 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.7.0 — 2026-03-18
+
+**Idle Live Activity · In-app changelog · Long-press edit mode.**
+
+### Features
+- **Idle Live Activity** — lock screen and Dynamic Island show "START THE DAY", "ENTER THE ARENA", "LOCK IN", or "CLOSE THE DAY" (time-aware) when no session is running. Activity starts automatically when HomeView appears, ends when a session starts, restarts when done.
+- **What's New screen** — in-app changelog accessible from Settings → WHAT'S NEW. Shows recent version entries with headline and bullet points. Built from a hardcoded struct array (no file read required).
+- **Long-press → edit mode** — long-pressing any arena card on HomeView enters edit mode with haptic feedback (replaces the need to find the EDIT ARENAS toggle). Drag-to-reorder now works directly on HomeView (previously only in ArenaListEditorView). Cards scale slightly when in edit mode for visual feedback.
+
+### Internal
+- `ArenaLiveActivityAttributes.ContentState` — added `isIdle: Bool` field
+- `DataStore.swift` — `startIdleActivity()` / `endIdleActivity()` using ActivityKit
+- `ArenaProtocolWidgetLiveActivity.swift` — idle branch in LockScreenBannerView, CompactLeadingView, CompactTrailingView
+- `HomeView.swift` — `moveArena()` + drag-to-reorder on both grid columns; idle activity on appear
+- `RootView.swift` — `Screen.whatsNew` case
+- `WhatsNewView.swift` — new file
+
+---
+
 ## v2.4.0 — 2026-03-17
 
 **New default arenas. Expanded arena editor.**

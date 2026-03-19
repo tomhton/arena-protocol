@@ -5,6 +5,9 @@
 import Foundation
 import Observation
 @preconcurrency import UserNotifications
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
 // MARK: - Models
 
@@ -507,6 +510,42 @@ final class DataStore {
     func saveProtocols() { saveToDefaults("arena_protocols",      protocols) }
     func saveSeenDrops() { saveToDefaults("arena_seen_drops",     seenDrops) }
     func saveCheckin()   { saveToDefaults("arena_checkin",        checkin) }
+
+    // Idle Live Activity — shown on lock screen when no session is active
+    #if canImport(ActivityKit)
+    func startIdleActivity() {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        // End any existing idle activities first
+        Task {
+            for a in Activity<ArenaLiveActivityAttributes>.activities {
+                await a.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+        let attrs = ArenaLiveActivityAttributes(
+            arenaId: "idle",
+            arenaLabel: "ARENA PROTOCOL",
+            arenaColor: "#E8C547",
+            arenaIcon: "◈",
+            questNote: "",
+            startTime: Date()
+        )
+        let state = ArenaLiveActivityAttributes.ContentState(
+            endTime: Date().addingTimeInterval(86400), // far future — not used
+            isPaused: false,
+            pausedRemaining: 0,
+            isIdle: true
+        )
+        _ = try? Activity.request(attributes: attrs, content: .init(state: state, staleDate: nil))
+    }
+
+    func endIdleActivity() {
+        Task {
+            for a in Activity<ArenaLiveActivityAttributes>.activities where a.attributes.arenaId == "idle" {
+                await a.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+    }
+    #endif
 
     // Active session lifecycle
     func startSession(arena: Arena, durationMins: Int, note: String) {

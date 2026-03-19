@@ -36,22 +36,63 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
     }
 }
 
+// MARK: - Idle helpers
+
+private func idlePrompt() -> String {
+    let hour = Calendar.current.component(.hour, from: Date())
+    switch hour {
+    case 5..<12:  return "START THE DAY"
+    case 12..<18: return "ENTER THE ARENA"
+    case 18..<23: return "LOCK IN"
+    default:      return "CLOSE THE DAY"
+    }
+}
+
 // MARK: - Lock Screen / Banner
 
 private struct LockScreenBannerView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
+        if context.state.isIdle {
+            idleBanner
+        } else {
+            sessionBanner
+        }
+    }
+
+    private var idleBanner: some View {
+        HStack(spacing: 14) {
+            Text("◈")
+                .font(.system(size: 26))
+                .foregroundColor(Color(hex: "#E8C547"))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(idlePrompt())
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+                    .tracking(2)
+                Text("Arena Protocol")
+                    .font(.system(size: 10))
+                    .foregroundColor(.white.opacity(0.35))
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color(red: 0.031, green: 0.031, blue: 0.063))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var sessionBanner: some View {
         let arenaColor = Color(hex: context.attributes.arenaColor)
 
-        HStack(spacing: 0) {
-            // Colored left strip
+        return HStack(spacing: 0) {
             Rectangle()
                 .fill(arenaColor)
                 .frame(width: 4)
 
             HStack(spacing: 12) {
-                // Circular progress clock with icon inside
                 if context.state.isPaused {
                     ZStack {
                         Circle()
@@ -77,7 +118,6 @@ private struct LockScreenBannerView: View {
                     .frame(width: 40, height: 40)
                 }
 
-                // Text block
                 VStack(alignment: .leading, spacing: 2) {
                     Text(context.attributes.arenaLabel)
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
@@ -94,7 +134,6 @@ private struct LockScreenBannerView: View {
 
                 Spacer()
 
-                // Timer or PAUSED
                 if context.state.isPaused {
                     Text("PAUSED")
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -125,7 +164,11 @@ private struct CompactLeadingView: View {
     var body: some View {
         let arenaColor = Color(hex: context.attributes.arenaColor)
 
-        if context.state.isPaused {
+        if context.state.isIdle {
+            Text("◈")
+                .font(.system(size: 14))
+                .foregroundColor(Color(hex: "#E8C547"))
+        } else if context.state.isPaused {
             ZStack {
                 Circle()
                     .stroke(arenaColor.opacity(0.3), lineWidth: 2)
@@ -162,7 +205,12 @@ private struct CompactTrailingView: View {
     var body: some View {
         let arenaColor = Color(hex: context.attributes.arenaColor)
 
-        if context.state.isPaused {
+        if context.state.isIdle {
+            Text("BEGIN")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundColor(Color(hex: "#E8C547").opacity(0.8))
+                .fixedSize()
+        } else if context.state.isPaused {
             Text("PAUSED")
                 .font(.system(size: 8, weight: .bold, design: .monospaced))
                 .foregroundColor(arenaColor.opacity(0.7))

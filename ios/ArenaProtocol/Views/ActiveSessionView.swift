@@ -326,7 +326,10 @@ struct ActiveSessionView: View {
             liveActivity = Activity<ArenaLiveActivityAttributes>.activities.first
             #endif
         } else {
-            // Fresh start
+            // Fresh start — end idle Live Activity first
+            #if canImport(ActivityKit)
+            store.endIdleActivity()
+            #endif
             store.startSession(arena: arena, durationMins: duration, note: note)
             let start = Date()
             endTime = start.addingTimeInterval(TimeInterval(timeLeft))

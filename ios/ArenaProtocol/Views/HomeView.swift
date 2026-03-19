@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var editMode = false
     @State private var showAbandonConfirm = false
     @State private var nextBlock: EKEvent? = nil
+    @State private var dragTarget: String? = nil
 
     private var arenas: [Arena] { store.letteredArenas }
     private var sessions: [Session] { store.sessions }
@@ -91,7 +92,25 @@ struct HomeView: View {
             Button("Abandon", role: .destructive) { store.endSession() }
             Button("Cancel", role: .cancel) { }
         }
-        .onAppear { refreshNextBlock() }
+        .onAppear {
+            refreshNextBlock()
+            // Start idle Live Activity when no session is running
+            if store.activeSession == nil {
+                #if canImport(ActivityKit)
+                store.startIdleActivity()
+                #endif
+            }
+        }
+    }
+
+    private func moveArena(from dragId: String, to dropId: String) {
+        guard dragId != dropId,
+              let fromIdx = store.arenas.firstIndex(where: { $0.id == dragId }),
+              let toIdx   = store.arenas.firstIndex(where: { $0.id == dropId })
+        else { return }
+        store.arenas.move(fromOffsets: IndexSet(integer: fromIdx),
+                          toOffset: toIdx > fromIdx ? toIdx + 1 : toIdx)
+        store.saveArenas()
     }
 
     private func refreshNextBlock() {
@@ -360,6 +379,19 @@ struct HomeView: View {
                         onTap: { editMode ? navigate(.editArena(arena)) : navigate(.select(arena)) },
                         sessions: sessions
                     )
+                    .opacity(dragTarget == arena.id ? 0.5 : 1.0)
+                    .scaleEffect(editMode ? 0.97 : 1.0)
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        withAnimation(.spring(response: 0.3)) { editMode = true }
+                        let gen = UIImpactFeedbackGenerator(style: .medium)
+                        gen.impactOccurred()
+                    }
+                    .draggable(arena.id)
+                    .dropDestination(for: String.self) { items, _ in
+                        guard let id = items.first else { return false }
+                        withAnimation { moveArena(from: id, to: arena.id) }
+                        return true
+                    } isTargeted: { over in dragTarget = over ? arena.id : nil }
                     .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 18)), removal: .opacity))
                 }
                 if editMode {
@@ -376,6 +408,19 @@ struct HomeView: View {
                         onTap: { editMode ? navigate(.editArena(arena)) : navigate(.select(arena)) },
                         sessions: sessions
                     )
+                    .opacity(dragTarget == arena.id ? 0.5 : 1.0)
+                    .scaleEffect(editMode ? 0.97 : 1.0)
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        withAnimation(.spring(response: 0.3)) { editMode = true }
+                        let gen = UIImpactFeedbackGenerator(style: .medium)
+                        gen.impactOccurred()
+                    }
+                    .draggable(arena.id)
+                    .dropDestination(for: String.self) { items, _ in
+                        guard let id = items.first else { return false }
+                        withAnimation { moveArena(from: id, to: arena.id) }
+                        return true
+                    } isTargeted: { over in dragTarget = over ? arena.id : nil }
                     .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 18)), removal: .opacity))
                 }
             }

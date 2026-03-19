@@ -17,5 +17,6 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
         var endTime: Date
         var isPaused: Bool
         var pausedRemaining: TimeInterval
+        var isIdle: Bool = false   // true = no session, show motivational text
     }
 }
