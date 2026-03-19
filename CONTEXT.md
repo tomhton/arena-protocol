@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-18 (v2.8.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-18 (v2.8.1).
 
 ---
 
@@ -53,6 +53,7 @@
 | 2.6.0 | 2026-03-17 | Google Calendar read feed. NEXT BLOCK banner on home. FROM YOUR CALENDAR in SelectView. |
 | 2.7.0 | 2026-03-18 | Idle Live Activity (ENTER THE ARENA on lock screen). In-app What's New changelog. Long-press arena → edit mode + drag-to-reorder on HomeView. |
 | 2.8.0 | 2026-03-18 | Bug fixes: idle Live Activity no longer shows 24hr countdown. Long-press edit mode fixed (simultaneousGesture). Drag-to-reorder replaced with List + .onMove in edit mode. |
+| 2.8.1 | 2026-03-18 | Bug fix: deleted arena no longer reappears (onDisappear persist() re-insertion). |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order

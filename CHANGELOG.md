@@ -5,6 +5,18 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.8.1 — 2026-03-18
+
+**Bug fix: deleted arena reappears.**
+
+### Bug Fixes
+- **Arena delete reappear** — deleting an arena from the editor caused it to immediately reappear. `handleDelete()` called `dismiss()`, which triggered `onDisappear { persist() }`, and `persist()` re-inserted the arena because `label` was still populated. Fixed by clearing `label` before `dismiss()` so `persist()` hits its empty-label guard and exits without writing.
+
+### Internal
+- `ArenaEditorView.swift` — `handleDelete()` sets `label = ""` before calling `dismiss()`
+
+---
+
 ## v2.8.0 — 2026-03-18
 
 **Bug fixes: idle Live Activity countdown · long-press edit mode · drag-to-reorder.**
