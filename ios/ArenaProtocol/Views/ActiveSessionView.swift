@@ -302,7 +302,13 @@ struct ActiveSessionView: View {
         let title = note.trimmingCharacters(in: .whitespaces).isEmpty
             ? "[\(arena.label)]"
             : "[\(arena.label)] \(note.trimmingCharacters(in: .whitespaces))"
-        CalendarManager.shared.addEvent(title: title, start: start, end: end, notes: arena.description)
+        let desc = arena.description
+        Task { @MainActor in
+            if !CalendarManager.shared.isWriteAuthorized {
+                _ = await CalendarManager.shared.requestWriteAccess()
+            }
+            CalendarManager.shared.addEvent(title: title, start: start, end: end, notes: desc)
+        }
     }
 
     private func setup() {
