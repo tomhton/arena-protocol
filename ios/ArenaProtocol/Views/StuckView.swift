@@ -2,6 +2,9 @@
 // Emergency protocol: grace period timer → mandatory arena selection
 
 import SwiftUI
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
 struct StuckView: View {
     @Environment(DataStore.self) private var store
@@ -283,7 +286,12 @@ struct StuckView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
-            Button { withAnimation { phase = .pickArena } } label: {
+            Button {
+            #if canImport(ActivityKit)
+            endStuckActivity()
+            #endif
+            withAnimation { phase = .pickArena }
+        } label: {
                 Text("I'M READY NOW →")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(Color.white.opacity(0.4))
@@ -299,8 +307,12 @@ struct StuckView: View {
         .onReceive(ticker) { _ in
             guard phase == .countdown else { return }
             let remaining = Int(endTime.timeIntervalSinceNow)
-            if remaining <= 0 { withAnimation { phase = .pickArena } }
-            else { timeLeft = remaining }
+            if remaining <= 0 {
+                #if canImport(ActivityKit)
+                endStuckActivity()
+                #endif
+                withAnimation { phase = .pickArena }
+            } else { timeLeft = remaining }
         }
     }
 
@@ -355,5 +367,40 @@ struct StuckView: View {
         timeLeft = effectiveDuration * 60
         endTime  = Date().addingTimeInterval(TimeInterval(timeLeft))
         withAnimation { phase = .countdown }
+        #if canImport(ActivityKit)
+        startStuckActivity()
+        #endif
     }
+
+    #if canImport(ActivityKit)
+    private func startStuckActivity() {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        let stuckEnd = endTime
+        let note = intention.trimmingCharacters(in: .whitespaces)
+        Task {
+            for a in Activity<ArenaLiveActivityAttributes>.activities {
+                await a.end(nil, dismissalPolicy: .immediate)
+            }
+            let attrs = ArenaLiveActivityAttributes(
+                arenaId: "stuck", arenaLabel: "STUCK",
+                arenaColor: "#FF8FA3", arenaIcon: "⚡",
+                questNote: note.isEmpty ? "Grace period" : note,
+                startTime: Date())
+            let state = ArenaLiveActivityAttributes.ContentState(
+                endTime: stuckEnd, isPaused: false, pausedRemaining: 0, isIdle: false)
+            _ = try? Activity.request(
+                attributes: attrs,
+                content: .init(state: state, staleDate: stuckEnd),
+                pushType: nil)
+        }
+    }
+
+    private func endStuckActivity() {
+        Task {
+            for a in Activity<ArenaLiveActivityAttributes>.activities where a.attributes.arenaId == "stuck" {
+                await a.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+    }
+    #endif
 }
