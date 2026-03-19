@@ -35,26 +35,10 @@ final class CalendarManager {
     // MARK: - Write
 
     func arenaCalendar() -> EKCalendar? {
-        if let existing = store.calendars(for: .event).first(where: { $0.title == "Arena Protocol" }) {
-            return existing
-        }
-        // Use the default calendar's source — this follows wherever the user's primary
-        // calendar lives (Google Calendar via CalDAV, iCloud, Exchange, local, etc.)
-        let source = store.defaultCalendarForNewEvents?.source
-                  ?? store.sources.first(where: { $0.sourceType == .calDAV })
-                  ?? store.sources.first(where: { $0.sourceType == .local })
-        guard let source else { return nil }
-        let cal = EKCalendar(for: .event, eventStore: store)
-        cal.title = "Arena Protocol"
-        cal.source = source
-        cal.cgColor = UIColor(Color(hex: "#E8C547")).cgColor
-        do {
-            try store.saveCalendar(cal, commit: true)
-            return cal
-        } catch {
-            print("[CalendarManager] saveCalendar failed: \(error)")
-            return nil
-        }
+        // Use the default calendar — Google Calendar (CalDAV) blocks programmatic
+        // calendar creation (EKErrorDomain Code=17), so we write to wherever the
+        // user's default is set (Google Calendar, iCloud, etc.)
+        return store.defaultCalendarForNewEvents
     }
 
     func addEvent(title: String, start: Date, end: Date, notes: String = "") {
