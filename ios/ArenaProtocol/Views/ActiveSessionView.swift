@@ -298,12 +298,11 @@ struct ActiveSessionView: View {
         addToGCal(arena: arena, start: start, end: endTime)
     }
 
-    private func addToGCal(arena: Arena, start: Date, end: Date) {
-        CalendarManager.shared.addEvent(
-            title: "[\(arena.label)] Focus Block",
-            start: start, end: end,
-            notes: arena.description
-        )
+    private func addToGCal(arena: Arena, start: Date, end: Date, note: String = "") {
+        let title = note.trimmingCharacters(in: .whitespaces).isEmpty
+            ? "[\(arena.label)]"
+            : "[\(arena.label)] \(note.trimmingCharacters(in: .whitespaces))"
+        CalendarManager.shared.addEvent(title: title, start: start, end: end, notes: arena.description)
     }
 
     private func setup() {
@@ -334,11 +333,7 @@ struct ActiveSessionView: View {
             SharedStore.writeActiveSession(arenaName: arena.label, arenaColor: arena.color, endsAt: endTime)
             WidgetCenter.shared.reloadAllTimelines()
             // Log primary arena block to "Arena Protocol" calendar
-            CalendarManager.shared.addEvent(
-                title: "[\(arena.label)] Focus Block",
-                start: start, end: endTime,
-                notes: note.isEmpty ? arena.description : note
-            )
+            addToGCal(arena: arena, start: start, end: endTime, note: note)
 
             #if canImport(ActivityKit)
             if ActivityAuthorizationInfo().areActivitiesEnabled {
