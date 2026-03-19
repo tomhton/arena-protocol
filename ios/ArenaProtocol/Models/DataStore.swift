@@ -530,7 +530,7 @@ final class DataStore {
             startTime: Date()
         )
         let state = ArenaLiveActivityAttributes.ContentState(
-            endTime: Date().addingTimeInterval(86400), // far future — not used
+            endTime: Date(), // idle — no countdown shown
             isPaused: false,
             pausedRemaining: 0,
             isIdle: true
