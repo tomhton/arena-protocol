@@ -30,6 +30,8 @@
 		6000000000000000000016AB /* IntervalTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000016AB /* IntervalTimerView.swift */; };
 		6000000000000000000017AB /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000017AB /* CalendarManager.swift */; };
 		6000000000000000000018AB /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000018AB /* WhatsNewView.swift */; };
+		6000000000000000000019AB /* SessionIntelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000019AB /* SessionIntelligence.swift */; };
+		600000000000000000001AAB /* ForgeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500000000000000000001AAB /* ForgeEngine.swift */; };
 		CA3792362F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA3792352F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift */; };
 		CA3792372F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA3792352F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift */; };
 		CA3792392F685EA700A87FC1 /* ArenaProtocolWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CA88FDCE2F6837930015A8AB /* ArenaProtocolWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -111,6 +113,8 @@
 		5000000000000000000016AB /* IntervalTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalTimerView.swift; sourceTree = "<group>"; };
 		5000000000000000000017AB /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarManager.swift; sourceTree = "<group>"; };
 		5000000000000000000018AB /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
+		5000000000000000000019AB /* SessionIntelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionIntelligence.swift; sourceTree = "<group>"; };
+		500000000000000000001AAB /* ForgeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgeEngine.swift; sourceTree = "<group>"; };
 		CA3792352F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaLiveActivityAttributes.swift; sourceTree = "<group>"; };
 		CA88FD792F6811D70015A8AB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -203,6 +207,8 @@
 			children = (
 				5000000000000000000002AB /* DataStore.swift */,
 				5000000000000000000017AB /* CalendarManager.swift */,
+				5000000000000000000019AB /* SessionIntelligence.swift */,
+				500000000000000000001AAB /* ForgeEngine.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -403,6 +409,8 @@
 				6000000000000000000001AB /* ArenaProtocolApp.swift in Sources */,
 				6000000000000000000002AB /* DataStore.swift in Sources */,
 				6000000000000000000017AB /* CalendarManager.swift in Sources */,
+				6000000000000000000019AB /* SessionIntelligence.swift in Sources */,
+				600000000000000000001AAB /* ForgeEngine.swift in Sources */,
 				CA3792362F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift in Sources */,
 				6000000000000000000003AB /* RootView.swift in Sources */,
 				6000000000000000000004AB /* HomeView.swift in Sources */,

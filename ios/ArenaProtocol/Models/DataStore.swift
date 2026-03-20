@@ -579,6 +579,9 @@ final class DataStore {
 
     var letteredArenas: [Arena] { Arena.reletter(arenas) }
     var todaySessions:  Int    { sessions.filter { $0.date == todayString() }.count }
+    /// Computed snapshot of the user's session patterns. Rebuilt on every access.
+    /// Don't observe this in tight render loops — call once per session-end event.
+    var sessionProfile: SessionProfile { buildSessionProfile(from: sessions, arenas: arenas) }
 
     // Save helpers
     func saveArenas()    { saveToDefaults("arena_custom_arenas",  arenas) }
@@ -758,6 +761,20 @@ final class DataStore {
 
     // Ember drop
     func checkAndClaimEmberDrop() -> EmberDrop? {
+        // Forge narratives take priority — more personalised than legacy drops
+        let profile = buildSessionProfile(from: sessions, arenas: arenas)
+        if let narrative = ForgeEngine.evaluate(
+            profile: profile,
+            arenas: arenas,
+            lastSession: sessions.max(by: { $0.ts < $1.ts }),
+            seenDropIds: seenDrops
+        ) {
+            let drop = narrative.toEmberDrop()
+            seenDrops.append(drop.id)
+            saveSeenDrops()
+            return drop
+        }
+        // Fallback: legacy ember drops
         guard let drop = checkEmberDrop(sessions: sessions, seenDrops: seenDrops) else { return nil }
         seenDrops.append(drop.id)
         saveSeenDrops()

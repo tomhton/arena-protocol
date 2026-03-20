@@ -5,6 +5,31 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.22.0 — 2026-03-20
+
+**Session intelligence backbone + Forge narrative framework. On-device, zero-API personalization.**
+
+### New Files
+- **`SessionIntelligence.swift`** — `enum UserArchetype` (10 cases: newcomer, returning, recovering, sprinter, deepWorker, streakChaser, specialist, balancer, veteran, surging); `struct SessionProfile` (25+ computed fields covering volume, momentum, time-of-day, arena affinity, streaks, sequences, social ratio, archetype); `func buildSessionProfile(from:arenas:)` — pure function, zero side effects.
+- **`ForgeEngine.swift`** — `struct ForgeNarrative` (id, glyph, headline, flavor, category, urgency) + `toEmberDrop()` for existing modal pipeline; `enum ForgeEngine` with 17 narrative branches across 7 priority tiers; `extension ForgeEngine { enum Queries }` — 25 testable pure boolean classifiers including `suggestedArena(forHour:profile:)` and `suggestedDuration(arenaId:profile:)`.
+- **`AI_BRAIN_MAP.md`** — developer reference: data flow diagram, SessionProfile field guide with use cases, ForgeEngine narrative catalogue with trigger conditions, full Queries API, UI integration points, extension roadmap.
+
+### Changed
+- **`DataStore.swift`** — `var sessionProfile: SessionProfile { buildSessionProfile(from:arenas:) }` computed var added. `checkAndClaimEmberDrop()` now runs `ForgeEngine.evaluate()` first (personalized narratives), falls back to legacy `checkEmberDrop()` (EMBER_DROPS) if no forge narrative qualifies.
+
+### Forge narrative catalogue (17 total)
+| Tier | Drop IDs |
+|---|---|
+| First contact | `forge_debut`, `forge_first_{arenaId}` |
+| Volume milestones | `forge_global_{5,10,25,50,100,200,365}`, `forge_arena_{id}_{3,7,13,21,33,50,77,111}` |
+| Streak milestones | `forge_streak_{3,7,14,21,30,60,100}` |
+| Momentum | `forge_comeback`, `forge_surge` |
+| Balance | `forge_all_arenas`, `forge_balancer`, `forge_multistreak` |
+| Behavioral patterns | `forge_deep_worker`, `forge_sprinter`, `forge_specialist_{id}`, `forge_social` |
+| Ambient nudges | `forge_reflective`, `forge_neglect_{arenaId}` |
+
+---
+
 ## v2.21.0 — 2026-03-20
 
 **Home UX rework: unified layout with session info inline, iOS-style jiggle edit mode for arena grid.**

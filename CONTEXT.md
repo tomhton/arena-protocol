@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.21.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.22.0).
 
 ---
 
@@ -82,6 +82,7 @@
 | 2.19.0 | 2026-03-20 | Live Activity + HomeView banner now update on arena transitions from any screen. `DataStore.syncLiveActivity(now:)` drives updates; HomeView 1 s timer calls it continuously. |
 | 2.20.0 | 2026-03-20 | App shortcuts dock: scrollable row of 56 pt rounded-square icons, long-press edit mode (shake + × delete + + add), 20-app curated catalog, custom app form, UserDefaults persistence. |
 | 2.21.0 | 2026-03-20 | Home UX rework: unified inline nav buttons, CURRENTLY IN tab with full timeline + clock end times, iOS-style jiggle edit mode for arena grid (no list switch). |
+| 2.22.0 | 2026-03-20 | Session intelligence backbone + Forge narrative framework. `SessionIntelligence.swift`: `SessionProfile` (25+ fields), `UserArchetype` (10 cases), `buildSessionProfile()`. `ForgeEngine.swift`: 17 narrative branches, 25 testable queries, `ForgeNarrative → EmberDrop` pipeline. `checkAndClaimEmberDrop()` now runs ForgeEngine first, falls back to legacy drops. `AI_BRAIN_MAP.md` developer reference added. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
