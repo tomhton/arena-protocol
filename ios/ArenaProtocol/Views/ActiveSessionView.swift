@@ -396,13 +396,16 @@ struct ActiveSessionView: View {
                     questNote: socialNote,
                     startTime: endTime.addingTimeInterval(-TimeInterval(timeLeft))
                 )
+                let sessionStart = endTime.addingTimeInterval(-TimeInterval(timeLeft))
                 let contentState = ArenaLiveActivityAttributes.ContentState(
                     endTime: endTime,
                     isPaused: false,
                     pausedRemaining: 0,
                     arenaLabel: arena.label,
                     arenaColor: normalizedColor,
-                    arenaIcon: arena.icon.isEmpty ? "◉" : arena.icon
+                    arenaIcon: arena.icon.isEmpty ? "◉" : arena.icon,
+                    currentArenaStart: sessionStart,
+                    sessionEndTime: endTime
                 )
                 // End any stale activities before requesting — handles schema changes between builds
                 Task {
@@ -472,27 +475,35 @@ struct ActiveSessionView: View {
     /// Call whenever endTime changes (add/remove joint) or the running arena transitions.
     private func updateLiveActivity(newEnd: Date? = nil) {
         #if canImport(ActivityKit)
-        let activity  = liveActivity
-        let paused    = isPaused
-        let remaining = TimeInterval(timeLeft)
-        let jCount    = jointEntries.count
-        let end       = newEnd ?? endTime
-        let cur       = currentLiveArena()
+        let activity    = liveActivity
+        let paused      = isPaused
+        let remaining   = TimeInterval(timeLeft)
+        let now         = Date()
+        let sessionEnd  = newEnd ?? endTime
+        let cur         = currentLiveArena(now: now)
+        let curEnd      = currentLiveArenaEnd(now: now)
+        let curStart    = currentLiveArenaStart(now: now)
+        let next        = nextLiveArena(now: now)
+        let jCount      = jointEntries.count
         let normColor: String = {
             let c = cur.color.trimmingCharacters(in: .whitespacesAndNewlines)
             return c.hasPrefix("#") ? c : "#\(c)"
         }()
         Task {
             let newState = ArenaLiveActivityAttributes.ContentState(
-                endTime: end,
+                endTime: curEnd,
                 isPaused: paused,
                 pausedRemaining: paused ? remaining : 0,
                 jointCount: jCount,
                 arenaLabel: cur.label,
                 arenaColor: normColor,
-                arenaIcon: cur.icon.isEmpty ? "◉" : cur.icon
+                arenaIcon: cur.icon.isEmpty ? "◉" : cur.icon,
+                currentArenaStart: curStart,
+                sessionEndTime: sessionEnd,
+                nextArenaLabel: next?.arena.label ?? "",
+                nextArenaIcon: next?.arena.icon ?? ""
             )
-            await activity?.update(.init(state: newState, staleDate: end))
+            await activity?.update(.init(state: newState, staleDate: sessionEnd))
         }
         #endif
     }
@@ -500,6 +511,36 @@ struct ActiveSessionView: View {
     /// The arena actively running right now — whichever joint slot is live, else primary.
     private func currentLiveArena(now: Date = Date()) -> Arena {
         jointEntries.first { $0.scheduledStart <= now && $0.scheduledEnd > now }?.arena ?? arena
+    }
+
+    /// The end time of the currently active arena slot.
+    private func currentLiveArenaEnd(now: Date = Date()) -> Date {
+        if let joint = jointEntries.first(where: { $0.scheduledStart <= now && $0.scheduledEnd > now }) {
+            return joint.scheduledEnd
+        }
+        // Primary is active — ends when first joint starts, or at session end if no joints
+        return jointEntries.first?.scheduledStart ?? endTime
+    }
+
+    /// The start time of the currently active arena slot (for the progress ring).
+    private func currentLiveArenaStart(now: Date = Date()) -> Date {
+        if let joint = jointEntries.first(where: { $0.scheduledStart <= now && $0.scheduledEnd > now }) {
+            return joint.scheduledStart
+        }
+        // Primary: started at session start
+        let totalMins = duration + jointEntries.reduce(0) { $0 + $1.minutes }
+        return endTime.addingTimeInterval(-TimeInterval(totalMins * 60))
+    }
+
+    /// The next arena slot that hasn't started yet, if any.
+    private func nextLiveArena(now: Date = Date()) -> JointArenaEntry? {
+        let primaryActive = !jointEntries.contains { $0.scheduledStart <= now && $0.scheduledEnd > now }
+        if primaryActive { return jointEntries.first }
+        if let idx = jointEntries.firstIndex(where: { $0.scheduledStart <= now && $0.scheduledEnd > now }) {
+            let next = idx + 1
+            return next < jointEntries.count ? jointEntries[next] : nil
+        }
+        return nil
     }
 
     private func endLiveActivity() {

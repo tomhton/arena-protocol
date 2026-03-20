@@ -113,76 +113,85 @@ private struct LockScreenBannerView: View {
 
     private var sessionBanner: some View {
         let arenaColor = Color(hex: context.state.arenaColor)
+        let hasMore = context.state.sessionEndTime > context.state.endTime.addingTimeInterval(5)
 
         return HStack(spacing: 0) {
             Rectangle()
                 .fill(arenaColor)
                 .frame(width: 4)
 
-            HStack(spacing: 12) {
-                if context.state.isPaused {
-                    ZStack {
-                        Circle()
-                            .stroke(arenaColor.opacity(0.25), lineWidth: 2)
-                            .frame(width: 40, height: 40)
-                        Text(context.state.arenaIcon)
-                            .font(.system(size: 18))
-                            .foregroundColor(arenaColor.opacity(0.5))
+            VStack(alignment: .leading, spacing: 6) {
+                // ── Main row ────────────────────────────────────────────────────
+                HStack(spacing: 12) {
+                    if context.state.isPaused {
+                        ZStack {
+                            Circle()
+                                .stroke(arenaColor.opacity(0.25), lineWidth: 2)
+                                .frame(width: 40, height: 40)
+                            Text(context.state.arenaIcon)
+                                .font(.system(size: 18))
+                                .foregroundColor(arenaColor.opacity(0.5))
+                        }
+                    } else {
+                        ProgressView(
+                            timerInterval: context.state.currentArenaStart...context.state.endTime,
+                            countsDown: true
+                        ) {
+                            EmptyView()
+                        } currentValueLabel: {
+                            Text(context.state.arenaIcon)
+                                .font(.system(size: 16))
+                                .foregroundColor(arenaColor)
+                        }
+                        .progressViewStyle(.circular)
+                        .tint(arenaColor)
+                        .frame(width: 40, height: 40)
                     }
-                } else {
-                    ProgressView(
-                        timerInterval: context.attributes.startTime...context.state.endTime,
-                        countsDown: true
-                    ) {
-                        EmptyView()
-                    } currentValueLabel: {
-                        Text(context.state.arenaIcon)
-                            .font(.system(size: 16))
-                            .foregroundColor(arenaColor)
-                    }
-                    .progressViewStyle(.circular)
-                    .tint(arenaColor)
-                    .frame(width: 40, height: 40)
-                }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(context.state.arenaLabel)
                             .font(.system(size: 13, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
                             .tracking(1.5)
-                        if context.state.jointCount > 0 {
-                            Text("+\(context.state.jointCount) JOINT")
-                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                                .foregroundColor(arenaColor.opacity(0.7))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(arenaColor.opacity(0.18))
-                                .clipShape(Capsule())
+                        if !context.attributes.questNote.isEmpty {
+                            Text(context.attributes.questNote)
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundColor(.white.opacity(0.55))
+                                .lineLimit(1)
                         }
                     }
 
-                    if !context.attributes.questNote.isEmpty {
-                        Text(context.attributes.questNote)
-                            .font(.system(size: 11, weight: .regular))
-                            .foregroundColor(.white.opacity(0.55))
-                            .lineLimit(1)
+                    Spacer()
+
+                    if context.state.isPaused {
+                        Text("PAUSED")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundColor(arenaColor.opacity(0.6))
+                    } else {
+                        Text(context.state.endTime, style: .timer)
+                            .font(.system(size: 16, weight: .bold, design: .monospaced))
+                            .foregroundColor(arenaColor)
+                            .monospacedDigit()
+                            .multilineTextAlignment(.trailing)
+                            .frame(minWidth: 56, alignment: .trailing)
                     }
                 }
 
-                Spacer()
-
-                if context.state.isPaused {
-                    Text("PAUSED")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundColor(arenaColor.opacity(0.6))
-                } else {
-                    Text(context.state.endTime, style: .timer)
-                        .font(.system(size: 16, weight: .bold, design: .monospaced))
-                        .foregroundColor(arenaColor)
-                        .monospacedDigit()
-                        .multilineTextAlignment(.trailing)
-                        .frame(minWidth: 56, alignment: .trailing)
+                // ── Info row — next arena + session finish time ──────────────
+                if hasMore {
+                    HStack(spacing: 8) {
+                        if !context.state.nextArenaIcon.isEmpty {
+                            (Text(context.state.nextArenaIcon + " ")
+                             + Text(context.state.nextArenaLabel))
+                                .lineLimit(1)
+                                .foregroundColor(arenaColor.opacity(0.55))
+                        }
+                        Spacer()
+                        (Text("DONE ") + Text(context.state.sessionEndTime, style: .time))
+                            .foregroundColor(.white.opacity(0.35))
+                    }
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .tracking(0.5)
                 }
             }
             .padding(.horizontal, 14)
@@ -221,7 +230,7 @@ private struct CompactLeadingView: View {
             }
         } else {
             ProgressView(
-                timerInterval: context.attributes.startTime...context.state.endTime,
+                timerInterval: context.state.currentArenaStart...context.state.endTime,
                 countsDown: true
             ) {
                 EmptyView()
@@ -281,7 +290,7 @@ private struct MinimalView: View {
         let arenaColor = Color(hex: context.state.arenaColor)
 
         ProgressView(
-            timerInterval: context.attributes.startTime...context.state.endTime,
+            timerInterval: context.state.currentArenaStart...context.state.endTime,
             countsDown: true
         ) {
             EmptyView()
@@ -352,6 +361,7 @@ private struct ExpandedBottomView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
+        let arenaColor = Color(hex: context.state.arenaColor)
         HStack(spacing: 10) {
             if !context.attributes.questNote.isEmpty {
                 Text(context.attributes.questNote)
@@ -360,11 +370,15 @@ private struct ExpandedBottomView: View {
                     .lineLimit(1)
             }
             Spacer()
-            if context.state.jointCount > 0 {
-                let arenaColor = Color(hex: context.state.arenaColor)
-                Text("PRIMARY  +  \(context.state.jointCount) JOINT")
+            if !context.state.nextArenaLabel.isEmpty {
+                (Text("NEXT  ") + Text(context.state.nextArenaIcon + " " + context.state.nextArenaLabel))
                     .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                    .foregroundColor(arenaColor.opacity(0.7))
+                    .foregroundColor(arenaColor.opacity(0.65))
+                    .tracking(0.8)
+            } else if context.state.jointCount > 0 {
+                Text("+\(context.state.jointCount) MORE")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundColor(arenaColor.opacity(0.55))
                     .tracking(1)
             }
         }

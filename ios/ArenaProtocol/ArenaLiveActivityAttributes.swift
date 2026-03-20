@@ -21,5 +21,10 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
         var arenaLabel: String = ""
         var arenaColor: String = "#E8C547"
         var arenaIcon: String = "◉"
+        // Per-arena timing — endTime is the current arena's end, sessionEndTime is the total session end
+        var currentArenaStart: Date = Date()   // current arena's start — for progress ring
+        var sessionEndTime: Date = Date()      // total session end including all joints
+        var nextArenaLabel: String = ""        // "" if no next arena
+        var nextArenaIcon: String = ""
     }
 }
