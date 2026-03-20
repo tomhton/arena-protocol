@@ -74,10 +74,15 @@ struct ArenaCardView: View {
 
                 // Content
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(arena.letter)
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.18))
-                        .kerning(3)
+                    HStack(spacing: 6) {
+                        Text(arena.icon)
+                            .font(.system(size: 18))
+                            .foregroundStyle(arenaColor)
+                        Text(arena.letter)
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.18))
+                            .kerning(3)
+                    }
 
                     Text(arena.label)
                         .font(.system(size: 15, weight: .bold, design: .monospaced))

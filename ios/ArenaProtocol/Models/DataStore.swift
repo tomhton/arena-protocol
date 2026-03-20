@@ -122,7 +122,7 @@ struct MorningCheckin: Codable {
 
 let DEFAULT_ARENAS: [Arena] = [
     Arena(
-        id: "preparation", label: "PREPARATION", letter: "A", color: "#60A5FA",
+        id: "alignment", label: "ALIGNMENT", letter: "A", color: "#60A5FA",
         subtitle: "plan · research · organise · ready",
         description: "Set the conditions for everything else. You can't build on a shaky foundation.",
         icon: "◎",
@@ -140,7 +140,7 @@ let DEFAULT_ARENAS: [Arena] = [
         ]
     ),
     Arena(
-        id: "labor", label: "LABOR", letter: "B", color: "#E8C547",
+        id: "work", label: "WORK", letter: "B", color: "#E8C547",
         subtitle: "execute · build · ship · produce",
         description: "The work itself. Ideas without output are just noise. Show up and produce.",
         icon: "◆",
@@ -158,7 +158,7 @@ let DEFAULT_ARENAS: [Arena] = [
         ]
     ),
     Arena(
-        id: "mental-recovery", label: "MENTAL RECOVERY", letter: "C", color: "#A78BFA",
+        id: "recovery", label: "RECOVERY", letter: "C", color: "#A78BFA",
         subtitle: "decompress · reflect · restore · learn",
         description: "The mind needs rest too. Downtime done right is not laziness — it's maintenance.",
         icon: "◑",
@@ -176,7 +176,7 @@ let DEFAULT_ARENAS: [Arena] = [
         ]
     ),
     Arena(
-        id: "physical", label: "PHYSICAL ACTIVITY", letter: "D", color: "#34D399",
+        id: "movement", label: "MOVEMENT", letter: "D", color: "#34D399",
         subtitle: "move · train · recover · fuel",
         description: "The body is not separate from performance. Move it deliberately, every day.",
         icon: "◉",
@@ -207,36 +207,36 @@ let SOCIAL_ARENA = Arena(
 let DEFAULT_PROTOCOLS: [ArenaProtocolModel] = [
     ArenaProtocolModel(
         id: "launcher", name: "THE LAUNCHER", glyph: "◎", color: "#60A5FA",
-        description: "Prepare, then execute. Build momentum from a clean start.",
+        description: "Align, then execute. Build momentum from a clean start.",
         blocks: [
-            ProtocolBlock(arenaId: "preparation", label: "PREPARATION", duration: 15, color: "#60A5FA"),
-            ProtocolBlock(arenaId: "labor",        label: "LABOR",       duration: 25, color: "#E8C547")
+            ProtocolBlock(arenaId: "alignment", label: "ALIGNMENT", duration: 15, color: "#60A5FA"),
+            ProtocolBlock(arenaId: "work",      label: "WORK",      duration: 25, color: "#E8C547")
         ]
     ),
     ArenaProtocolModel(
         id: "warrior", name: "THE WARRIOR", glyph: "◆", color: "#E8C547",
         description: "Move the body. Then move the work. No excuses.",
         blocks: [
-            ProtocolBlock(arenaId: "physical", label: "PHYSICAL ACTIVITY", duration: 20, color: "#34D399"),
-            ProtocolBlock(arenaId: "labor",    label: "LABOR",             duration: 30, color: "#E8C547")
+            ProtocolBlock(arenaId: "movement", label: "MOVEMENT", duration: 20, color: "#34D399"),
+            ProtocolBlock(arenaId: "work",     label: "WORK",     duration: 30, color: "#E8C547")
         ]
     ),
     ArenaProtocolModel(
         id: "recharge", name: "THE RECHARGE", glyph: "◑", color: "#A78BFA",
         description: "Body and mind recovery. Reset before the next push.",
         blocks: [
-            ProtocolBlock(arenaId: "physical",        label: "PHYSICAL ACTIVITY", duration: 20, color: "#34D399"),
-            ProtocolBlock(arenaId: "mental-recovery", label: "MENTAL RECOVERY",   duration: 20, color: "#A78BFA")
+            ProtocolBlock(arenaId: "movement", label: "MOVEMENT", duration: 20, color: "#34D399"),
+            ProtocolBlock(arenaId: "recovery", label: "RECOVERY", duration: 20, color: "#A78BFA")
         ]
     ),
     ArenaProtocolModel(
         id: "full-day", name: "THE FULL DAY", glyph: "◉", color: "#E8C547",
         description: "All four arenas. A complete session.",
         blocks: [
-            ProtocolBlock(arenaId: "preparation",     label: "PREPARATION",     duration: 10, color: "#60A5FA"),
-            ProtocolBlock(arenaId: "labor",           label: "LABOR",           duration: 25, color: "#E8C547"),
-            ProtocolBlock(arenaId: "physical",        label: "PHYSICAL ACTIVITY", duration: 15, color: "#34D399"),
-            ProtocolBlock(arenaId: "mental-recovery", label: "MENTAL RECOVERY", duration: 10, color: "#A78BFA")
+            ProtocolBlock(arenaId: "alignment", label: "ALIGNMENT", duration: 10, color: "#60A5FA"),
+            ProtocolBlock(arenaId: "work",      label: "WORK",      duration: 25, color: "#E8C547"),
+            ProtocolBlock(arenaId: "movement",  label: "MOVEMENT",  duration: 15, color: "#34D399"),
+            ProtocolBlock(arenaId: "recovery",  label: "RECOVERY",  duration: 10, color: "#A78BFA")
         ]
     )
 ]
