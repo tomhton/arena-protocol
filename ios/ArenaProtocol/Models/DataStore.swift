@@ -84,6 +84,14 @@ struct IdeaNote: Identifiable, Codable {
     var ts: String
 }
 
+struct DockApp: Identifiable, Codable {
+    var id: String
+    var name: String
+    var urlScheme: String
+    var sfSymbol: String
+    var brandColor: String
+}
+
 struct AppSettings: Codable {
     var windDownTime: String = "21:30"
     var clockTimezone: String = "America/Los_Angeles"
@@ -148,6 +156,15 @@ struct MorningCheckin: Codable {
 }
 
 // MARK: - Static Defaults
+
+let DEFAULT_DOCK_APPS: [DockApp] = [
+    DockApp(id: "spotify",   name: "Spotify",  urlScheme: "spotify://",        sfSymbol: "music.note",          brandColor: "#1DB954"),
+    DockApp(id: "audible",   name: "Audible",  urlScheme: "audible://",        sfSymbol: "headphones",          brandColor: "#F47920"),
+    DockApp(id: "health",    name: "Health",   urlScheme: "x-apple-health://", sfSymbol: "heart.fill",          brandColor: "#FF2D55"),
+    DockApp(id: "youtube",   name: "YouTube",  urlScheme: "youtube://",        sfSymbol: "play.rectangle.fill", brandColor: "#FF0000"),
+    DockApp(id: "notes",     name: "Notes",    urlScheme: "mobilenotes://",    sfSymbol: "note.text",           brandColor: "#FFD60A"),
+    DockApp(id: "gcalendar", name: "Calendar", urlScheme: "googlecalendar://", sfSymbol: "calendar",            brandColor: "#1A73E8"),
+]
 
 let DEFAULT_ARENAS: [Arena] = [
     Arena(
@@ -534,6 +551,7 @@ final class DataStore {
     var habitLogs:  [HabitLog]           = loadFromDefaults("arena_habit_logs",      fallback: [])
     var journals:   [JournalEntry]       = loadFromDefaults("arena_journals",        fallback: [])
     var ideas:      [IdeaNote]           = loadFromDefaults("arena_ideas",           fallback: [])
+    var dockApps:   [DockApp]            = loadFromDefaults("arena_dock_apps",       fallback: DEFAULT_DOCK_APPS)
     var settings:   AppSettings          = loadFromDefaults("arena_settings",        fallback: AppSettings())
     var protocols:  [ArenaProtocolModel] = loadFromDefaults("arena_protocols",       fallback: DEFAULT_PROTOCOLS)
     var seenDrops:  [String]             = loadFromDefaults("arena_seen_drops",      fallback: [])
@@ -559,6 +577,7 @@ final class DataStore {
     func saveHabitLogs() { saveToDefaults("arena_habit_logs",     habitLogs) }
     func saveJournals()  { saveToDefaults("arena_journals",       journals) }
     func saveIdeas()     { saveToDefaults("arena_ideas",          ideas) }
+    func saveDockApps()  { saveToDefaults("arena_dock_apps",      dockApps) }
     func saveSettings()  { saveToDefaults("arena_settings",       settings) }
     func saveProtocols() { saveToDefaults("arena_protocols",      protocols) }
     func saveSeenDrops() { saveToDefaults("arena_seen_drops",     seenDrops) }

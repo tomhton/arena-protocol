@@ -5,6 +5,24 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.20.0 — 2026-03-20
+
+**App shortcuts dock with curated app catalog and edit mode.**
+
+### Features
+- **Scrollable app dock** — replaces the static 6-button shortcuts bar with a horizontal scroll row of rounded-square icons (56 pt, iOS app icon style) each showing an SF Symbol in the app's brand color plus name label below.
+- **Long-press edit mode** — long-pressing the dock enters edit mode: icons shake, × delete buttons appear on each icon, and a + add button appears at the end of the row. A DONE button exits edit mode.
+- **Curated catalog of 20 apps** — Spotify, Apple Music, Audible, YouTube, Health, Google Calendar, Notion, Headspace, Nike Run Club, Strava, WhatsApp, Messages, Phone, Safari, Instagram, X, LinkedIn, Notes, Reminders, Calm. All use SF Symbols + brand colors (no App Store icons bundled).
+- **Add flow** — picker sheet lists curated apps not yet in the dock. "Custom…" row opens a form for name, URL scheme, and SF Symbol to add any app.
+- **Persistent dock** — `store.dockApps: [DockApp]` saved to `arena_dock_apps` in UserDefaults. Default dock: Spotify, Audible, Health, YouTube, Notes, Calendar.
+
+### Internal
+- `DataStore.swift` — `DockApp: Identifiable, Codable` struct; `DEFAULT_DOCK_APPS` (6-app constant); `var dockApps`, `func saveDockApps()`
+- `AppShortcutsBar.swift` — full replacement: `CURATED_DOCK_APPS` (20-app catalog), `AppShortcutsBar` (scroll + long-press + DONE), `DockIconView` (56 pt icon + shake + × delete), `AddDockButton`, `DockAppPickerSheet` (curated list + custom form)
+- `Info.plist` — `LSApplicationQueriesSchemes` expanded to cover all 20 curated app URL scheme prefixes
+
+---
+
 ## v2.19.0 — 2026-03-20
 
 **Live Activity arena transitions work from anywhere — no longer require the session screen to be open.**
