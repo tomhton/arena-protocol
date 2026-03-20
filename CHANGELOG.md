@@ -5,6 +5,44 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.14.0 — 2026-03-19
+
+**Multi-arena session banner. Stacked sessions in header. Bug fixes.**
+
+### Features
+- **Multi-arena banner** — when sessions are stacked (swipe-down stash), all running arenas are shown in the top banner instead of bottom pills. Active session displays large (icon + name + live countdown + subtitle + PAUSE/RESUME). Each stacked session appears as a sub-row with its own countdown; tap any to bring it to foreground.
+- **Stacked-only state** — if the active session was stashed and no new one started, the first stacked arena is shown as the muted primary row with "STACKED — TAP TO RESUME". Tapping unstashes it and navigates to the timer.
+- **Arena count label** — banner shows "IN SESSION · N ARENAS" when multiple arenas are running.
+
+### Bug Fixes
+- **Banner reverts to idle on stash** — `headerSection` previously only triggered when `store.activeSession != nil`. Swipe-down stash moves the session to `stackedSessions` (setting `activeSession = nil`), which caused the idle "ENTER THE ARENA" header to appear. Now triggers `sessionBanner` whenever `activeSession != nil || !stackedSessions.isEmpty`.
+- **Color flood now covers stacked-only state** — background tint tracks the primary or first-stacked arena color.
+- **Bottom session tray removed** — pills, egg bonus badge, and abandon confirmation dialog removed from HomeView; banner is the single source of truth for all running arenas.
+
+### Internal
+- `HomeView.swift` — `sessionBanner` replaces `activeBanner` + bottom tray; `timerPill`, `stackedPill`, `showAbandonConfirm` removed; color flood generalized to `activeSession?.arena ?? stackedSessions.first?.arena`
+
+---
+
+## v2.13.0 — 2026-03-19
+
+**Arena renames. Arena icon on home screen cards.**
+
+### Features
+- **Arena renames** — default arenas renamed for clarity:
+  - Preparation → **Alignment** (id: `alignment`)
+  - Labor → **Work** (id: `work`)
+  - Mental Recovery → **Recovery** (id: `recovery`)
+  - Physical Activity → **Movement** (id: `movement`)
+  - All default protocols updated with new arena IDs and labels.
+- **Arena icon on cards** — `arena.icon` (◎ ◆ ◑ ◉) now displays on each arena card at the top-left at 18pt in the arena's color, alongside the letter. Was stored in the model but never rendered.
+
+### Internal
+- `DataStore.swift` — `DEFAULT_ARENAS` and `DEFAULT_PROTOCOLS` updated with new IDs/labels
+- `ArenaCardView.swift` — icon + letter shown as `HStack` in card content
+
+---
+
 ## v2.12.0 — 2026-03-19
 
 **Active session banner on HomeView.**

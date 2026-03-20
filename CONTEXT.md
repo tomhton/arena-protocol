@@ -1,12 +1,12 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.12.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.14.0).
 
 ---
 
 ## App Identity
 
 **Name:** Arena Protocol
-**One-liner:** A dark-themed iOS life-management app built around timed focus sessions across four life "arenas" (Alignment, Labor, Recharge, Movement) with a Social modifier, gamification, habit tracking, and daily rituals.
+**One-liner:** A dark-themed iOS life-management app built around timed focus sessions across four life "arenas" (Alignment, Work, Recovery, Movement) with a Social modifier, gamification, habit tracking, and daily rituals.
 **Bundle ID:** `com.arenaprotocol.app`
 **Repo:** `tomhton/arena-protocol`
 **Active branch:** `main`
@@ -73,6 +73,8 @@
 | 2.10.0 | 2026-03-19 | Calendar ↔ app full sync: EKEvent ID tracking, update/delete on finishEarly/abandon/joint remove. Interval timers log to calendar. Calendar resume banner in SelectView. Live Activity fixed for joint arenas + stash. |
 | 2.11.0 | 2026-03-19 | New arenas (Preparation, Labor, Mental Recovery, Physical Activity). Social modifier on HomeView — tags any session or runs standalone. Customisable protocols (ProtocolEditorView). Social Bool threaded through all navigation. |
 | 2.12.0 | 2026-03-19 | Active session banner replaces header + floating pill on HomeView. Arena color flood on background. Pause/resume from banner. `DataStore.togglePause()` added. |
+| 2.13.0 | 2026-03-19 | Arena renames: Alignment, Work, Recovery, Movement. Arena icon (◎ ◆ ◑ ◉) now rendered on home screen cards. |
+| 2.14.0 | 2026-03-19 | Multi-arena session banner: all stacked sessions shown in top banner. Bug fix: banner no longer reverts to idle on swipe-down stash. Bottom tray removed. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
