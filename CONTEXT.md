@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.19.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.20.0).
 
 ---
 
@@ -80,6 +80,7 @@
 | 2.17.0 | 2026-03-20 | Timeline-based session banner. `ActiveSessionState` gets `timeline`/`currentSlot`/`nextSlot` backend. Banner label → "CURRENTLY IN". Big row always shows live current arena. Single "UP NEXT" row with live countdown to next arena start. All controls and colors track `currentSlot`. |
 | 2.18.0 | 2026-03-20 | Xcode build fix (`PRODUCT_NAME` added to main app target). Live Activity arena identity (`arenaLabel/Color/Icon`) moved to `ContentState` so `Activity.update()` can change displayed arena on transition. |
 | 2.19.0 | 2026-03-20 | Live Activity + HomeView banner now update on arena transitions from any screen. `DataStore.syncLiveActivity(now:)` drives updates; HomeView 1 s timer calls it continuously. |
+| 2.20.0 | 2026-03-20 | App shortcuts dock: scrollable row of 56 pt rounded-square icons, long-press edit mode (shake + × delete + + add), 20-app curated catalog, custom app form, UserDefaults persistence. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -163,7 +164,7 @@ arena-protocol/
 │   │   ├── Components/
 │   │   │   ├── ArenaCardView.swift        ← Card UI + Canvas illustrations + AddArenaCardView
 │   │   │   ├── CircularTimerView.swift    ← Reusable circular progress timer
-│   │   │   ├── AppShortcutsBar.swift      ← 6 app shortcut buttons (deep link + fallback)
+│   │   │   ├── AppShortcutsBar.swift      ← Scrollable dock (CURATED_DOCK_APPS 20 apps, edit mode, picker sheet, DockApp struct)
 │   │   │   └── EmberDropModal.swift       ← Achievement popup overlay
 │   │   └── Resources/
 │   │       └── Info.plist                 ← Bundle config, URL schemes, dark mode
@@ -252,7 +253,7 @@ The app also handles the `arenaprotocol://active` deep link via `.onOpenURL` in 
 
 | Screen | File | What it does |
 |---|---|---|
-| **Home** | `HomeView.swift` | 2-column arena grid, session banner (replaces idle header when any session is active/stacked), edit toggle, social toggle, app shortcuts bar, Intervals row, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Session banner: "CURRENTLY IN" label, big current-arena row (timeline-driven — always the live slot), single "UP NEXT" row with live countdown, optional "+N MORE QUEUED", STACKED sub-rows, PAUSE/RESUME. All banner colors track `currentSlot` via 5 s `sessionNow` clock. |
+| **Home** | `HomeView.swift` | 2-column arena grid, session banner (replaces idle header when any session is active/stacked), edit toggle, social toggle, app shortcuts dock (horizontal scroll, long-press edit mode, persistent via `store.dockApps`), Intervals row, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Session banner: "CURRENTLY IN" label, big current-arena row (timeline-driven — always the live slot), single "UP NEXT" row with live countdown, optional "+N MORE QUEUED", STACKED sub-rows, PAUSE/RESUME. All banner colors track `currentSlot` via 1 s `sessionNow` clock. |
 | **Morning Check-in** | `MorningCheckinView.swift` | 3-step ritual (Reading 5m, Goals 5m, Movement 5m), animated progress bar, skip option. Shows once per day. |
 | **Select** | `SelectView.swift` | Arena detail + quest note textarea, sub-arena pills → example task list, duration picker (5/10/30/60/90/custom), Google Calendar option, launches session |
 | **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. Manages Live Activity lifecycle (start on session begin, update on pause/resume, end on done/abandon). Tapping the Dynamic Island or lock screen banner deep-links to this screen via `arenaprotocol://active`. |
@@ -373,6 +374,20 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
 **IMPORTANT:** `arenaLabel`, `arenaColor`, `arenaIcon` are in `ContentState` (not static attributes) so `Activity.update()` can change the displayed arena when a joint takes over. All widget/lock-screen rendering reads `context.state.arenaLabel/Color/Icon`.
 Defined in `ArenaProtocol/ArenaLiveActivityAttributes.swift` — compiled into **both** the main app target and the widget extension target.
 
+### DockApp
+```swift
+struct DockApp: Identifiable, Codable {
+    var id: String          // curated id ("spotify") or "custom_<uuid-prefix>" for custom entries
+    var name: String        // display name
+    var urlScheme: String   // e.g. "spotify://"
+    var sfSymbol: String    // SF Symbol name
+    var brandColor: String  // hex color
+}
+```
+`CURATED_DOCK_APPS` (20 apps, in `AppShortcutsBar.swift`) is the picker catalog.
+`DEFAULT_DOCK_APPS` (6 apps, in `DataStore.swift`) is the factory default dock.
+`store.dockApps` is the user's live dock — persisted to `arena_dock_apps` in UserDefaults.
+
 ### ArenaProtocolModel / ProtocolBlock
 ```swift
 struct ArenaProtocolModel: Identifiable, Codable {
@@ -406,6 +421,7 @@ struct HabitLog: Codable {
     var habitLogs:     [HabitLog]
     var journals:      [JournalEntry]
     var ideas:         [IdeaNote]
+    var dockApps:      [DockApp]          // persisted to arena_dock_apps; default = 6 apps
     var settings:      AppSettings        // { windDownTime: "21:30" }
     var protocols:     [ArenaProtocolModel]
     var seenDrops:     [String]           // ember drop ids already shown
@@ -444,6 +460,7 @@ struct HabitLog: Codable {
 | `arena_habit_logs` | `[HabitLog]` |
 | `arena_journals` | `[JournalEntry]` |
 | `arena_ideas` | `[IdeaNote]` |
+| `arena_dock_apps` | `[DockApp]` |
 | `arena_settings` | `AppSettings` |
 | `arena_protocols` | `[ArenaProtocolModel]` |
 | `arena_seen_drops` | `[String]` |
