@@ -113,6 +113,35 @@ struct ActiveSessionState {
     var social: Bool = false
 }
 
+// MARK: - ActiveSessionState timeline helpers
+
+extension ActiveSessionState {
+    /// Ordered list of every arena time slot for this session (primary first, then joints in sequence).
+    var timeline: [(arena: Arena, start: Date, end: Date)] {
+        let primaryEnd = jointEntries.isEmpty ? endTime : jointEntries[0].scheduledStart
+        var slots: [(arena: Arena, start: Date, end: Date)] = [(arena, startTime, primaryEnd)]
+        for entry in jointEntries {
+            slots.append((entry.arena, entry.scheduledStart, entry.scheduledEnd))
+        }
+        return slots
+    }
+
+    /// The arena slot actively running at `now` (start ≤ now < end). nil if between slots or complete.
+    func currentSlot(now: Date = Date()) -> (arena: Arena, start: Date, end: Date)? {
+        timeline.first { $0.start <= now && now < $0.end }
+    }
+
+    /// The slot immediately after the currently-running one, or the first upcoming slot if none active.
+    func nextSlot(now: Date = Date()) -> (arena: Arena, start: Date, end: Date)? {
+        let tl = timeline
+        if let idx = tl.firstIndex(where: { $0.start <= now && now < $0.end }) {
+            let next = idx + 1
+            return next < tl.count ? tl[next] : nil
+        }
+        return tl.first { $0.start > now }
+    }
+}
+
 struct MorningCheckin: Codable {
     var date: String
     var completed: [String]

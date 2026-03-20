@@ -19,16 +19,11 @@ struct HomeView: View {
     private var arenas: [Arena] { store.letteredArenas }
     private var sessions: [Session] { store.sessions }
 
-    /// The arena currently running right now — whichever joint is live, else primary, else first stacked.
+    /// The arena currently running right now — derived from the session timeline.
     private var currentlyRunningArena: Arena? {
-        let now = Date()
-        if let a = store.activeSession {
-            for entry in a.jointEntries where entry.scheduledStart <= now && entry.scheduledEnd > now {
-                return entry.arena
-            }
-            return a.arena
-        }
-        return store.stackedSessions.first?.arena
+        store.activeSession?.currentSlot(now: sessionNow)?.arena
+            ?? store.stackedSessions.first?.currentSlot(now: sessionNow)?.arena
+            ?? store.stackedSessions.first?.arena
     }
 
     var body: some View {
@@ -152,38 +147,40 @@ struct HomeView: View {
     }
 
     private var sessionBanner: some View {
-        let active = store.activeSession
+        let active  = store.activeSession
         let stacked = store.stackedSessions
-        let primaryColor: Color = {
-            if let a = active { return Color(hex: a.arena.color) }
-            if let s = stacked.first { return Color(hex: s.arena.color) }
-            return Color(hex: "#E8C547")
-        }()
+
+        // Source for timeline queries — active session, or first stacked if nothing active
+        let src: ActiveSessionState? = active ?? stacked.first
+        let curSlot  = src?.currentSlot(now: sessionNow)
+        let nextSlot = src?.nextSlot(now: sessionNow)
+
+        // Live arena & its end time — always reflects what is running right now
+        let liveArena: Arena = curSlot?.arena ?? active?.arena ?? stacked.first?.arena ?? DEFAULT_ARENAS[0]
+        let liveColor = Color(hex: liveArena.color)
+        let liveEnd: Date   = curSlot?.end ?? active?.endTime ?? stacked.first?.endTime ?? Date()
+
+        // Counts for the header label
         let jointEntries: [JointArenaEntry] = active?.jointEntries ?? []
         let totalCount = (active != nil ? 1 : 0) + jointEntries.count + stacked.count
-        // Primary arena's own end time (when it hands off to the first joint, or total end if no joints)
-        let primaryOwnEnd: Date = jointEntries.isEmpty ? (active?.endTime ?? Date()) : jointEntries[0].scheduledStart
-        // Has the primary arena's time elapsed — a joint has taken over?
-        let primaryIsDone: Bool = !jointEntries.isEmpty && sessionNow >= jointEntries[0].scheduledStart
-        // Color of whichever arena is running right now (primary or active joint)
-        let runningColor: Color = {
-            if let a = active {
-                for entry in a.jointEntries where entry.scheduledStart <= sessionNow && entry.scheduledEnd > sessionNow {
-                    return Color(hex: entry.arena.color)
-                }
-            }
-            return primaryColor
+        let totalMins  = (active?.durationMins ?? 0) + jointEntries.reduce(0) { $0 + $1.minutes }
+
+        // How many queued slots exist beyond the single "UP NEXT" row
+        let moreCount: Int = {
+            guard let tl = src?.timeline else { return 0 }
+            return max(0, tl.filter { $0.start > sessionNow }.count - 1)
         }()
-        // Sub-rows: all stacked when active exists; all-but-first when no active (first shown as primary)
+
+        // Stacked sessions that appear as sub-rows (all when active; all-but-first when stacked-only)
         let subStacked: [ActiveSessionState] = active != nil ? stacked : Array(stacked.dropFirst())
 
         return VStack(spacing: 0) {
-            // Thick vivid top accent bar — tracks the currently-running arena
+            // Top accent bar — tracks the currently-running arena color
             Rectangle()
-                .fill(runningColor)
+                .fill(liveColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: 4)
-                .animation(.easeInOut(duration: 0.5), value: runningColor.description)
+                .animation(.easeInOut(duration: 0.5), value: liveColor.description)
 
             VStack(alignment: .leading, spacing: 0) {
                 // Nav buttons
@@ -198,57 +195,59 @@ struct HomeView: View {
                 .padding(.top, 48)
                 .padding(.horizontal, 20)
 
-                // Session count label — in the currently-running arena's color
-                Text(totalCount > 1 ? "IN SESSION  ·  \(totalCount) ARENAS" : "IN SESSION")
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(runningColor.opacity(0.8))
-                    .kerning(5)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 8)
+                // "CURRENTLY IN" label
+                HStack(spacing: 6) {
+                    Text("CURRENTLY IN")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(liveColor.opacity(0.8))
+                        .kerning(5)
+                    if totalCount > 1 {
+                        Text("·  \(totalCount) ARENAS")
+                            .font(.system(size: 9, weight: .regular, design: .monospaced))
+                            .foregroundStyle(liveColor.opacity(0.4))
+                            .kerning(3)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 14)
+                .padding(.bottom, 8)
 
-                // Primary row — active session if exists, else first stacked
+                // ── CURRENT ARENA (big row) ───────────────────────────────────
                 if let a = active {
                     Button { navigate(.active(a.arena, a.durationMins, a.note, a.social)) } label: {
                         HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 5) {
                                 HStack(spacing: 8) {
-                                    Text(a.arena.icon)
+                                    Text(liveArena.icon)
                                         .font(.system(size: 20))
-                                        .foregroundStyle(primaryIsDone ? primaryColor.opacity(0.35) : primaryColor)
-                                    Text(a.arena.label)
+                                        .foregroundStyle(liveColor)
+                                    Text(liveArena.label)
                                         .font(.system(size: 26, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(primaryIsDone ? .white.opacity(0.35) : .white)
+                                        .foregroundStyle(.white)
                                         .kerning(2)
                                 }
-                                Text(a.arena.subtitle)
+                                Text(liveArena.subtitle)
                                     .font(.system(size: 9, design: .monospaced))
-                                    .foregroundStyle(.white.opacity(0.2))
+                                    .foregroundStyle(.white.opacity(0.35))
                                     .kerning(2)
                                 if !jointEntries.isEmpty {
-                                    let totalMins = a.durationMins + jointEntries.reduce(0) { $0 + $1.minutes }
                                     Text("TOTAL  \(totalMins)m")
                                         .font(.system(size: 8, design: .monospaced))
-                                        .foregroundStyle(runningColor.opacity(0.45))
+                                        .foregroundStyle(liveColor.opacity(0.45))
                                         .kerning(2)
                                 }
                             }
                             Spacer()
-                            if primaryIsDone {
-                                Text("DONE")
-                                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(primaryColor.opacity(0.35))
-                                    .kerning(3)
-                            } else if a.isPaused {
+                            if a.isPaused {
                                 let s = Int(a.pausedRemaining)
                                 Text(String(format: "%d:%02d", s / 60, s % 60))
                                     .font(.system(size: 32, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(primaryColor)
+                                    .foregroundStyle(liveColor)
                                     .monospacedDigit()
                             } else {
-                                Text(primaryOwnEnd, style: .timer)
+                                Text(liveEnd, style: .timer)
                                     .font(.system(size: 32, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(primaryColor)
+                                    .foregroundStyle(liveColor)
                                     .monospacedDigit()
                             }
                         }
@@ -256,8 +255,11 @@ struct HomeView: View {
                     }
                     .buttonStyle(.plain)
                 } else if let first = stacked.first {
-                    // No active — show first stacked as muted primary, prompt to resume
-                    let fc = Color(hex: first.arena.color)
+                    // Stacked-only — first stacked shown muted, tap to resume
+                    let firstSlot  = first.currentSlot(now: sessionNow)
+                    let firstArena = firstSlot?.arena ?? first.arena
+                    let firstColor = Color(hex: firstArena.color)
+                    let firstEnd   = firstSlot?.end ?? first.endTime
                     Button {
                         store.unstashSession(arenaId: first.arena.id)
                         if let a = store.activeSession {
@@ -267,23 +269,23 @@ struct HomeView: View {
                         HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 5) {
                                 HStack(spacing: 8) {
-                                    Text(first.arena.icon)
+                                    Text(firstArena.icon)
                                         .font(.system(size: 20))
-                                        .foregroundStyle(fc.opacity(0.6))
-                                    Text(first.arena.label)
+                                        .foregroundStyle(firstColor.opacity(0.6))
+                                    Text(firstArena.label)
                                         .font(.system(size: 26, weight: .bold, design: .monospaced))
                                         .foregroundStyle(.white.opacity(0.55))
                                         .kerning(2)
                                 }
                                 Text("STACKED  —  TAP TO RESUME")
                                     .font(.system(size: 8, design: .monospaced))
-                                    .foregroundStyle(fc.opacity(0.6))
+                                    .foregroundStyle(firstColor.opacity(0.6))
                                     .kerning(3)
                             }
                             Spacer()
-                            Text(first.endTime, style: .timer)
+                            Text(firstEnd, style: .timer)
                                 .font(.system(size: 32, weight: .bold, design: .monospaced))
-                                .foregroundStyle(fc.opacity(0.55))
+                                .foregroundStyle(firstColor.opacity(0.55))
                                 .monospacedDigit()
                         }
                         .padding(.horizontal, 20)
@@ -291,66 +293,57 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                 }
 
-                // Joint arenas queued after primary
-                if !jointEntries.isEmpty {
+                // ── UP NEXT ──────────────────────────────────────────────────
+                if let next = nextSlot {
+                    let nc       = Color(hex: next.arena.color)
+                    let nextMins = max(1, Int(next.end.timeIntervalSince(next.start) / 60))
                     Rectangle()
                         .fill(Color.white.opacity(0.06))
                         .frame(height: 1)
                         .padding(.horizontal, 20)
-                        .padding(.top, 12)
-
-                    Text("JOINT QUEUE")
+                        .padding(.top, 14)
+                    Text("UP NEXT")
                         .font(.system(size: 8, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.22))
                         .kerning(4)
                         .padding(.horizontal, 20)
                         .padding(.top, 8)
                         .padding(.bottom, 2)
-
-                    ForEach(jointEntries, id: \.id) { entry in
-                        let jc = Color(hex: entry.arena.color)
-                        let isRunning = sessionNow >= entry.scheduledStart && sessionNow < entry.scheduledEnd
-                        let isDone    = sessionNow >= entry.scheduledEnd
-                        HStack(spacing: 10) {
-                            Text(entry.arena.icon)
-                                .font(.system(size: isRunning ? 16 : 13))
-                                .foregroundStyle(isDone ? jc.opacity(0.25) : jc.opacity(isRunning ? 1 : 0.55))
-                            Text(entry.arena.label)
-                                .font(.system(size: 11, weight: isRunning ? .bold : .regular, design: .monospaced))
-                                .foregroundStyle(isDone ? jc.opacity(0.25) : jc.opacity(isRunning ? 0.9 : 0.6))
-                                .kerning(2)
-                            Spacer()
-                            if isDone {
-                                Text("done")
-                                    .font(.system(size: 10, design: .monospaced))
-                                    .foregroundStyle(jc.opacity(0.25))
-                            } else if isRunning {
-                                // Live countdown to this joint's end — same category color, bold
-                                Text(entry.scheduledEnd, style: .timer)
-                                    .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(jc)
-                                    .monospacedDigit()
-                            } else {
-                                // Live countdown to when this joint starts
-                                (Text("in ") + Text(entry.scheduledStart, style: .timer))
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundStyle(jc.opacity(0.45))
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, isRunning ? 10 : 6)
-                        .background(isRunning ? jc.opacity(0.07) : Color.clear)
+                    HStack(spacing: 10) {
+                        Text(next.arena.icon)
+                            .font(.system(size: 14))
+                            .foregroundStyle(nc.opacity(0.6))
+                        Text(next.arena.label)
+                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .foregroundStyle(nc.opacity(0.7))
+                            .kerning(2)
+                        Text("·  \(nextMins)m")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(nc.opacity(0.35))
+                        Spacer()
+                        (Text("in ") + Text(next.start, style: .timer))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(nc.opacity(0.5))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    if moreCount > 0 {
+                        Text("+\(moreCount) MORE QUEUED")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.18))
+                            .kerning(3)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 4)
                     }
                 }
 
-                // Sub-rows for remaining stacked sessions
+                // ── STACKED SESSIONS ─────────────────────────────────────────
                 if !subStacked.isEmpty {
                     Rectangle()
                         .fill(Color.white.opacity(0.08))
                         .frame(height: 1)
                         .padding(.horizontal, 20)
-                        .padding(.top, 12)
-
+                        .padding(.top, nextSlot == nil ? 14 : 8)
                     Text("STACKED")
                         .font(.system(size: 8, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.22))
@@ -358,9 +351,11 @@ struct HomeView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 8)
                         .padding(.bottom, 2)
-
                     ForEach(subStacked, id: \.arena.id) { s in
-                        let sc = Color(hex: s.arena.color)
+                        let sSlot  = s.currentSlot(now: sessionNow)
+                        let sArena = sSlot?.arena ?? s.arena
+                        let sColor = Color(hex: sArena.color)
+                        let sEnd   = sSlot?.end ?? s.endTime
                         Button {
                             store.unstashSession(arenaId: s.arena.id)
                             if let a = store.activeSession {
@@ -368,21 +363,21 @@ struct HomeView: View {
                             }
                         } label: {
                             HStack(spacing: 10) {
-                                Text(s.arena.icon)
+                                Text(sArena.icon)
                                     .font(.system(size: 13))
-                                    .foregroundStyle(sc)
-                                Text(s.arena.label)
+                                    .foregroundStyle(sColor)
+                                Text(sArena.label)
                                     .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(sc.opacity(0.8))
+                                    .foregroundStyle(sColor.opacity(0.8))
                                     .kerning(2)
                                 Spacer()
-                                Text(s.endTime, style: .timer)
+                                Text(sEnd, style: .timer)
                                     .font(.system(size: 13, design: .monospaced))
-                                    .foregroundStyle(sc.opacity(0.7))
+                                    .foregroundStyle(sColor.opacity(0.7))
                                     .monospacedDigit()
                                 Text("→")
                                     .font(.system(size: 10))
-                                    .foregroundStyle(sc.opacity(0.4))
+                                    .foregroundStyle(sColor.opacity(0.4))
                             }
                             .padding(.horizontal, 20)
                             .padding(.vertical, 8)
@@ -391,19 +386,19 @@ struct HomeView: View {
                     }
                 }
 
-                // Bottom controls
+                // ── Bottom controls ───────────────────────────────────────────
                 HStack(spacing: 12) {
                     if let a = active {
                         Button { store.togglePause() } label: {
                             Text(a.isPaused ? "▶  RESUME" : "⏸  PAUSE")
                                 .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundStyle(primaryColor)
+                                .foregroundStyle(liveColor)
                                 .kerning(2)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
-                                .background(primaryColor.opacity(0.15))
+                                .background(liveColor.opacity(0.15))
                                 .overlay(RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(primaryColor.opacity(0.5), lineWidth: 1))
+                                    .strokeBorder(liveColor.opacity(0.5), lineWidth: 1))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
@@ -420,8 +415,8 @@ struct HomeView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 20)
             }
-            .background(runningColor.opacity(0.14))
-            .animation(.easeInOut(duration: 0.5), value: runningColor.description)
+            .background(liveColor.opacity(0.14))
+            .animation(.easeInOut(duration: 0.5), value: liveColor.description)
         }
     }
 
