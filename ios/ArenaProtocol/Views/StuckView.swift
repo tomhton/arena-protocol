@@ -382,12 +382,12 @@ struct StuckView: View {
                 await a.end(nil, dismissalPolicy: .immediate)
             }
             let attrs = ArenaLiveActivityAttributes(
-                arenaId: "stuck", arenaLabel: "STUCK",
-                arenaColor: "#FF8FA3", arenaIcon: "⚡",
+                arenaId: "stuck",
                 questNote: note.isEmpty ? "Grace period" : note,
                 startTime: Date())
             let state = ArenaLiveActivityAttributes.ContentState(
-                endTime: stuckEnd, isPaused: false, pausedRemaining: 0, isIdle: false)
+                endTime: stuckEnd, isPaused: false, pausedRemaining: 0, isIdle: false,
+                arenaLabel: "STUCK", arenaColor: "#FF8FA3", arenaIcon: "⚡")
             _ = try? Activity.request(
                 attributes: attrs,
                 content: .init(state: state, staleDate: stuckEnd),
@@ -399,7 +399,8 @@ struct StuckView: View {
         Task {
             let mandatoryState = ArenaLiveActivityAttributes.ContentState(
                 endTime: Date(), isPaused: false, pausedRemaining: 0,
-                isIdle: false, isMandatory: true)
+                isIdle: false, isMandatory: true,
+                arenaLabel: "MANDATORY", arenaColor: "#FF8FA3", arenaIcon: "⚡")
             for a in Activity<ArenaLiveActivityAttributes>.activities where a.attributes.arenaId == "stuck" {
                 await a.update(.init(state: mandatoryState, staleDate: nil))
             }

@@ -672,10 +672,12 @@ struct ActiveProtocolView: View {
         let newEnd = isPaused ? Date() : endTime
         let paused = isPaused
         let left = timeLeft
+        let block = currentBlock
         Task {
             let state = ArenaLiveActivityAttributes.ContentState(
                 endTime: newEnd, isPaused: paused,
-                pausedRemaining: paused ? TimeInterval(left) : 0, isIdle: false)
+                pausedRemaining: paused ? TimeInterval(left) : 0, isIdle: false,
+                arenaLabel: block.label, arenaColor: block.color, arenaIcon: "◈")
             for a in Activity<ArenaLiveActivityAttributes>.activities where a.attributes.arenaId != "idle" {
                 await a.update(.init(state: state, staleDate: nil))
             }
@@ -697,10 +699,10 @@ struct ActiveProtocolView: View {
         let block = currentBlock
         let blockEndTime = endTime
         let state = ArenaLiveActivityAttributes.ContentState(
-            endTime: blockEndTime, isPaused: false, pausedRemaining: 0, isIdle: false)
+            endTime: blockEndTime, isPaused: false, pausedRemaining: 0, isIdle: false,
+            arenaLabel: block.label, arenaColor: block.color, arenaIcon: "◈")
         let attrs = ArenaLiveActivityAttributes(
-            arenaId: block.arenaId, arenaLabel: block.label,
-            arenaColor: block.color, arenaIcon: "◈",
+            arenaId: block.arenaId,
             questNote: `protocol`.name, startTime: Date())
         Task {
             for a in Activity<ArenaLiveActivityAttributes>.activities {

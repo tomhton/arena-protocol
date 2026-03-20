@@ -21,6 +21,7 @@ struct ActiveSessionView: View {
     @State private var jointEntries: [JointArenaEntry] = []
     @State private var showJointPicker = false
     @State private var totalTime: Int
+    @State private var liveArenaId: String = ""  // tracks last arena pushed to Live Activity
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private var arenaColor: Color { Color(hex: arena.color) }
@@ -302,7 +303,7 @@ struct ActiveSessionView: View {
         totalTime -= entry.minutes * 60
         store.activeSession?.jointEntries = jointEntries
         store.activeSession?.endTime = endTime
-        updateLiveActivityEndTime(endTime)
+        updateLiveActivity()
     }
 
     private func addJoint(arena: Arena, minutes: Int) {
@@ -317,7 +318,7 @@ struct ActiveSessionView: View {
         store.activeSession?.jointEntries = jointEntries
         store.activeSession?.endTime = endTime
         showJointPicker = false
-        updateLiveActivityEndTime(endTime)
+        updateLiveActivity()
         let entryId = entry.id
         let arenaLabel = arena.label
         let desc = arena.description
@@ -392,16 +393,16 @@ struct ActiveSessionView: View {
                 }()
                 let attrs = ArenaLiveActivityAttributes(
                     arenaId: arena.id,
-                    arenaLabel: arena.label,
-                    arenaColor: normalizedColor,
-                    arenaIcon: arena.icon.isEmpty ? "◉" : arena.icon,
                     questNote: socialNote,
                     startTime: endTime.addingTimeInterval(-TimeInterval(timeLeft))
                 )
                 let contentState = ArenaLiveActivityAttributes.ContentState(
                     endTime: endTime,
                     isPaused: false,
-                    pausedRemaining: 0
+                    pausedRemaining: 0,
+                    arenaLabel: arena.label,
+                    arenaColor: normalizedColor,
+                    arenaIcon: arena.icon.isEmpty ? "◉" : arena.icon
                 )
                 // End any stale activities before requesting — handles schema changes between builds
                 Task {
@@ -423,6 +424,7 @@ struct ActiveSessionView: View {
             }
             #endif
         }
+        liveArenaId = arena.id   // seed so first transition check has a baseline
         if let example = arena.examples.randomElement() { focusHint = example }
     }
 
@@ -442,6 +444,12 @@ struct ActiveSessionView: View {
             navigate(.complete(arena, duration, note, social))
         } else {
             timeLeft = remaining
+            // Detect arena transition (primary → joint) and push updated identity to Live Activity
+            let cur = currentLiveArena()
+            if cur.id != liveArenaId {
+                liveArenaId = cur.id
+                updateLiveActivity()
+            }
         }
     }
 
@@ -457,38 +465,41 @@ struct ActiveSessionView: View {
             store.activeSession?.endTime = endTime
             UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
         }
+        updateLiveActivity()
+    }
+
+    /// Push the current arena identity + timer state to the Live Activity.
+    /// Call whenever endTime changes (add/remove joint) or the running arena transitions.
+    private func updateLiveActivity(newEnd: Date? = nil) {
         #if canImport(ActivityKit)
-        let activity = liveActivity
-        let currentEndTime = store.activeSession?.endTime ?? endTime
-        let currentPaused = isPaused
-        let currentRemaining = store.activeSession?.pausedRemaining ?? 0
+        let activity  = liveActivity
+        let paused    = isPaused
+        let remaining = TimeInterval(timeLeft)
+        let jCount    = jointEntries.count
+        let end       = newEnd ?? endTime
+        let cur       = currentLiveArena()
+        let normColor: String = {
+            let c = cur.color.trimmingCharacters(in: .whitespacesAndNewlines)
+            return c.hasPrefix("#") ? c : "#\(c)"
+        }()
         Task {
             let newState = ArenaLiveActivityAttributes.ContentState(
-                endTime: currentEndTime,
-                isPaused: currentPaused,
-                pausedRemaining: currentRemaining
+                endTime: end,
+                isPaused: paused,
+                pausedRemaining: paused ? remaining : 0,
+                jointCount: jCount,
+                arenaLabel: cur.label,
+                arenaColor: normColor,
+                arenaIcon: cur.icon.isEmpty ? "◉" : cur.icon
             )
-            await activity?.update(.init(state: newState, staleDate: nil))
+            await activity?.update(.init(state: newState, staleDate: end))
         }
         #endif
     }
 
-    private func updateLiveActivityEndTime(_ newEnd: Date) {
-        #if canImport(ActivityKit)
-        let activity = liveActivity
-        let paused = isPaused
-        let remaining = TimeInterval(timeLeft)
-        let jCount = jointEntries.count
-        Task {
-            let newState = ArenaLiveActivityAttributes.ContentState(
-                endTime: newEnd,
-                isPaused: paused,
-                pausedRemaining: paused ? remaining : 0,
-                jointCount: jCount
-            )
-            await activity?.update(.init(state: newState, staleDate: newEnd))
-        }
-        #endif
+    /// The arena actively running right now — whichever joint slot is live, else primary.
+    private func currentLiveArena(now: Date = Date()) -> Arena {
+        jointEntries.first { $0.scheduledStart <= now && $0.scheduledEnd > now }?.arena ?? arena
     }
 
     private func endLiveActivity() {

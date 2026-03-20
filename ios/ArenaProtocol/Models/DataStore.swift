@@ -572,17 +572,17 @@ final class DataStore {
         }
         let attrs = ArenaLiveActivityAttributes(
             arenaId: "idle",
-            arenaLabel: "ARENA PROTOCOL",
-            arenaColor: "#E8C547",
-            arenaIcon: "◈",
             questNote: "",
             startTime: Date()
         )
         let state = ArenaLiveActivityAttributes.ContentState(
-            endTime: Date(), // idle — no countdown shown
+            endTime: Date(),
             isPaused: false,
             pausedRemaining: 0,
-            isIdle: true
+            isIdle: true,
+            arenaLabel: "ARENA PROTOCOL",
+            arenaColor: "#E8C547",
+            arenaIcon: "◈"
         )
         _ = try? Activity.request(attributes: attrs, content: .init(state: state, staleDate: nil))
     }

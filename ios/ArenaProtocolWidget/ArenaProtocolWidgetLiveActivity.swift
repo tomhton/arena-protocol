@@ -31,7 +31,7 @@ struct ArenaProtocolWidgetLiveActivity: Widget {
                 MinimalView(context: context)
             }
             .widgetURL(URL(string: "arenaprotocol://active"))
-            .keylineTint(Color(hex: context.attributes.arenaColor))
+            .keylineTint(Color(hex: context.state.arenaColor))
         }
     }
 }
@@ -112,7 +112,7 @@ private struct LockScreenBannerView: View {
     }
 
     private var sessionBanner: some View {
-        let arenaColor = Color(hex: context.attributes.arenaColor)
+        let arenaColor = Color(hex: context.state.arenaColor)
 
         return HStack(spacing: 0) {
             Rectangle()
@@ -125,7 +125,7 @@ private struct LockScreenBannerView: View {
                         Circle()
                             .stroke(arenaColor.opacity(0.25), lineWidth: 2)
                             .frame(width: 40, height: 40)
-                        Text(context.attributes.arenaIcon)
+                        Text(context.state.arenaIcon)
                             .font(.system(size: 18))
                             .foregroundColor(arenaColor.opacity(0.5))
                     }
@@ -136,7 +136,7 @@ private struct LockScreenBannerView: View {
                     ) {
                         EmptyView()
                     } currentValueLabel: {
-                        Text(context.attributes.arenaIcon)
+                        Text(context.state.arenaIcon)
                             .font(.system(size: 16))
                             .foregroundColor(arenaColor)
                     }
@@ -147,7 +147,7 @@ private struct LockScreenBannerView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(context.attributes.arenaLabel)
+                        Text(context.state.arenaLabel)
                             .font(.system(size: 13, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
                             .tracking(1.5)
@@ -200,7 +200,7 @@ private struct CompactLeadingView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        let arenaColor = Color(hex: context.attributes.arenaColor)
+        let arenaColor = Color(hex: context.state.arenaColor)
 
         if context.state.isMandatory {
             Text("⚡")
@@ -245,7 +245,7 @@ private struct CompactTrailingView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        let arenaColor = Color(hex: context.attributes.arenaColor)
+        let arenaColor = Color(hex: context.state.arenaColor)
 
         if context.state.isMandatory {
             Text("PICK")
@@ -278,7 +278,7 @@ private struct MinimalView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        let arenaColor = Color(hex: context.attributes.arenaColor)
+        let arenaColor = Color(hex: context.state.arenaColor)
 
         ProgressView(
             timerInterval: context.attributes.startTime...context.state.endTime,
@@ -300,13 +300,13 @@ private struct ExpandedLeadingView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        let arenaColor = Color(hex: context.attributes.arenaColor)
+        let arenaColor = Color(hex: context.state.arenaColor)
 
         VStack(alignment: .leading, spacing: 4) {
-            Text(context.attributes.arenaIcon)
+            Text(context.state.arenaIcon)
                 .font(.system(size: 20))
                 .foregroundColor(arenaColor)
-            Text(context.attributes.arenaLabel)
+            Text(context.state.arenaLabel)
                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundColor(arenaColor)
         }
@@ -322,7 +322,7 @@ private struct ExpandedTrailingView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        let arenaColor = Color(hex: context.attributes.arenaColor)
+        let arenaColor = Color(hex: context.state.arenaColor)
 
         Group {
             if context.state.isMandatory {
@@ -361,7 +361,7 @@ private struct ExpandedBottomView: View {
             }
             Spacer()
             if context.state.jointCount > 0 {
-                let arenaColor = Color(hex: context.attributes.arenaColor)
+                let arenaColor = Color(hex: context.state.arenaColor)
                 Text("PRIMARY  +  \(context.state.jointCount) JOINT")
                     .font(.system(size: 9, weight: .semibold, design: .monospaced))
                     .foregroundColor(arenaColor.opacity(0.7))

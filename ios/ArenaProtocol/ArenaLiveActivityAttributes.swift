@@ -2,17 +2,14 @@ import ActivityKit
 import SwiftUI
 
 struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
-    // Static (non-changing) fields
-    let arenaId: String
-    let arenaLabel: String
-    let arenaColor: String
-    let arenaIcon: String
+    // Static — set once at Activity.request, never changes
+    let arenaId: String         // identifies activity type: "idle" | "stuck" | arena id
     let questNote: String
-    let startTime: Date          // session start — used for circular progress ring
+    let startTime: Date         // session start — used for circular progress ring
 
     static let appGroupID = "group.arena.protocol"
 
-    // Dynamic (changing) state
+    // Dynamic — updated via Activity.update as the session progresses
     struct ContentState: Codable, Hashable, Sendable {
         var endTime: Date
         var isPaused: Bool
@@ -20,5 +17,9 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
         var isIdle: Bool = false        // true = no session, show motivational text
         var isMandatory: Bool = false   // true = post-stuck grace, must pick an arena
         var jointCount: Int = 0         // number of joint arenas queued after primary
+        // Arena identity — moves to ContentState so it updates when a joint takes over
+        var arenaLabel: String = ""
+        var arenaColor: String = "#E8C547"
+        var arenaIcon: String = "◉"
     }
 }
