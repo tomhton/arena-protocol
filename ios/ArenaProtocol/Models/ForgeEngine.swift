@@ -480,6 +480,60 @@ extension ForgeEngine {
     }
 }
 
+// MARK: - Egg Drop Evaluation
+
+extension ForgeEngine {
+
+    /// Returns an (EggRarity, triggerID) to drop, or nil if no egg qualifies.
+    /// Uses a separate seenEggDropIds array so eggs and narratives are tracked independently.
+    /// Priority: streak milestones → global milestones → per-arena milestones (highest tier first).
+    static func evaluateEggDrop(
+        profile: SessionProfile,
+        lastSession: Session?,
+        seenEggDropIds: [String]
+    ) -> (EggRarity, String)? {
+        let seen = Set(seenEggDropIds)
+
+        // Streak-triggered eggs
+        let streakTiers: [(Int, EggRarity)] = [
+            (365, .legendary), (100, .epic), (60, .epic),
+            (30, .rare), (21, .rare), (14, .uncommon),
+            (7, .common), (3, .common),
+        ]
+        for (threshold, rarity) in streakTiers {
+            let id = "egg_streak_\(threshold)"
+            if profile.currentGlobalStreak >= threshold && !seen.contains(id) {
+                return (rarity, id)
+            }
+        }
+
+        // Global session milestones
+        let globalTiers: [(Int, EggRarity)] = [
+            (50, .epic), (21, .rare), (13, .uncommon), (3, .common),
+        ]
+        for (threshold, rarity) in globalTiers {
+            let id = "egg_global_\(threshold)"
+            if profile.totalSessions >= threshold && !seen.contains(id) {
+                return (rarity, id)
+            }
+        }
+
+        // Per-arena milestones (based on last completed session's arena)
+        if let s = lastSession {
+            let arenaTiers: [(Int, EggRarity)] = [(21, .rare), (3, .common)]
+            let count = profile.arenaSessionCounts[s.arenaId] ?? 0
+            for (threshold, rarity) in arenaTiers {
+                let id = "egg_arena_\(s.arenaId)_\(threshold)"
+                if count >= threshold && !seen.contains(id) {
+                    return (rarity, id)
+                }
+            }
+        }
+
+        return nil
+    }
+}
+
 // MARK: - Protocol Recommendations
 
 extension ForgeEngine {

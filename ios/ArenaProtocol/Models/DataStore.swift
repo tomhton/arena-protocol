@@ -105,6 +105,95 @@ struct AppSettings: Codable {
     var calendarEnabled: Bool = false
 }
 
+// MARK: - Forge Progression Models
+
+enum EggRarity: String, Codable, CaseIterable, Sendable {
+    case common, uncommon, rare, epic, legendary, echo
+
+    var displayName: String {
+        switch self {
+        case .common:    return "COMMON"
+        case .uncommon:  return "UNCOMMON"
+        case .rare:      return "RARE"
+        case .epic:      return "EPIC"
+        case .legendary: return "LEGENDARY"
+        case .echo:      return "ECHO"
+        }
+    }
+    var glyph: String {
+        switch self {
+        case .common:    return "▪"
+        case .uncommon:  return "◆"
+        case .rare:      return "★"
+        case .epic:      return "⬟"
+        case .legendary: return "✦"
+        case .echo:      return "◈"
+        }
+    }
+    var hexColor: String {
+        switch self {
+        case .common:    return "#9CA3AF"
+        case .uncommon:  return "#60A5FA"
+        case .rare:      return "#A78BFA"
+        case .epic:      return "#F59E0B"
+        case .legendary: return "#E8C547"
+        case .echo:      return "#34D399"
+        }
+    }
+    var hatchThreshold: Int {
+        switch self {
+        case .common:    return 5
+        case .uncommon:  return 15
+        case .rare:      return 30
+        case .epic:      return 60
+        case .legendary: return 100
+        case .echo:      return 100
+        }
+    }
+}
+
+enum InventoryItemType: String, Codable, Sendable {
+    case title, glyph, badge, aura, fragment, echo
+}
+
+struct InventoryEgg: Identifiable, Codable {
+    var id: String
+    var rarity: EggRarity
+    var droppedAt: Double           // epoch ms
+    var sessionCountOnDrop: Int     // sessions.count when dropped
+    var hatchThreshold: Int         // cached at drop time
+    var isHatched: Bool
+    var rewardId: String?
+    var sourceArenaId: String?
+    var sourceTrigger: String
+}
+
+struct InventoryItem: Identifiable, Codable {
+    var id: String
+    var type: InventoryItemType
+    var rarity: EggRarity
+    var name: String
+    var description: String
+    var glyph: String
+    var isEquipped: Bool
+    var unlockedAt: Double          // epoch ms
+    var arenaId: String?            // for glyph items
+}
+
+struct RebirthState: Codable {
+    var arenaId: String
+    var islandLevel: Int            // 1–10
+    var totalSessionsAllTime: Int   // preserved across resets
+    var rebirthDates: [String]      // yyyy-MM-dd of each reset
+}
+
+struct PlayerProfile: Codable {
+    var equippedTitle: String?              // displayed title string
+    var equippedGlyphs: [String: String]    // arenaId → glyph character
+    var isPublic: Bool
+    var joinedAt: Double                    // epoch ms
+}
+
 struct JointArenaEntry: Identifiable {
     let id = UUID()
     let arena: Arena
@@ -562,7 +651,17 @@ final class DataStore {
     var dockApps:   [DockApp]            = loadFromDefaults("arena_dock_apps",       fallback: DEFAULT_DOCK_APPS)
     var settings:   AppSettings          = loadFromDefaults("arena_settings",        fallback: AppSettings())
     var protocols:  [ArenaProtocolModel] = loadFromDefaults("arena_protocols",       fallback: DEFAULT_PROTOCOLS)
-    var seenDrops:  [String]             = loadFromDefaults("arena_seen_drops",      fallback: [])
+    var seenDrops:     [String]             = loadFromDefaults("arena_seen_drops",      fallback: [])
+    var seenEggDrops:  [String]             = loadFromDefaults("arena_seen_egg_drops", fallback: [])
+    var eggs:          [InventoryEgg]       = loadFromDefaults("arena_eggs",           fallback: [])
+    var inventory:     [InventoryItem]      = loadFromDefaults("arena_inventory",      fallback: [])
+    var rebirthStates: [RebirthState]       = loadFromDefaults("arena_rebirth",        fallback: [])
+    var playerProfile: PlayerProfile        = {
+        let saved: PlayerProfile = loadFromDefaults("arena_profile",
+            fallback: PlayerProfile(equippedTitle: nil, equippedGlyphs: [:], isPublic: false,
+                                    joinedAt: Date().timeIntervalSince1970 * 1000))
+        return saved
+    }()
     var checkin:    MorningCheckin       = {
         let saved: MorningCheckin = loadFromDefaults("arena_checkin", fallback: MorningCheckin(date: "", completed: []))
         return saved.date == todayString() ? saved : MorningCheckin(date: todayString(), completed: [])
@@ -597,8 +696,13 @@ final class DataStore {
     func saveDockApps()  { saveToDefaults("arena_dock_apps",      dockApps) }
     func saveSettings()  { saveToDefaults("arena_settings",       settings) }
     func saveProtocols() { saveToDefaults("arena_protocols",      protocols) }
-    func saveSeenDrops() { saveToDefaults("arena_seen_drops",     seenDrops) }
-    func saveCheckin()   { saveToDefaults("arena_checkin",        checkin) }
+    func saveSeenDrops()     { saveToDefaults("arena_seen_drops",      seenDrops) }
+    func saveSeenEggDrops()  { saveToDefaults("arena_seen_egg_drops",  seenEggDrops) }
+    func saveEggs()          { saveToDefaults("arena_eggs",            eggs) }
+    func saveInventory()     { saveToDefaults("arena_inventory",       inventory) }
+    func saveRebirthStates() { saveToDefaults("arena_rebirth",         rebirthStates) }
+    func savePlayerProfile() { saveToDefaults("arena_profile",         playerProfile) }
+    func saveCheckin()       { saveToDefaults("arena_checkin",         checkin) }
 
     // Idle Live Activity — shown on lock screen when no session is active
     #if canImport(ActivityKit)
@@ -759,14 +863,27 @@ final class DataStore {
     func streak(for arenaId: String) -> Int { getStreakForArena(arenaId: arenaId, sessions: sessions) }
     func forgeMark(for arenaId: String) -> ForgeMark? { getForgeMarkForArena(arenaId: arenaId, sessions: sessions) }
 
-    // Ember drop
+    // Ember drop + egg drop
     func checkAndClaimEmberDrop() -> EmberDrop? {
-        // Forge narratives take priority — more personalised than legacy drops
-        let profile = buildSessionProfile(from: sessions, arenas: arenas)
+        let profile    = buildSessionProfile(from: sessions, arenas: arenas)
+        let lastSession = sessions.max(by: { $0.ts < $1.ts })
+
+        // Egg drops — independent of narrative, fire as a side effect
+        if let (rarity, triggerId) = ForgeEngine.evaluateEggDrop(
+            profile: profile,
+            lastSession: lastSession,
+            seenEggDropIds: seenEggDrops
+        ) {
+            seenEggDrops.append(triggerId)
+            saveSeenEggDrops()
+            addEgg(rarity: rarity, sourceArenaId: lastSession?.arenaId, sourceTrigger: triggerId)
+        }
+
+        // Forge narratives (personalized, higher priority)
         if let narrative = ForgeEngine.evaluate(
             profile: profile,
             arenas: arenas,
-            lastSession: sessions.max(by: { $0.ts < $1.ts }),
+            lastSession: lastSession,
             seenDropIds: seenDrops
         ) {
             let drop = narrative.toEmberDrop()
@@ -779,6 +896,130 @@ final class DataStore {
         seenDrops.append(drop.id)
         saveSeenDrops()
         return drop
+    }
+
+    // MARK: - Egg & Inventory
+
+    func addEgg(rarity: EggRarity, sourceArenaId: String?, sourceTrigger: String) {
+        let egg = InventoryEgg(
+            id: UUID().uuidString,
+            rarity: rarity,
+            droppedAt: Date().timeIntervalSince1970 * 1000,
+            sessionCountOnDrop: sessions.count,
+            hatchThreshold: rarity.hatchThreshold,
+            isHatched: false, rewardId: nil,
+            sourceArenaId: sourceArenaId,
+            sourceTrigger: sourceTrigger
+        )
+        eggs.append(egg)
+        saveEggs()
+    }
+
+    func eggProgress(_ egg: InventoryEgg) -> Int {
+        max(0, sessions.count - egg.sessionCountOnDrop)
+    }
+
+    func isEggReady(_ egg: InventoryEgg) -> Bool {
+        !egg.isHatched && eggProgress(egg) >= egg.hatchThreshold
+    }
+
+    func hatchEgg(_ egg: InventoryEgg) {
+        guard let idx = eggs.firstIndex(where: { $0.id == egg.id }), !egg.isHatched else { return }
+        let reward = _generateHatchReward(rarity: egg.rarity)
+        eggs[idx].isHatched = true
+        eggs[idx].rewardId = reward.id
+        inventory.append(reward)
+        saveEggs()
+        saveInventory()
+    }
+
+    private func _generateHatchReward(rarity: EggRarity) -> InventoryItem {
+        let id = UUID().uuidString
+        let ts = Date().timeIntervalSince1970 * 1000
+        switch rarity {
+        case .common:
+            return InventoryItem(id: id, type: .fragment, rarity: .common,
+                name: "FORGE SHARD",
+                description: "The first crack in the ore. Something older lives inside.",
+                glyph: "▪", isEquipped: false, unlockedAt: ts, arenaId: nil)
+        case .uncommon:
+            return InventoryItem(id: id, type: .glyph, rarity: .uncommon,
+                name: "EMBER MARK",
+                description: "An alternate forge glyph. Equip it to a specific arena in your profile.",
+                glyph: "❋", isEquipped: false, unlockedAt: ts, arenaId: nil)
+        case .rare:
+            return InventoryItem(id: id, type: .title, rarity: .rare,
+                name: "THE FORGED",
+                description: "Earned through the fire. Others would see this title.",
+                glyph: "★", isEquipped: false, unlockedAt: ts, arenaId: nil)
+        case .epic:
+            return InventoryItem(id: id, type: .aura, rarity: .epic,
+                name: "ASCENDANT AURA",
+                description: "A mark of sustained excellence. Visible on arena cards.",
+                glyph: "⬟", isEquipped: false, unlockedAt: ts, arenaId: nil)
+        case .legendary:
+            return InventoryItem(id: id, type: .title, rarity: .legendary,
+                name: "THE UNDYING",
+                description: "You've been here longer than most will ever manage.",
+                glyph: "✦", isEquipped: false, unlockedAt: ts, arenaId: nil)
+        case .echo:
+            return InventoryItem(id: id, type: .echo, rarity: .echo,
+                name: "ECHO",
+                description: "A snapshot of your best day. Preserved.",
+                glyph: "◈", isEquipped: false, unlockedAt: ts, arenaId: nil)
+        }
+    }
+
+    func equipItem(_ item: InventoryItem) {
+        // Unequip all items of the same type first
+        for i in inventory.indices where inventory[i].type == item.type {
+            inventory[i].isEquipped = false
+        }
+        if let idx = inventory.firstIndex(where: { $0.id == item.id }) {
+            inventory[idx].isEquipped = true
+            if item.type == .title {
+                playerProfile.equippedTitle = item.name
+                savePlayerProfile()
+            }
+        }
+        saveInventory()
+    }
+
+    func unequipItem(_ item: InventoryItem) {
+        if let idx = inventory.firstIndex(where: { $0.id == item.id }) {
+            inventory[idx].isEquipped = false
+            if item.type == .title {
+                playerProfile.equippedTitle = nil
+                savePlayerProfile()
+            }
+        }
+        saveInventory()
+    }
+
+    func equippedGlyph(for arenaId: String) -> String? {
+        playerProfile.equippedGlyphs[arenaId]
+    }
+
+    func rebirthState(for arenaId: String) -> RebirthState? {
+        rebirthStates.first { $0.arenaId == arenaId }
+    }
+
+    /// Resets an arena's session count and advances its Rebirth Island level.
+    /// Requires arenaSessionCounts[arenaId] ≥ 111. Non-reversible — call only after confirmation.
+    func rebirthArena(_ arenaId: String) {
+        let total = sessions.filter { $0.arenaId == arenaId }.count
+        guard total >= 111 else { return }
+        if let idx = rebirthStates.firstIndex(where: { $0.arenaId == arenaId }) {
+            rebirthStates[idx].islandLevel += 1
+            rebirthStates[idx].totalSessionsAllTime += total
+            rebirthStates[idx].rebirthDates.append(todayString())
+        } else {
+            rebirthStates.append(RebirthState(arenaId: arenaId, islandLevel: 1,
+                                              totalSessionsAllTime: total, rebirthDates: [todayString()]))
+        }
+        sessions.removeAll { $0.arenaId == arenaId }
+        saveSessions()
+        saveRebirthStates()
     }
 
     // Export CSV

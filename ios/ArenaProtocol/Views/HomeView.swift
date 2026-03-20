@@ -273,8 +273,9 @@ struct HomeView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 7) {
-                topButton("IDEA !", color: "#E8C547")  { navigate(.notes)    }
-                topButton("STATS",  color: "#B794F4")  { navigate(.history)  }
+                topButton("IDEA !", color: "#E8C547")  { navigate(.notes)     }
+                topButton("STATS",  color: "#B794F4")  { navigate(.history)   }
+                topButton("BAG",    color: "#34D399")  { navigate(.inventory) }
                 topButton("⚙",      color: "rgba(255,255,255,0.4)") { navigate(.settings) }
             }
         }
@@ -322,8 +323,9 @@ struct HomeView: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 7) {
-                    topButton("IDEA !", color: "#E8C547")  { navigate(.notes)    }
-                    topButton("STATS",  color: "#B794F4")  { navigate(.history)  }
+                    topButton("IDEA !", color: "#E8C547")  { navigate(.notes)     }
+                    topButton("STATS",  color: "#B794F4")  { navigate(.history)   }
+                    topButton("BAG",    color: "#34D399")  { navigate(.inventory) }
                     topButton("⚙",      color: "rgba(255,255,255,0.4)") { navigate(.settings) }
                 }
                 .padding(.top, 4)
@@ -999,18 +1001,33 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
 
-            Button { navigate(.stuck) } label: {
-                HStack(spacing: 10) {
-                    Text("⚡").font(.system(size: 13)).foregroundStyle(Color(hex: "#FF8FA3"))
-                    Text("I AM STUCK").font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(hex: "#FF8FA3")).kerning(4)
+            HStack(spacing: 8) {
+                Button { navigate(.stuck) } label: {
+                    HStack(spacing: 8) {
+                        Text("⚡").font(.system(size: 13)).foregroundStyle(Color(hex: "#FF8FA3"))
+                        Text("I AM STUCK").font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(hex: "#FF8FA3")).kerning(4)
+                    }
+                    .frame(maxWidth: .infinity).padding(.vertical, 14)
+                    .background(Color(hex: "#FF8FA3").opacity(0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#FF8FA3").opacity(0.25), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-                .frame(maxWidth: .infinity).padding(.vertical, 14)
-                .background(Color(hex: "#FF8FA3").opacity(0.06))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#FF8FA3").opacity(0.25), lineWidth: 1))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .buttonStyle(.plain)
+
+                Button { navigate(.profile) } label: {
+                    HStack(spacing: 8) {
+                        Text("◈").font(.system(size: 11)).foregroundStyle(Color(hex: "#E8C547"))
+                        Text("PROFILE").font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(hex: "#E8C547")).kerning(4)
+                    }
+                    .frame(maxWidth: .infinity).padding(.vertical, 14)
+                    .background(Color(hex: "#E8C547").opacity(0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#E8C547").opacity(0.2), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 14).padding(.bottom, 10)
     }

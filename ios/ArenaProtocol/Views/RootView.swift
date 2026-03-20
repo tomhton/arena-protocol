@@ -24,6 +24,8 @@ enum Screen: Hashable {
     case stuck
     case interval(String, Int)
     case whatsNew
+    case inventory
+    case profile
 }
 
 // MARK: - Root
@@ -137,6 +139,10 @@ struct RootView: View {
                 .navigationBarBackButtonHidden(true)
         case .whatsNew:
             WhatsNewView(navigate: navigate)
+        case .inventory:
+            InventoryView(navigate: navigate)
+        case .profile:
+            ProfileView(navigate: navigate)
         }
     }
 
