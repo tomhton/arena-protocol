@@ -13,6 +13,27 @@ private struct VersionEntry: Identifiable {
 
 private let CHANGELOG: [VersionEntry] = [
     VersionEntry(
+        version: "v2.11.0", date: "Mar 19, 2026",
+        headline: "New arenas · Social modifier · Custom protocols",
+        bullets: [
+            "New arenas: Preparation (A), Labor (B), Mental Recovery (C), Physical Activity (D)",
+            "Social toggle on home screen — tag any session as social or run a standalone Social session",
+            "Social sessions show ◎ prefix in Live Activity, calendar events, and session logs",
+            "Protocols tab fully customisable — create, edit, and delete your own arena combinations",
+            "Per-protocol: set name, icon, colour, and any number of arena + duration blocks",
+        ]
+    ),
+    VersionEntry(
+        version: "v2.10.0", date: "Mar 19, 2026",
+        headline: "Calendar sync · Resume from calendar",
+        bullets: [
+            "Sessions now track calendar event IDs — early finish trims the event, abandon deletes it",
+            "Joint arenas that hadn't started yet are deleted from calendar when removed",
+            "Interval timers (Flow, Drift, Walk…) create and trim their own calendar events",
+            "SelectView detects ongoing calendar events matching the arena — shows RESUME with time remaining",
+        ]
+    ),
+    VersionEntry(
         version: "v2.9.0", date: "Mar 19, 2026",
         headline: "Protocol Live Activity",
         bullets: [
