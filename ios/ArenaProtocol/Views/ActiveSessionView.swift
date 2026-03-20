@@ -427,7 +427,8 @@ struct ActiveSessionView: View {
             }
             #endif
         }
-        liveArenaId = arena.id   // seed so first transition check has a baseline
+        liveArenaId = arena.id   // seed local transition tracker
+        store.liveArenaId = arena.id  // seed DataStore tracker so HomeView's 1s timer doesn't re-push on first tick
         if let example = arena.examples.randomElement() { focusHint = example }
     }
 
@@ -451,6 +452,7 @@ struct ActiveSessionView: View {
             let cur = currentLiveArena()
             if cur.id != liveArenaId {
                 liveArenaId = cur.id
+                store.liveArenaId = cur.id  // keep DataStore in sync so HomeView timer doesn't double-push
                 updateLiveActivity()
             }
         }

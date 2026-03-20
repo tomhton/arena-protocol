@@ -545,6 +545,10 @@ final class DataStore {
     var activeSession: ActiveSessionState? = nil
     var stackedSessions: [ActiveSessionState] = []
 
+    // Tracks the last arena whose identity was broadcast to the Live Activity.
+    // Updated by syncLiveActivity() so duplicate pushes are skipped.
+    var liveArenaId: String = ""
+
     var letteredArenas: [Arena] { Arena.reletter(arenas) }
     var todaySessions:  Int    { sessions.filter { $0.date == todayString() }.count }
 
@@ -591,6 +595,41 @@ final class DataStore {
         Task {
             for a in Activity<ArenaLiveActivityAttributes>.activities where a.attributes.arenaId == "idle" {
                 await a.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+    }
+
+    /// Called every second from HomeView's always-running timer.
+    /// Detects arena transitions and pushes an updated ContentState to the Live Activity
+    /// so the lock screen / Dynamic Island switches arenas even when ActiveSessionView
+    /// is not in the view hierarchy (e.g. user is on HomeView or phone is locked).
+    func syncLiveActivity(now: Date = Date()) {
+        let session = activeSession ?? stackedSessions.first
+        guard let session else { return }
+        guard let cur = session.currentSlot(now: now) else { return }
+        guard cur.arena.id != liveArenaId else { return }
+        liveArenaId = cur.arena.id
+        let next = session.nextSlot(now: now)
+        let normColor: String = {
+            let c = cur.arena.color.trimmingCharacters(in: .whitespacesAndNewlines)
+            return c.hasPrefix("#") ? c : "#\(c)"
+        }()
+        let newState = ArenaLiveActivityAttributes.ContentState(
+            endTime: cur.end,
+            isPaused: session.isPaused,
+            pausedRemaining: session.isPaused ? session.pausedRemaining : 0,
+            jointCount: session.jointEntries.count,
+            arenaLabel: cur.arena.label,
+            arenaColor: normColor,
+            arenaIcon: cur.arena.icon.isEmpty ? "◉" : cur.arena.icon,
+            currentArenaStart: cur.start,
+            sessionEndTime: session.endTime,
+            nextArenaLabel: next?.arena.label ?? "",
+            nextArenaIcon: next?.arena.icon ?? ""
+        )
+        Task {
+            for activity in Activity<ArenaLiveActivityAttributes>.activities {
+                await activity.update(.init(state: newState, staleDate: session.endTime))
             }
         }
     }

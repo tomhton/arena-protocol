@@ -65,8 +65,12 @@ struct HomeView: View {
         .animation(.easeInOut(duration: 0.25), value: pendingDrop?.id)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: store.activeSession != nil)
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: store.stackedSessions.count)
-        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { t in
-            if store.activeSession != nil || !store.stackedSessions.isEmpty { sessionNow = t }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { t in
+            guard store.activeSession != nil || !store.stackedSessions.isEmpty else { return }
+            sessionNow = t
+            #if canImport(ActivityKit)
+            store.syncLiveActivity(now: t)
+            #endif
         }
         .onAppear {
             refreshNextBlock()
