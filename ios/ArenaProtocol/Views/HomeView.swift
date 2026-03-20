@@ -4,6 +4,8 @@
 import SwiftUI
 import EventKit
 
+private enum HomeViewMode { case home, session }
+
 struct HomeView: View {
     @Environment(DataStore.self) private var store
     var navigate: (Screen) -> Void
@@ -14,7 +16,7 @@ struct HomeView: View {
     @State private var nextBlock: EKEvent? = nil
     @State private var socialActive = false
     @State private var sessionNow: Date = Date()
-    @State private var sessionTab: Int = 0  // 0 = Home, 1 = Currently In
+    @State private var viewMode: HomeViewMode = .home
 
     private let socialColor = Color(hex: "#B794F4")
 
@@ -41,13 +43,18 @@ struct HomeView: View {
             }
 
             VStack(spacing: 0) {
-                // Tab strip — only when session running; sits just below safe area naturally
+                // Compact session strip — replaces tab pills, shows timer inline
                 if hasSession {
-                    sessionTabBar
+                    compactSessionStrip
+                }
+
+                // View selector dropdown — always accessible at top when session running
+                if hasSession {
+                    viewSelectorMenu
                 }
 
                 ScrollView(showsIndicators: false) {
-                    if hasSession && sessionTab == 1 {
+                    if hasSession && viewMode == .session {
                         sessionContent
                     } else {
                         homeContent
@@ -73,7 +80,7 @@ struct HomeView: View {
         }
         .onAppear {
             refreshNextBlock()
-            if hasSession { sessionTab = 1 }
+            if hasSession { viewMode = .session }
             if store.activeSession == nil && store.stackedSessions.isEmpty {
                 #if canImport(ActivityKit)
                 store.startIdleActivity()
@@ -81,7 +88,7 @@ struct HomeView: View {
             }
         }
         .onChange(of: hasSession) { _, new in
-            if new { withAnimation(.spring(response: 0.3)) { sessionTab = 1 } }
+            if new { withAnimation(.spring(response: 0.3)) { viewMode = .session } }
         }
     }
 
@@ -91,58 +98,129 @@ struct HomeView: View {
         nextBlock = upcoming.first(where: { Int($0.startDate.timeIntervalSinceNow / 60) <= 90 })
     }
 
-    // MARK: - Session Tab Bar
+    // MARK: - Compact Session Strip (replaces tab pills)
 
-    private var sessionTabBar: some View {
-        let liveColor = Color(hex: currentlyRunningArena?.color ?? "#E8C547")
-        let liveIcon  = currentlyRunningArena?.icon  ?? "◉"
-        let liveLabel = currentlyRunningArena?.label ?? "SESSION"
+    private var compactSessionStrip: some View {
+        let active    = store.activeSession
+        let stacked   = store.stackedSessions
+        let src: ActiveSessionState? = active ?? stacked.first
+        let curSlot   = src?.currentSlot(now: sessionNow)
+        let liveArena = curSlot?.arena ?? active?.arena ?? stacked.first?.arena ?? DEFAULT_ARENAS[0]
+        let liveColor = Color(hex: liveArena.color)
+        let liveEnd   = curSlot?.end ?? active?.endTime ?? stacked.first?.endTime ?? Date()
 
         return VStack(spacing: 0) {
             Rectangle()
                 .fill(liveColor)
-                .frame(maxWidth: .infinity, maxHeight: 3)
-                .animation(.easeInOut(duration: 0.5), value: liveColor.description)
-            HStack(spacing: 8) {
-                tabPill("HOME", selected: sessionTab == 0, color: .white.opacity(0.75)) {
-                    withAnimation(.spring(response: 0.3)) { sessionTab = 0 }
+                .frame(height: 2)
+
+            HStack(spacing: 12) {
+                // Arena name + end time — tappable to open full session view
+                Button {
+                    if let a = active {
+                        navigate(.active(a.arena, a.durationMins, a.note, a.social))
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(liveArena.icon)
+                            .font(.system(size: 16))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(liveArena.label)
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.white)
+                                .kerning(2)
+                            Text("ENDS  \(formattedStartTime(liveEnd))")
+                                .font(.system(size: 8, design: .monospaced))
+                                .foregroundStyle(liveColor.opacity(0.55))
+                                .kerning(2)
+                        }
+                    }
                 }
-                tabPill("\(liveIcon)  \(liveLabel)", selected: sessionTab == 1, color: liveColor) {
-                    withAnimation(.spring(response: 0.3)) { sessionTab = 1 }
-                }
+                .buttonStyle(.plain)
+
                 Spacer()
+
+                // Live countdown
+                if let a = active, a.isPaused {
+                    let s = Int(a.pausedRemaining)
+                    Text(String(format: "%d:%02d", s / 60, s % 60))
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .foregroundStyle(liveColor.opacity(0.55))
+                        .monospacedDigit()
+                } else {
+                    Text(liveEnd, style: .timer)
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .foregroundStyle(liveColor)
+                        .monospacedDigit()
+                }
+
+                // Pause / Resume
+                if let a = active {
+                    Button { store.togglePause() } label: {
+                        Text(a.isPaused ? "▶" : "⏸")
+                            .font(.system(size: 13))
+                            .foregroundStyle(liveColor)
+                            .frame(width: 32, height: 32)
+                            .background(liveColor.opacity(0.18))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 10)
-            .background(liveColor.opacity(0.08))
-            .animation(.easeInOut(duration: 0.5), value: liveColor.description)
+            .padding(.vertical, 10)
+            .background(liveColor.opacity(0.10))
         }
+        .animation(.easeInOut(duration: 0.5), value: liveColor.description)
     }
 
-    private func tabPill(_ label: String, selected: Bool, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(selected ? color : Color.white.opacity(0.28))
-                .kerning(2)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(selected ? color.opacity(0.15) : Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(selected ? color.opacity(0.45) : Color.white.opacity(0.08), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+    // MARK: - View Selector Dropdown
+
+    private var viewSelectorMenu: some View {
+        let liveColor = Color(hex: currentlyRunningArena?.color ?? "#E8C547")
+
+        return HStack(spacing: 0) {
+            Menu {
+                Button {
+                    withAnimation(.spring(response: 0.3)) { viewMode = .home }
+                } label: {
+                    Label("Home", systemImage: "square.grid.2x2")
+                }
+                Button {
+                    withAnimation(.spring(response: 0.3)) { viewMode = .session }
+                } label: {
+                    Label("Currently In", systemImage: "timer")
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(viewMode == .home ? "HOME" : "CURRENTLY IN")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(viewMode == .session ? liveColor.opacity(0.8) : Color.white.opacity(0.45))
+                        .kerning(3)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.3))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+            }
+            .menuStyle(.automatic)
+
+            Spacer()
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .background(Color.black.opacity(0.18))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.white.opacity(0.05))
+                .frame(height: 1)
+        }
     }
 
     // MARK: - Nav Buttons (shared by both tabs)
 
     private var navButtonsRow: some View {
         HStack(alignment: .top) {
-            // Left: session count + title badge
             VStack(alignment: .leading, spacing: 4) {
                 if store.todaySessions > 0 {
                     Text("● \(store.todaySessions) SESSION\(store.todaySessions != 1 ? "S" : "") TODAY")
@@ -175,7 +253,6 @@ struct HomeView: View {
 
     private var homeContent: some View {
         VStack(spacing: 0) {
-            // Header: idle title + nav buttons (or compact when session is running in other tab)
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("ARENA PROTOCOL")
@@ -248,14 +325,12 @@ struct HomeView: View {
         let totalCount = (active != nil ? 1 : 0) + jointEntries.count + stacked.count
         let totalMins  = (active?.durationMins ?? 0) + jointEntries.reduce(0) { $0 + $1.minutes }
 
-        // All future slots beyond the currently-running one
         let futureSlots: [(arena: Arena, start: Date, end: Date)] =
             src?.timeline.filter { $0.start > sessionNow } ?? []
         let subStacked: [ActiveSessionState] = active != nil ? stacked : Array(stacked.dropFirst())
 
         return VStack(alignment: .leading, spacing: 0) {
 
-            // Nav buttons + session count
             navButtonsRow
                 .padding(.top, 8)
 
@@ -361,7 +436,6 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                 }
 
-                // Controls
                 if let a = active {
                     HStack(spacing: 12) {
                         Button { store.togglePause() } label: {
@@ -646,7 +720,6 @@ struct HomeView: View {
                 }
             }
 
-            // ADD card — visible only in edit mode
             if editMode {
                 AddArenaCardView { navigate(.newArena) }
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
