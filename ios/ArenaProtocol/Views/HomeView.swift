@@ -10,7 +10,6 @@ struct HomeView: View {
     @Binding var pendingDrop: EmberDrop?
 
     @State private var editMode = false
-    @State private var showAbandonConfirm = false
     @State private var nextBlock: EKEvent? = nil
     @State private var socialActive = false
 
@@ -24,13 +23,13 @@ struct HomeView: View {
             // Ember particles background
             EmberParticles()
 
-            // Active arena color flood
-            if let active = store.activeSession {
-                Color(hex: active.arena.color)
+            // Active arena color flood — primary arena (active) or first stacked
+            if let primaryArena = store.activeSession?.arena ?? store.stackedSessions.first?.arena {
+                Color(hex: primaryArena.color)
                     .opacity(0.22)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
-                    .animation(.easeInOut(duration: 0.5), value: active.arena.id)
+                    .animation(.easeInOut(duration: 0.5), value: primaryArena.id)
             }
 
             ScrollView(showsIndicators: false) {
@@ -54,50 +53,10 @@ struct HomeView: View {
                     .zIndex(999)
             }
 
-            // Session tray — stacked (minimized) pills only; active session shown as banner
-            if !store.stackedSessions.isEmpty {
-                VStack {
-                    Spacer()
-                    VStack(spacing: 6) {
-                        // Egg bonus badge when multiple arenas running
-                        if store.stackedSessions.count >= 1 {
-                            HStack(spacing: 6) {
-                                Text("◆")
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(Color(hex: "#E8C547"))
-                                Text("EGG BONUS ACTIVE — \(store.stackedSessions.count + (store.activeSession != nil ? 1 : 0)) ARENAS")
-                                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(Color(hex: "#E8C547").opacity(0.8))
-                                    .kerning(2)
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(Color(hex: "#E8C547").opacity(0.08))
-                            .overlay(Capsule().strokeBorder(Color(hex: "#E8C547").opacity(0.25), lineWidth: 1))
-                            .clipShape(Capsule())
-                            .transition(.scale.combined(with: .opacity))
-                        }
-
-                        // Stashed sessions
-                        ForEach(store.stackedSessions, id: \.arena.id) { stashed in
-                            stackedPill(stashed)
-                                .frame(maxWidth: .infinity)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                    }
-                    .padding(.bottom, 16)
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .zIndex(100)
-            }
         }
         .animation(.easeInOut(duration: 0.25), value: pendingDrop?.id)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: store.activeSession != nil)
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: store.stackedSessions.count)
-        .confirmationDialog("Abandon session?", isPresented: $showAbandonConfirm, titleVisibility: .visible) {
-            Button("Abandon", role: .destructive) { store.endSession() }
-            Button("Cancel", role: .cancel) { }
-        }
         .onAppear {
             refreshNextBlock()
             // Start idle Live Activity only when no sessions exist at all (active or stacked)
@@ -165,125 +124,38 @@ struct HomeView: View {
         .disabled(matched == nil)
     }
 
-    // MARK: - Timer Pill
-
-    private func timerPill(_ active: ActiveSessionState) -> some View {
-        let arenaColor = Color(hex: active.arena.color)
-
-        return HStack(spacing: 0) {
-            // Left: dot + label
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(arenaColor)
-                    .frame(width: 12, height: 12)
-                Text(active.arena.label)
-                    .font(.system(size: 14, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.textPrimary)
-            }
-            .padding(.leading, 16)
-
-            Spacer()
-
-            // Center separator
-            Rectangle()
-                .fill(Color.white.opacity(0.1))
-                .frame(width: 1, height: 24)
-
-            // Right: live countdown
-            Text(active.endTime, style: .timer)
-                .font(.system(size: 14, weight: .medium, design: .monospaced))
-                .foregroundStyle(arenaColor)
-                .multilineTextAlignment(.trailing)
-                .frame(width: 64)
-                .padding(.horizontal, 10)
-        }
-        .frame(width: 280, height: 56)
-        .background(Color.cardBg)
-        .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(arenaColor, lineWidth: 1))
-        .onTapGesture {
-            navigate(.active(active.arena, active.durationMins, active.note, active.social))
-        }
-        .overlay(alignment: .trailing) {
-            Button { showAbandonConfirm = true } label: {
-                Text("✕")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.white.opacity(0.3))
-                    .padding(.horizontal, 16)
-                    .frame(height: 56)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func stackedPill(_ session: ActiveSessionState) -> some View {
-        let arenaColor = Color(hex: session.arena.color)
-        return HStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(arenaColor.opacity(0.5))
-                    .frame(width: 8, height: 8)
-                Text(session.arena.label)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.5))
-            }
-            .padding(.leading, 16)
-
-            Spacer()
-
-            Text(session.endTime, style: .timer)
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(arenaColor.opacity(0.6))
-                .monospacedDigit()
-                .frame(width: 64)
-                .padding(.horizontal, 10)
-        }
-        .frame(width: 280, height: 42)
-        .background(Color.cardBg.opacity(0.7))
-        .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(arenaColor.opacity(0.35), lineWidth: 1))
-        .onTapGesture {
-            store.unstashSession(arenaId: session.arena.id)
-            if let active = store.activeSession {
-                navigate(.active(active.arena, active.durationMins, active.note, active.social))
-            }
-        }
-        .overlay(alignment: .trailing) {
-            Button {
-                store.abandonStackedSession(arenaId: session.arena.id)
-            } label: {
-                Text("✕")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.white.opacity(0.25))
-                    .padding(.horizontal, 14)
-                    .frame(height: 42)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
     // MARK: - Header
 
     @ViewBuilder
     private var headerSection: some View {
-        if let active = store.activeSession {
-            activeBanner(active)
+        if store.activeSession != nil || !store.stackedSessions.isEmpty {
+            sessionBanner
         } else {
             idleHeader
         }
     }
 
-    private func activeBanner(_ active: ActiveSessionState) -> some View {
-        let arenaColor = Color(hex: active.arena.color)
+    private var sessionBanner: some View {
+        let active = store.activeSession
+        let stacked = store.stackedSessions
+        let primaryColor: Color = {
+            if let a = active { return Color(hex: a.arena.color) }
+            if let s = stacked.first { return Color(hex: s.arena.color) }
+            return Color(hex: "#E8C547")
+        }()
+        let totalCount = (active != nil ? 1 : 0) + stacked.count
+        // Sub-rows: all stacked when active exists; all-but-first when no active (first shown as primary)
+        let subStacked: [ActiveSessionState] = active != nil ? stacked : Array(stacked.dropFirst())
+
         return VStack(spacing: 0) {
             // Thick vivid top accent bar
             Rectangle()
-                .fill(arenaColor)
+                .fill(primaryColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: 4)
 
             VStack(alignment: .leading, spacing: 0) {
-                // Nav buttons row (keep access to IDEA/STATS/⚙)
+                // Nav buttons
                 HStack {
                     Spacer()
                     VStack(alignment: .trailing, spacing: 7) {
@@ -295,75 +167,156 @@ struct HomeView: View {
                 .padding(.top, 48)
                 .padding(.horizontal, 20)
 
-                // Main banner content — tappable to open session
-                Button {
-                    navigate(.active(active.arena, active.durationMins, active.note, active.social))
-                } label: {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("IN SESSION")
-                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(arenaColor.opacity(0.8))
-                            .kerning(5)
-
-                        HStack(alignment: .firstTextBaseline, spacing: 14) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(active.arena.label)
-                                    .font(.system(size: 34, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.white)
-                                    .kerning(2)
-                                Text(active.arena.subtitle)
-                                    .font(.system(size: 10, design: .monospaced))
-                                    .foregroundStyle(Color.white.opacity(0.4))
-                                    .kerning(2)
-                            }
-                            Spacer()
-                            // Live countdown (or paused remaining)
-                            Group {
-                                if active.isPaused {
-                                    let secs = Int(active.pausedRemaining)
-                                    Text(String(format: "%d:%02d", secs / 60, secs % 60))
-                                } else {
-                                    Text(active.endTime, style: .timer)
-                                }
-                            }
-                            .font(.system(size: 38, weight: .bold, design: .monospaced))
-                            .foregroundStyle(arenaColor)
-                            .monospacedDigit()
-                        }
-
-                        HStack(spacing: 12) {
-                            // Pause / resume
-                            Button {
-                                store.togglePause()
-                            } label: {
-                                Text(active.isPaused ? "▶  RESUME" : "⏸  PAUSE")
-                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(arenaColor)
-                                    .kerning(2)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(arenaColor.opacity(0.15))
-                                    .overlay(RoundedRectangle(cornerRadius: 10)
-                                        .strokeBorder(arenaColor.opacity(0.5), lineWidth: 1))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                            }
-                            .buttonStyle(.plain)
-
-                            Spacer()
-
-                            Text("TAP TO OPEN →")
-                                .font(.system(size: 9, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.25))
-                                .kerning(3)
-                        }
-                    }
+                // Session count label
+                Text(totalCount > 1 ? "IN SESSION  ·  \(totalCount) ARENAS" : "IN SESSION")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(primaryColor.opacity(0.8))
+                    .kerning(5)
                     .padding(.horizontal, 20)
                     .padding(.top, 14)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 8)
+
+                // Primary row — active session if exists, else first stacked
+                if let a = active {
+                    Button { navigate(.active(a.arena, a.durationMins, a.note, a.social)) } label: {
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack(spacing: 8) {
+                                    Text(a.arena.icon)
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(primaryColor)
+                                    Text(a.arena.label)
+                                        .font(.system(size: 26, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(.white)
+                                        .kerning(2)
+                                }
+                                Text(a.arena.subtitle)
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundStyle(.white.opacity(0.35))
+                                    .kerning(2)
+                            }
+                            Spacer()
+                            Group {
+                                if a.isPaused {
+                                    let s = Int(a.pausedRemaining)
+                                    Text(String(format: "%d:%02d", s / 60, s % 60))
+                                } else {
+                                    Text(a.endTime, style: .timer)
+                                }
+                            }
+                            .font(.system(size: 32, weight: .bold, design: .monospaced))
+                            .foregroundStyle(primaryColor)
+                            .monospacedDigit()
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .buttonStyle(.plain)
+                } else if let first = stacked.first {
+                    // No active — show first stacked as muted primary, prompt to resume
+                    let fc = Color(hex: first.arena.color)
+                    Button {
+                        store.unstashSession(arenaId: first.arena.id)
+                        if let a = store.activeSession {
+                            navigate(.active(a.arena, a.durationMins, a.note, a.social))
+                        }
+                    } label: {
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack(spacing: 8) {
+                                    Text(first.arena.icon)
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(fc.opacity(0.6))
+                                    Text(first.arena.label)
+                                        .font(.system(size: 26, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(.white.opacity(0.55))
+                                        .kerning(2)
+                                }
+                                Text("STACKED  —  TAP TO RESUME")
+                                    .font(.system(size: 8, design: .monospaced))
+                                    .foregroundStyle(fc.opacity(0.6))
+                                    .kerning(3)
+                            }
+                            Spacer()
+                            Text(first.endTime, style: .timer)
+                                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                                .foregroundStyle(fc.opacity(0.55))
+                                .monospacedDigit()
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+
+                // Sub-rows for remaining stacked sessions
+                if !subStacked.isEmpty {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 1)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+
+                    ForEach(subStacked, id: \.arena.id) { s in
+                        let sc = Color(hex: s.arena.color)
+                        Button {
+                            store.unstashSession(arenaId: s.arena.id)
+                            if let a = store.activeSession {
+                                navigate(.active(a.arena, a.durationMins, a.note, a.social))
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(s.arena.icon)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(sc)
+                                Text(s.arena.label)
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(sc.opacity(0.8))
+                                    .kerning(2)
+                                Spacer()
+                                Text(s.endTime, style: .timer)
+                                    .font(.system(size: 13, design: .monospaced))
+                                    .foregroundStyle(sc.opacity(0.7))
+                                    .monospacedDigit()
+                                Text("→")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(sc.opacity(0.4))
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                // Bottom controls
+                HStack(spacing: 12) {
+                    if let a = active {
+                        Button { store.togglePause() } label: {
+                            Text(a.isPaused ? "▶  RESUME" : "⏸  PAUSE")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundStyle(primaryColor)
+                                .kerning(2)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(primaryColor.opacity(0.15))
+                                .overlay(RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(primaryColor.opacity(0.5), lineWidth: 1))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Spacer()
+                    if active != nil {
+                        Text("TAP TO OPEN →")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.2))
+                            .kerning(3)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
-            .background(arenaColor.opacity(0.18))
+            .background(primaryColor.opacity(0.18))
         }
     }
 
