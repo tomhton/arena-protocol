@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.15.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.16.0).
 
 ---
 
@@ -75,7 +75,8 @@
 | 2.12.0 | 2026-03-19 | Active session banner replaces header + floating pill on HomeView. Arena color flood on background. Pause/resume from banner. `DataStore.togglePause()` added. |
 | 2.13.0 | 2026-03-19 | Arena renames: Alignment, Work, Recovery, Movement. Arena icon (◎ ◆ ◑ ◉) now rendered on home screen cards. |
 | 2.14.0 | 2026-03-19 | Multi-arena session banner: all stacked sessions shown in top banner. Bug fix: banner no longer reverts to idle on swipe-down stash. Bottom tray removed. |
-| 2.15.0 | 2026-03-19 | PRIMARY / JOINT / STACKED event type distinction on HomeView banner, ActiveSessionView breakdown, and Live Activity lock screen + expanded. |
+| 2.15.0 | 2026-03-19 | PRIMARY / JOINT / STACKED event type distinction on HomeView banner, ActiveSessionView breakdown, and Live Activity lock screen + expanded. Per-arena individual timers in banner (primary counts to own end; joints show scheduledEnd countdown or "in Xm"). Color flood tracks currently-running arena. |
+| 2.16.0 | 2026-03-19 | Fully live per-arena timers in session banner. 5-second clock drives branch switching (pending → active → done) for all joint rows. Banner accent bar and background animate to currently-running arena color. Primary row shows DONE when joint takes over. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -248,7 +249,7 @@ The app also handles the `arenaprotocol://active` deep link via `.onOpenURL` in 
 
 | Screen | File | What it does |
 |---|---|---|
-| **Home** | `HomeView.swift` | 2-column arena grid, header with title/streak count, edit toggle, app shortcuts bar, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Floating timer pill (bottom-center capsule) appears when `store.activeSession != nil` — tap to return to session, ✕ to abandon. |
+| **Home** | `HomeView.swift` | 2-column arena grid, session banner (replaces idle header when any session is active/stacked), edit toggle, social toggle, app shortcuts bar, Intervals row, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Session banner shows all active arenas with per-arena live timers, JOINT QUEUE with pending/active/done states, STACKED section, and PAUSE/RESUME. Banner accent bar + background animate to the currently-running arena's color (5 s clock). |
 | **Morning Check-in** | `MorningCheckinView.swift` | 3-step ritual (Reading 5m, Goals 5m, Movement 5m), animated progress bar, skip option. Shows once per day. |
 | **Select** | `SelectView.swift` | Arena detail + quest note textarea, sub-arena pills → example task list, duration picker (5/10/30/60/90/custom), Google Calendar option, launches session |
 | **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. Manages Live Activity lifecycle (start on session begin, update on pause/resume, end on done/abandon). Tapping the Dynamic Island or lock screen banner deep-links to this screen via `arenaprotocol://active`. |
@@ -303,13 +304,31 @@ struct ActiveSessionState {
     var arena: Arena
     var durationMins: Int
     var note: String
-    var startTime: Date          // recorded at session start — used for progress ring + Forge drop timing
-    var endTime: Date
+    var startTime: Date          // recorded at session start
+    var endTime: Date            // total session end (primary + all joints)
     var isPaused: Bool = false
     var pausedRemaining: TimeInterval = 0
+    var jointArenas: [Arena] = []            // legacy — use jointEntries
+    var jointEntries: [JointArenaEntry] = [] // typed joint arenas with scheduling
+    var calEventId: String? = nil
+    var social: Bool = false
+}
+
+struct JointArenaEntry: Identifiable {
+    let id: UUID
+    let arena: Arena
+    let minutes: Int
+    var calEventId: String? = nil
+    var scheduledStart: Date  // = previous arena's end time
+    var scheduledEnd: Date    // = scheduledStart + minutes * 60
 }
 ```
-`DataStore` also holds `stackedSessions: [ActiveSessionState]` — arenas stashed via swipe-down. Multiple stacked arenas activate an EGG BONUS multiplier in the Forge System.
+`DataStore` also holds `stackedSessions: [ActiveSessionState]` — arenas stashed via swipe-down.
+
+**Three running arena types:**
+- **PRIMARY** — `store.activeSession.arena` — foreground timer
+- **JOINT** — `store.activeSession.jointEntries` — queued arenas with individual `scheduledStart`/`scheduledEnd`
+- **STACKED** — `store.stackedSessions` — independently-running sessions minimized via swipe-down
 
 ### ArenaLiveActivityAttributes (ActivityKit — shared by app + widget extension)
 ```swift
@@ -323,11 +342,14 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
 
     static let appGroupID = "group.arena.protocol"
 
-    // Dynamic (updated via Activity.update on pause/resume)
+    // Dynamic (updated via Activity.update on pause/resume/joint add)
     struct ContentState: Codable, Hashable, Sendable {
         var endTime: Date
         var isPaused: Bool
         var pausedRemaining: TimeInterval
+        var isIdle: Bool = false
+        var isMandatory: Bool = false
+        var jointCount: Int = 0  // number of queued joint arenas
     }
 }
 ```
@@ -370,15 +392,20 @@ struct HabitLog: Codable {
     var protocols:     [ArenaProtocolModel]
     var seenDrops:     [String]           // ember drop ids already shown
     var checkin:       MorningCheckin     // { date, completed: [habitId] }
-    var activeSession: ActiveSessionState? = nil  // transient — nil when no session running
+    var activeSession: ActiveSessionState? = nil    // transient — nil when no session running
+    var stackedSessions: [ActiveSessionState] = [] // minimized sessions
 
     // Computed
     var letteredArenas: [Arena]       // auto-assigns A/B/C/D letters
     var todaySessions: Int
 
     // Session lifecycle
-    func startSession(arena: Arena, durationMins: Int, note: String)  // sets activeSession
-    func endSession()                                                   // sets activeSession = nil
+    func startSession(arena: Arena, durationMins: Int, note: String, social: Bool)
+    func endSession()
+    func togglePause()               // flips isPaused, recalculates endTime
+    func stashSession()              // moves activeSession → stackedSessions
+    func unstashSession(arenaId: String)  // pops from stackedSessions → activeSession
+    func abandonStackedSession(arenaId: String)
 }
 ```
 
@@ -459,13 +486,15 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 
 | Arena | Hex | Usage |
 |---|---|---|
-| Body | `#C0392B` | Red — physical |
-| Spirit | `#D4A017` | Gold — inner |
-| Tribe | `#B87333` | Copper — social |
-| Craft | `#708090` | Slate — work |
-| Accent yellow | `#E8C547` | Primary CTA, morning |
+| Alignment | `#60A5FA` | Blue — plan/research |
+| Work | `#E8C547` | Yellow — execute/build |
+| Recovery | `#A78BFA` | Purple — rest/reflect |
+| Movement | `#34D399` | Green — physical |
+| Social | `#B794F4` | Purple — social modifier |
+| Accent yellow | `#E8C547` | Primary CTA, morning, idle |
 | Accent purple | `#B794F4` | Wind-down, history |
-| Accent pink | `#FF8FA3` | Stuck protocol |
+| Accent pink | `#FF8FA3` | Stuck protocol, mandatory |
+| Accent teal | `#4ECDC4` | Intervals |
 | Background | `#080810` | App background (near-black) |
 | Text primary | `#E8E8E8` | Body text |
 
