@@ -5,6 +5,21 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.16.0 — 2026-03-19
+
+**Live session banner — per-arena timers, running-arena color tracking.**
+
+### Features
+- **Live joint timers on main menu** — each arena in the JOINT QUEUE now has a fully live timer. Pending joints show `in X:XX` counting down to their start (using SwiftUI's live `.timer` text style). When a joint becomes active it switches to its own countdown in its arena color, rendered bold at a larger size with a subtle background highlight. When elapsed, shows "done" muted.
+- **Primary row "DONE" state** — once the primary arena's time is up and a joint has taken over, the primary row dims to 35% opacity and swaps its timer for a muted "DONE" label. No more expired/backwards counter.
+- **Banner tracks the currently-running arena** — the top accent bar and section background now animate to the color of whichever arena is running right now (primary or an active joint). Transitions smoothly via `easeInOut(duration: 0.5)`.
+- **5-second clock in HomeView** — `sessionNow` state ticks every 5 s when any session is active, driving branch switches (pending → active → done) for all joint rows and the `primaryIsDone` flag without full-view polling.
+
+### Internal
+- `HomeView` — added `@State private var sessionNow: Date`, `onReceive(Timer.publish(every: 5))`, `primaryIsDone`, `runningColor` computed from `sessionNow`; joint ForEach uses `sessionNow` for `isRunning`/`isDone` states
+
+---
+
 ## v2.15.0 — 2026-03-19
 
 **Event type distinction across HomeView, Active Session, and Live Activity.**

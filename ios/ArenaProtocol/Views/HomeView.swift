@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var editMode = false
     @State private var nextBlock: EKEvent? = nil
     @State private var socialActive = false
+    @State private var sessionNow: Date = Date()  // ticks every 5 s when a session is live
 
     private let socialColor = Color(hex: "#B794F4")
 
@@ -69,6 +70,9 @@ struct HomeView: View {
         .animation(.easeInOut(duration: 0.25), value: pendingDrop?.id)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: store.activeSession != nil)
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: store.stackedSessions.count)
+        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { t in
+            if store.activeSession != nil || !store.stackedSessions.isEmpty { sessionNow = t }
+        }
         .onAppear {
             refreshNextBlock()
             // Start idle Live Activity only when no sessions exist at all (active or stacked)
@@ -159,15 +163,27 @@ struct HomeView: View {
         let totalCount = (active != nil ? 1 : 0) + jointEntries.count + stacked.count
         // Primary arena's own end time (when it hands off to the first joint, or total end if no joints)
         let primaryOwnEnd: Date = jointEntries.isEmpty ? (active?.endTime ?? Date()) : jointEntries[0].scheduledStart
+        // Has the primary arena's time elapsed — a joint has taken over?
+        let primaryIsDone: Bool = !jointEntries.isEmpty && sessionNow >= jointEntries[0].scheduledStart
+        // Color of whichever arena is running right now (primary or active joint)
+        let runningColor: Color = {
+            if let a = active {
+                for entry in a.jointEntries where entry.scheduledStart <= sessionNow && entry.scheduledEnd > sessionNow {
+                    return Color(hex: entry.arena.color)
+                }
+            }
+            return primaryColor
+        }()
         // Sub-rows: all stacked when active exists; all-but-first when no active (first shown as primary)
         let subStacked: [ActiveSessionState] = active != nil ? stacked : Array(stacked.dropFirst())
 
         return VStack(spacing: 0) {
-            // Thick vivid top accent bar
+            // Thick vivid top accent bar — tracks the currently-running arena
             Rectangle()
-                .fill(primaryColor)
+                .fill(runningColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: 4)
+                .animation(.easeInOut(duration: 0.5), value: runningColor.description)
 
             VStack(alignment: .leading, spacing: 0) {
                 // Nav buttons
@@ -182,10 +198,10 @@ struct HomeView: View {
                 .padding(.top, 48)
                 .padding(.horizontal, 20)
 
-                // Session count label
+                // Session count label — in the currently-running arena's color
                 Text(totalCount > 1 ? "IN SESSION  ·  \(totalCount) ARENAS" : "IN SESSION")
                     .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(primaryColor.opacity(0.8))
+                    .foregroundStyle(runningColor.opacity(0.8))
                     .kerning(5)
                     .padding(.horizontal, 20)
                     .padding(.top, 14)
@@ -199,36 +215,42 @@ struct HomeView: View {
                                 HStack(spacing: 8) {
                                     Text(a.arena.icon)
                                         .font(.system(size: 20))
-                                        .foregroundStyle(primaryColor)
+                                        .foregroundStyle(primaryIsDone ? primaryColor.opacity(0.35) : primaryColor)
                                     Text(a.arena.label)
                                         .font(.system(size: 26, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(primaryIsDone ? .white.opacity(0.35) : .white)
                                         .kerning(2)
                                 }
                                 Text(a.arena.subtitle)
                                     .font(.system(size: 9, design: .monospaced))
-                                    .foregroundStyle(.white.opacity(0.35))
+                                    .foregroundStyle(.white.opacity(0.2))
                                     .kerning(2)
                                 if !jointEntries.isEmpty {
                                     let totalMins = a.durationMins + jointEntries.reduce(0) { $0 + $1.minutes }
                                     Text("TOTAL  \(totalMins)m")
                                         .font(.system(size: 8, design: .monospaced))
-                                        .foregroundStyle(primaryColor.opacity(0.45))
+                                        .foregroundStyle(runningColor.opacity(0.45))
                                         .kerning(2)
                                 }
                             }
                             Spacer()
-                            Group {
-                                if a.isPaused {
-                                    let s = Int(a.pausedRemaining)
-                                    Text(String(format: "%d:%02d", s / 60, s % 60))
-                                } else {
-                                    Text(primaryOwnEnd, style: .timer)
-                                }
+                            if primaryIsDone {
+                                Text("DONE")
+                                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(primaryColor.opacity(0.35))
+                                    .kerning(3)
+                            } else if a.isPaused {
+                                let s = Int(a.pausedRemaining)
+                                Text(String(format: "%d:%02d", s / 60, s % 60))
+                                    .font(.system(size: 32, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(primaryColor)
+                                    .monospacedDigit()
+                            } else {
+                                Text(primaryOwnEnd, style: .timer)
+                                    .font(.system(size: 32, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(primaryColor)
+                                    .monospacedDigit()
                             }
-                            .font(.system(size: 32, weight: .bold, design: .monospaced))
-                            .foregroundStyle(primaryColor)
-                            .monospacedDigit()
                         }
                         .padding(.horizontal, 20)
                     }
@@ -287,34 +309,37 @@ struct HomeView: View {
 
                     ForEach(jointEntries, id: \.id) { entry in
                         let jc = Color(hex: entry.arena.color)
-                        let now = Date()
+                        let isRunning = sessionNow >= entry.scheduledStart && sessionNow < entry.scheduledEnd
+                        let isDone    = sessionNow >= entry.scheduledEnd
                         HStack(spacing: 10) {
                             Text(entry.arena.icon)
-                                .font(.system(size: 13))
-                                .foregroundStyle(jc)
+                                .font(.system(size: isRunning ? 16 : 13))
+                                .foregroundStyle(isDone ? jc.opacity(0.25) : jc.opacity(isRunning ? 1 : 0.55))
                             Text(entry.arena.label)
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundStyle(jc.opacity(0.8))
+                                .font(.system(size: 11, weight: isRunning ? .bold : .regular, design: .monospaced))
+                                .foregroundStyle(isDone ? jc.opacity(0.25) : jc.opacity(isRunning ? 0.9 : 0.6))
                                 .kerning(2)
                             Spacer()
-                            if now < entry.scheduledStart {
-                                let minsUntil = max(1, Int(entry.scheduledStart.timeIntervalSinceNow / 60) + 1)
-                                Text("in \(minsUntil)m")
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundStyle(jc.opacity(0.45))
-                            } else if now < entry.scheduledEnd {
+                            if isDone {
+                                Text("done")
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(jc.opacity(0.25))
+                            } else if isRunning {
+                                // Live countdown to this joint's end — same category color, bold
                                 Text(entry.scheduledEnd, style: .timer)
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 20, weight: .bold, design: .monospaced))
                                     .foregroundStyle(jc)
                                     .monospacedDigit()
                             } else {
-                                Text("done")
+                                // Live countdown to when this joint starts
+                                (Text("in ") + Text(entry.scheduledStart, style: .timer))
                                     .font(.system(size: 11, design: .monospaced))
-                                    .foregroundStyle(jc.opacity(0.3))
+                                    .foregroundStyle(jc.opacity(0.45))
                             }
                         }
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, isRunning ? 10 : 6)
+                        .background(isRunning ? jc.opacity(0.07) : Color.clear)
                     }
                 }
 
@@ -395,7 +420,8 @@ struct HomeView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 20)
             }
-            .background(primaryColor.opacity(0.18))
+            .background(runningColor.opacity(0.14))
+            .animation(.easeInOut(duration: 0.5), value: runningColor.description)
         }
     }
 
