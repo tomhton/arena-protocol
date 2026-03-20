@@ -38,6 +38,7 @@ struct Session: Identifiable, Codable {
     var date: String           // yyyy-MM-dd
     var note: String
     var ts: Double             // epoch ms
+    var social: Bool = false
 }
 
 struct ArenaProtocolModel: Identifiable, Codable, Hashable {
@@ -109,6 +110,7 @@ struct ActiveSessionState {
     var jointArenas: [Arena] = []
     var jointEntries: [JointArenaEntry] = []
     var calEventId: String? = nil
+    var social: Bool = false
 }
 
 struct MorningCheckin: Codable {
@@ -120,107 +122,108 @@ struct MorningCheckin: Codable {
 
 let DEFAULT_ARENAS: [Arena] = [
     Arena(
-        id: "alignment", label: "ALIGNMENT & PLANNING", letter: "A", color: "#60A5FA",
-        subtitle: "vision · strategy · clarity",
-        description: "The compass. Where you're going and why. Set direction, define the day, close the loop.",
+        id: "preparation", label: "PREPARATION", letter: "A", color: "#60A5FA",
+        subtitle: "plan · research · organise · ready",
+        description: "Set the conditions for everything else. You can't build on a shaky foundation.",
         icon: "◎",
-        examples: ["Write today's single most important task", "Review goals for 10 min",
+        examples: ["Write today's single most important task", "Review and prioritise your inbox",
                    "Plan tomorrow the night before", "Weekly review — what worked, what didn't",
-                   "Clarify one ambiguous project", "Define your ideal outcome for today",
-                   "Identify one thing to stop doing", "Write your 3 priorities for the week"],
+                   "Clarify one ambiguous project", "Research before you decide",
+                   "Organise your workspace", "Map out the next 3 steps"],
         subArenas: [
-            "VISION": ["Review long-term goals", "Visualize the ideal outcome",
-                       "Write your 3 priorities for the week", "Identify one thing to stop doing"],
-            "STRATEGY": ["Plan tomorrow the night before", "Clarify one ambiguous project",
+            "PLANNING": ["Write today's single most important task", "Plan tomorrow the night before",
                          "Weekly review — what worked, what didn't", "Map out the next 3 steps"],
-            "CLARITY": ["Write today's single most important task", "Define your ideal outcome for today",
-                        "Eliminate one decision from tomorrow", "Capture all open loops"]
+            "RESEARCH": ["Clarify one ambiguous project", "Research before you decide",
+                         "Read for 20 min on a relevant topic", "Summarise what you learned"],
+            "ORGANISE": ["Clear your workspace", "Process your inbox to zero",
+                         "Capture all open loops", "File or delete things that aren't actions"]
         ]
     ),
     Arena(
-        id: "execution", label: "EXECUTION & MASTERY", letter: "B", color: "#E8C547",
-        subtitle: "deep work · build · ship",
-        description: "The output. Ideas are worthless until built. Show up, do the work, ship the thing.",
+        id: "labor", label: "LABOR", letter: "B", color: "#E8C547",
+        subtitle: "execute · build · ship · produce",
+        description: "The work itself. Ideas without output are just noise. Show up and produce.",
         icon: "◆",
         examples: ["25 min deep work session", "Ship one thing — however small",
                    "Work on the hardest task first", "Write 200 words",
-                   "Complete one work task end-to-end", "Learn one skill for 20 min",
+                   "Complete one task end-to-end", "Learn one skill for 20 min",
                    "Do one thing you've been avoiding", "Build a system for a repeated task"],
         subArenas: [
             "DEEP WORK": ["25 min deep work session", "Work on the hardest task first",
                           "Write 200 words", "Build a system for a repeated task"],
-            "BUILD": ["Ship one thing — however small", "Complete one work task end-to-end",
+            "BUILD": ["Ship one thing — however small", "Complete one task end-to-end",
                       "Sketch a prototype or outline", "Build one thing, start to finish"],
             "MASTERY": ["Learn one skill for 20 min", "Study something outside your comfort zone",
                         "Practice deliberately for 15 min", "Teach what you learned today"]
         ]
     ),
     Arena(
-        id: "health", label: "HEALTH & RECOVERY", letter: "C", color: "#34D399",
-        subtitle: "move · fuel · restore",
-        description: "The foundation. Performance without recovery is just debt. Move, eat well, rest hard.",
-        icon: "◉",
-        examples: ["10 min walk", "20 pushups", "Cook a real meal",
-                   "Sleep before midnight", "5 min breathwork", "Stretch for 10 min",
-                   "Drink 2L of water", "Cold shower", "20 min nap", "No screens 1hr before bed"],
+        id: "mental-recovery", label: "MENTAL RECOVERY", letter: "C", color: "#A78BFA",
+        subtitle: "decompress · reflect · restore · learn",
+        description: "The mind needs rest too. Downtime done right is not laziness — it's maintenance.",
+        icon: "◑",
+        examples: ["5 min breathing or meditation", "Journal for 10 min", "Read something non-urgent",
+                   "Walk without a destination", "Close all tabs and rest",
+                   "Listen to music with no other task", "Reflect on what went well today",
+                   "Write down three things you're grateful for"],
         subArenas: [
-            "MOVE": ["10 min walk", "20 pushups", "Cold shower", "Stretch for 10 min"],
-            "FUEL": ["Cook a real meal", "Drink 2L of water", "Prep meals for tomorrow", "No sugar today"],
-            "RESTORE": ["Sleep before midnight", "5 min breathwork", "20 min nap", "No screens 1hr before bed"]
+            "DECOMPRESS": ["Close all tabs and rest", "Listen to music with no other task",
+                           "Walk without a destination", "5 min breathing or meditation"],
+            "REFLECT": ["Journal for 10 min", "Write down three things you're grateful for",
+                        "Reflect on what went well today", "Review what you'd do differently"],
+            "LEARN": ["Read something non-urgent", "Watch an educational video",
+                      "Take notes on a book chapter", "Study something you're curious about"]
         ]
     ),
     Arena(
-        id: "connection", label: "CONNECTION & COMMUNITY", letter: "D", color: "#B794F4",
-        subtitle: "reach out · show up · give",
-        description: "The network. You are the people around you. Invest in them deliberately.",
-        icon: "◇",
-        examples: ["Send one meaningful message", "Call someone you've been meaning to",
-                   "Plan something with a friend", "Tell someone you appreciate them",
-                   "Check in on family", "Accept an invitation", "Be fully present — no phone",
-                   "Do something kind without being asked"],
+        id: "physical", label: "PHYSICAL ACTIVITY", letter: "D", color: "#34D399",
+        subtitle: "move · train · recover · fuel",
+        description: "The body is not separate from performance. Move it deliberately, every day.",
+        icon: "◉",
+        examples: ["10 min walk", "Strength training", "Cook a real meal",
+                   "Stretch for 10 min", "5 min breathwork", "Cold shower",
+                   "Drink 2L of water", "20 min run", "No screens 1hr before bed"],
         subArenas: [
-            "REACH OUT": ["Send one meaningful message", "Call someone you've been meaning to",
-                          "Tell someone you appreciate them", "Reply to a message you've been ignoring"],
-            "SHOW UP": ["Check in on family", "Accept an invitation",
-                        "Be fully present — no phone", "Do something kind without being asked"],
-            "GIVE": ["Plan something with a friend", "Offer help without being asked",
-                     "Celebrate someone else's win", "Share something useful with your network"]
+            "TRAIN": ["Strength training", "10 min walk", "20 min run", "Cold shower"],
+            "RECOVER": ["Stretch for 10 min", "5 min breathwork", "Sleep before midnight", "20 min nap"],
+            "FUEL": ["Cook a real meal", "Drink 2L of water", "Prep meals for tomorrow", "No sugar today"]
         ]
     )
 ]
 
 let DEFAULT_PROTOCOLS: [ArenaProtocolModel] = [
     ArenaProtocolModel(
-        id: "warrior", name: "THE WARRIOR", glyph: "⚔", color: "#C0392B",
-        description: "Body first. Then the work. No excuses.",
+        id: "launcher", name: "THE LAUNCHER", glyph: "◎", color: "#60A5FA",
+        description: "Prepare, then execute. Build momentum from a clean start.",
         blocks: [
-            ProtocolBlock(arenaId: "body",  label: "BODY",  duration: 20, color: "#C0392B"),
-            ProtocolBlock(arenaId: "craft", label: "CRAFT", duration: 25, color: "#708090")
+            ProtocolBlock(arenaId: "preparation", label: "PREPARATION", duration: 15, color: "#60A5FA"),
+            ProtocolBlock(arenaId: "labor",        label: "LABOR",       duration: 25, color: "#E8C547")
         ]
     ),
     ArenaProtocolModel(
-        id: "monk", name: "THE MONK", glyph: "☽", color: "#D4A017",
-        description: "Silence and study. Turn inward, then outward.",
+        id: "warrior", name: "THE WARRIOR", glyph: "◆", color: "#E8C547",
+        description: "Move the body. Then move the work. No excuses.",
         blocks: [
-            ProtocolBlock(arenaId: "spirit", label: "SPIRIT", duration: 15, color: "#D4A017"),
-            ProtocolBlock(arenaId: "tribe",  label: "TRIBE",  duration: 10, color: "#B87333")
+            ProtocolBlock(arenaId: "physical", label: "PHYSICAL ACTIVITY", duration: 20, color: "#34D399"),
+            ProtocolBlock(arenaId: "labor",    label: "LABOR",             duration: 30, color: "#E8C547")
         ]
     ),
     ArenaProtocolModel(
-        id: "builder", name: "THE BUILDER", glyph: "◈", color: "#708090",
-        description: "Pure output. Build something that lasts.",
+        id: "recharge", name: "THE RECHARGE", glyph: "◑", color: "#A78BFA",
+        description: "Body and mind recovery. Reset before the next push.",
         blocks: [
-            ProtocolBlock(arenaId: "craft", label: "CRAFT", duration: 25, color: "#708090"),
-            ProtocolBlock(arenaId: "craft", label: "CRAFT", duration: 25, color: "#708090")
+            ProtocolBlock(arenaId: "physical",        label: "PHYSICAL ACTIVITY", duration: 20, color: "#34D399"),
+            ProtocolBlock(arenaId: "mental-recovery", label: "MENTAL RECOVERY",   duration: 20, color: "#A78BFA")
         ]
     ),
     ArenaProtocolModel(
-        id: "ember", name: "THE EMBER", glyph: "◉", color: "#B87333",
-        description: "A gentle day. Move, connect, rest.",
+        id: "full-day", name: "THE FULL DAY", glyph: "◉", color: "#E8C547",
+        description: "All four arenas. A complete session.",
         blocks: [
-            ProtocolBlock(arenaId: "body",   label: "BODY",   duration: 10, color: "#C0392B"),
-            ProtocolBlock(arenaId: "tribe",  label: "TRIBE",  duration: 10, color: "#B87333"),
-            ProtocolBlock(arenaId: "spirit", label: "SPIRIT", duration: 10, color: "#D4A017")
+            ProtocolBlock(arenaId: "preparation",     label: "PREPARATION",     duration: 10, color: "#60A5FA"),
+            ProtocolBlock(arenaId: "labor",           label: "LABOR",           duration: 25, color: "#E8C547"),
+            ProtocolBlock(arenaId: "physical",        label: "PHYSICAL ACTIVITY", duration: 15, color: "#34D399"),
+            ProtocolBlock(arenaId: "mental-recovery", label: "MENTAL RECOVERY", duration: 10, color: "#A78BFA")
         ]
     )
 ]
@@ -552,14 +555,15 @@ final class DataStore {
     #endif
 
     // Active session lifecycle
-    func startSession(arena: Arena, durationMins: Int, note: String) {
+    func startSession(arena: Arena, durationMins: Int, note: String, social: Bool = false) {
         let now = Date.now
         activeSession = ActiveSessionState(
             arena: arena,
             durationMins: durationMins,
             note: note,
             startTime: now,
-            endTime: now + TimeInterval(durationMins * 60)
+            endTime: now + TimeInterval(durationMins * 60),
+            social: social
         )
     }
 

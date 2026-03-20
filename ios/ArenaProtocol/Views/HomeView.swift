@@ -195,7 +195,7 @@ struct HomeView: View {
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(arenaColor, lineWidth: 1))
         .onTapGesture {
-            navigate(.active(active.arena, active.durationMins, active.note))
+            navigate(.active(active.arena, active.durationMins, active.note, active.social))
         }
         .overlay(alignment: .trailing) {
             Button { showAbandonConfirm = true } label: {
@@ -238,7 +238,7 @@ struct HomeView: View {
         .onTapGesture {
             store.unstashSession(arenaId: session.arena.id)
             if let active = store.activeSession {
-                navigate(.active(active.arena, active.durationMins, active.note))
+                navigate(.active(active.arena, active.durationMins, active.note, active.social))
             }
         }
         .overlay(alignment: .trailing) {

@@ -16,6 +16,7 @@ struct SelectView: View {
     @State private var activeSubArena: String? = nil
     @State private var calEvents: [EKEvent] = []
     @State private var ongoingMatch: EKEvent? = nil
+    @State private var isSocial = false
     @FocusState private var customFocused: Bool
 
     private var arenaColor: Color { Color(hex: arena.color) }
@@ -45,6 +46,7 @@ struct SelectView: View {
                 if let event = ongoingMatch { resumeFromCalBanner(event: event) }
                 if !calEvents.isEmpty { calFeedSection }
                 durationSection
+                socialToggle
                 launchSection
             }
             .padding(.horizontal, 24)
@@ -426,6 +428,36 @@ struct SelectView: View {
         }
     }
 
+    // MARK: - Social Toggle
+
+    private var socialToggle: some View {
+        let socialColor = Color(hex: "#B794F4")
+        return HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("SOCIAL")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(isSocial ? socialColor : Color.white.opacity(0.4))
+                    .kerning(5)
+                Text("with others")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.25))
+            }
+            Spacer()
+            Toggle("", isOn: $isSocial)
+                .tint(socialColor)
+                .labelsHidden()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(isSocial ? socialColor.opacity(0.08) : Color.white.opacity(0.03))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(isSocial ? socialColor.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.bottom, 20)
+    }
+
     // MARK: - Calendar Resume Banner
 
     private func resumeFromCalBanner(event: EKEvent) -> some View {
@@ -490,7 +522,7 @@ struct SelectView: View {
         scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
                              body: "Your focus block has ended.",
                              secondsFromNow: TimeInterval(minutes * 60))
-        navigate(.active(arena, minutes, note))
+        navigate(.active(arena, minutes, note, isSocial))
     }
 
     private func startSession() {
@@ -499,7 +531,7 @@ struct SelectView: View {
         scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
                              body: "Your focus block has ended.",
                              secondsFromNow: TimeInterval(dur * 60))
-        navigate(.active(arena, dur, note))
+        navigate(.active(arena, dur, note, isSocial))
     }
 }
 

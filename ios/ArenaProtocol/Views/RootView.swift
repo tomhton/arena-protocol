@@ -9,8 +9,8 @@ enum Screen: Hashable {
     case home       // not a destination — navigate(.home) always pops to root
     case checkin
     case select(Arena)
-    case active(Arena, Int, String)          // arena, durationMins, note
-    case complete(Arena, Int, String)        // arena, durationMins, note
+    case active(Arena, Int, String, Bool)    // arena, durationMins, note, social
+    case complete(Arena, Int, String, Bool)  // arena, durationMins, note, social
     case protocols
     case activeProtocol(ArenaProtocolModel)
     case history
@@ -62,7 +62,7 @@ struct RootView: View {
                   url.host == "active",
                   let session = store.activeSession else { return }
             path = NavigationPath()
-            path.append(Screen.active(session.arena, session.durationMins, session.note))
+            path.append(Screen.active(session.arena, session.durationMins, session.note, session.social))
         }
     }
 
@@ -86,14 +86,15 @@ struct RootView: View {
             )
         case .select(let arena):
             SelectView(arena: arena, navigate: navigate)
-        case .active(let arena, let duration, let note):
-            ActiveSessionView(arena: arena, duration: duration, note: note, navigate: navigate)
+        case .active(let arena, let duration, let note, let social):
+            ActiveSessionView(arena: arena, duration: duration, note: note, social: social, navigate: navigate)
                 .navigationBarBackButtonHidden(true)
-        case .complete(let arena, let duration, let note):
+        case .complete(let arena, let duration, let note, let social):
             CompleteView(arena: arena, duration: duration, note: note) {
                 let s = Session(arenaId: arena.id, duration: duration,
                                 date: todayString(), note: note,
-                                ts: Date().timeIntervalSince1970 * 1000)
+                                ts: Date().timeIntervalSince1970 * 1000,
+                                social: social)
                 store.addSession(s)
                 pendingDrop = store.checkAndClaimEmberDrop()
                 navigate(.home)

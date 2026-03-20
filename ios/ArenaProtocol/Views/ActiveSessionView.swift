@@ -10,6 +10,7 @@ struct ActiveSessionView: View {
     let arena: Arena
     let duration: Int   // minutes
     let note: String
+    let social: Bool
     var navigate: (Screen) -> Void
 
     @State private var timeLeft: Int
@@ -27,10 +28,11 @@ struct ActiveSessionView: View {
         ([arena] + jointEntries.map { $0.arena }).map { Color(hex: $0.color) }
     }
 
-    init(arena: Arena, duration: Int, note: String, navigate: @escaping (Screen) -> Void) {
+    init(arena: Arena, duration: Int, note: String, social: Bool = false, navigate: @escaping (Screen) -> Void) {
         self.arena = arena
         self.duration = duration
         self.note = note
+        self.social = social
         self.navigate = navigate
         _timeLeft = State(initialValue: duration * 60)
         _totalTime = State(initialValue: duration * 60)
@@ -319,10 +321,12 @@ struct ActiveSessionView: View {
         }
     }
 
-    private func addToGCal(arena: Arena, start: Date, end: Date, note: String = "") {
-        let title = note.trimmingCharacters(in: .whitespaces).isEmpty
-            ? "[\(arena.label)]"
-            : "[\(arena.label)] \(note.trimmingCharacters(in: .whitespaces))"
+    private func addToGCal(arena: Arena, start: Date, end: Date, note: String = "", isSocial: Bool = false) {
+        let trimmed = note.trimmingCharacters(in: .whitespaces)
+        let socialTag = isSocial ? " ◎" : ""
+        let title = trimmed.isEmpty
+            ? "[\(arena.label)]\(socialTag)"
+            : "[\(arena.label)] \(trimmed)\(socialTag)"
         let desc = arena.description
         Task { @MainActor in
             if !CalendarManager.shared.isReadAuthorized {
@@ -354,14 +358,14 @@ struct ActiveSessionView: View {
             #endif
         } else {
             // Fresh start
-            store.startSession(arena: arena, durationMins: duration, note: note)
+            store.startSession(arena: arena, durationMins: duration, note: note, social: social)
             let start = Date()
             endTime = start.addingTimeInterval(TimeInterval(timeLeft))
             UserDefaults.standard.set(endTime.timeIntervalSince1970, forKey: "timerEndTime")
             SharedStore.writeActiveSession(arenaName: arena.label, arenaColor: arena.color, endsAt: endTime)
             WidgetCenter.shared.reloadAllTimelines()
             // Log primary arena block to "Arena Protocol" calendar
-            addToGCal(arena: arena, start: start, end: endTime, note: note)
+            addToGCal(arena: arena, start: start, end: endTime, note: note, isSocial: social)
 
             #if canImport(ActivityKit)
             if ActivityAuthorizationInfo().areActivitiesEnabled {
@@ -369,12 +373,17 @@ struct ActiveSessionView: View {
                     let c = arena.color.trimmingCharacters(in: .whitespacesAndNewlines)
                     return c.hasPrefix("#") ? c : "#\(c)"
                 }()
+                let socialNote: String = {
+                    if social && !note.isEmpty { return "◎ \(note)" }
+                    if social { return "◎ Social" }
+                    return note
+                }()
                 let attrs = ArenaLiveActivityAttributes(
                     arenaId: arena.id,
                     arenaLabel: arena.label,
                     arenaColor: normalizedColor,
                     arenaIcon: arena.icon.isEmpty ? "◉" : arena.icon,
-                    questNote: note,
+                    questNote: socialNote,
                     startTime: endTime.addingTimeInterval(-TimeInterval(timeLeft))
                 )
                 let contentState = ArenaLiveActivityAttributes.ContentState(
@@ -414,10 +423,11 @@ struct ActiveSessionView: View {
             for entry in jointEntries {
                 store.addSession(Session(arenaId: entry.arena.id, duration: entry.minutes,
                                          date: todayString(), note: note,
-                                         ts: Date().timeIntervalSince1970 * 1000))
+                                         ts: Date().timeIntervalSince1970 * 1000,
+                                         social: social))
             }
             store.endSession()
-            navigate(.complete(arena, duration, note))
+            navigate(.complete(arena, duration, note, social))
         } else {
             timeLeft = remaining
         }
@@ -508,10 +518,11 @@ struct ActiveSessionView: View {
         for entry in jointEntries {
             store.addSession(Session(arenaId: entry.arena.id, duration: entry.minutes,
                                      date: todayString(), note: note,
-                                     ts: Date().timeIntervalSince1970 * 1000))
+                                     ts: Date().timeIntervalSince1970 * 1000,
+                                     social: social))
         }
         store.endSession()
-        navigate(.complete(arena, duration, note))
+        navigate(.complete(arena, duration, note, social))
     }
 
     private func abandonSession() {
