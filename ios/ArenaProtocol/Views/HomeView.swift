@@ -18,18 +18,30 @@ struct HomeView: View {
     private var arenas: [Arena] { store.letteredArenas }
     private var sessions: [Session] { store.sessions }
 
+    /// The arena currently running right now — whichever joint is live, else primary, else first stacked.
+    private var currentlyRunningArena: Arena? {
+        let now = Date()
+        if let a = store.activeSession {
+            for entry in a.jointEntries where entry.scheduledStart <= now && entry.scheduledEnd > now {
+                return entry.arena
+            }
+            return a.arena
+        }
+        return store.stackedSessions.first?.arena
+    }
+
     var body: some View {
         ZStack {
             // Ember particles background
             EmberParticles()
 
-            // Active arena color flood — primary arena (active) or first stacked
-            if let primaryArena = store.activeSession?.arena ?? store.stackedSessions.first?.arena {
-                Color(hex: primaryArena.color)
+            // Active arena color flood — whichever arena is running right now
+            if let runningArena = currentlyRunningArena {
+                Color(hex: runningArena.color)
                     .opacity(0.22)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
-                    .animation(.easeInOut(duration: 0.5), value: primaryArena.id)
+                    .animation(.easeInOut(duration: 0.5), value: runningArena.id)
             }
 
             ScrollView(showsIndicators: false) {
@@ -145,6 +157,8 @@ struct HomeView: View {
         }()
         let jointEntries: [JointArenaEntry] = active?.jointEntries ?? []
         let totalCount = (active != nil ? 1 : 0) + jointEntries.count + stacked.count
+        // Primary arena's own end time (when it hands off to the first joint, or total end if no joints)
+        let primaryOwnEnd: Date = jointEntries.isEmpty ? (active?.endTime ?? Date()) : jointEntries[0].scheduledStart
         // Sub-rows: all stacked when active exists; all-but-first when no active (first shown as primary)
         let subStacked: [ActiveSessionState] = active != nil ? stacked : Array(stacked.dropFirst())
 
@@ -195,6 +209,13 @@ struct HomeView: View {
                                     .font(.system(size: 9, design: .monospaced))
                                     .foregroundStyle(.white.opacity(0.35))
                                     .kerning(2)
+                                if !jointEntries.isEmpty {
+                                    let totalMins = a.durationMins + jointEntries.reduce(0) { $0 + $1.minutes }
+                                    Text("TOTAL  \(totalMins)m")
+                                        .font(.system(size: 8, design: .monospaced))
+                                        .foregroundStyle(primaryColor.opacity(0.45))
+                                        .kerning(2)
+                                }
                             }
                             Spacer()
                             Group {
@@ -202,7 +223,7 @@ struct HomeView: View {
                                     let s = Int(a.pausedRemaining)
                                     Text(String(format: "%d:%02d", s / 60, s % 60))
                                 } else {
-                                    Text(a.endTime, style: .timer)
+                                    Text(primaryOwnEnd, style: .timer)
                                 }
                             }
                             .font(.system(size: 32, weight: .bold, design: .monospaced))
@@ -266,6 +287,7 @@ struct HomeView: View {
 
                     ForEach(jointEntries, id: \.id) { entry in
                         let jc = Color(hex: entry.arena.color)
+                        let now = Date()
                         HStack(spacing: 10) {
                             Text(entry.arena.icon)
                                 .font(.system(size: 13))
@@ -275,9 +297,21 @@ struct HomeView: View {
                                 .foregroundStyle(jc.opacity(0.8))
                                 .kerning(2)
                             Spacer()
-                            Text("+\(entry.minutes)m")
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundStyle(jc.opacity(0.55))
+                            if now < entry.scheduledStart {
+                                let minsUntil = max(1, Int(entry.scheduledStart.timeIntervalSinceNow / 60) + 1)
+                                Text("in \(minsUntil)m")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(jc.opacity(0.45))
+                            } else if now < entry.scheduledEnd {
+                                Text(entry.scheduledEnd, style: .timer)
+                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(jc)
+                                    .monospacedDigit()
+                            } else {
+                                Text("done")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(jc.opacity(0.3))
+                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 6)

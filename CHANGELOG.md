@@ -9,6 +9,11 @@ Format: version — date — summary. Most recent version first.
 
 **Event type distinction across HomeView, Active Session, and Live Activity.**
 
+### Bug Fixes
+- **Joint arena individual timers** — each joint arena in the JOINT QUEUE section now shows its own individual countdown: if not yet started shows "in Xm", if active shows a live `.timer` countdown in the arena's color, if elapsed shows "done". Previously all joints showed a static `+Xm` duration label.
+- **Primary timer shows primary-only end time** — the large countdown on the primary row now counts down to when the primary arena ends (handoff point to first joint), not to the combined session end. When joints are queued, a small `TOTAL Xm` label appears below the subtitle.
+- **Color flood tracks currently-running arena** — the background color tint now switches to whichever arena is actually running at the current moment based on `scheduledStart`/`scheduledEnd`. When Recovery takes over from Work, the flood color updates to Recovery's color.
+
 ### Features
 - **PRIMARY / JOINT / STACKED labels** — three types of running arenas are now visually distinct everywhere:
   - **PRIMARY** — the active foreground session
