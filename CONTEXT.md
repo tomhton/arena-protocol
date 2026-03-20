@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.11.0 — Dev Setup added).
+> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.12.0).
 
 ---
 
@@ -72,6 +72,7 @@
 | 2.9.2 | 2026-03-19 | Bug fix: calendar events write to defaultCalendarForNewEvents (Google Calendar). Dropped custom calendar creation — blocked by CalDAV (EKErrorDomain Code=17). |
 | 2.10.0 | 2026-03-19 | Calendar ↔ app full sync: EKEvent ID tracking, update/delete on finishEarly/abandon/joint remove. Interval timers log to calendar. Calendar resume banner in SelectView. Live Activity fixed for joint arenas + stash. |
 | 2.11.0 | 2026-03-19 | New arenas (Preparation, Labor, Mental Recovery, Physical Activity). Social modifier on HomeView — tags any session or runs standalone. Customisable protocols (ProtocolEditorView). Social Bool threaded through all navigation. |
+| 2.12.0 | 2026-03-19 | Active session banner replaces header + floating pill on HomeView. Arena color flood on background. Pause/resume from banner. `DataStore.togglePause()` added. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order

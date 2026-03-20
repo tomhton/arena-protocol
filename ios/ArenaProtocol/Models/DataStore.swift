@@ -584,6 +584,19 @@ final class DataStore {
         activeSession = nil
     }
 
+    func togglePause() {
+        guard var s = activeSession else { return }
+        if s.isPaused {
+            s.endTime = Date().addingTimeInterval(s.pausedRemaining)
+            s.isPaused = false
+            s.pausedRemaining = 0
+        } else {
+            s.pausedRemaining = max(0, s.endTime.timeIntervalSinceNow)
+            s.isPaused = true
+        }
+        activeSession = s
+    }
+
     // Move foreground session to stash (allows starting a new session)
     func stashSession() {
         guard let active = activeSession else { return }

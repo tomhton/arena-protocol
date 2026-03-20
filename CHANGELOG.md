@@ -5,6 +5,23 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.12.0 — 2026-03-19
+
+**Active session banner on HomeView.**
+
+### Features
+- **Active session banner** — when a session is running, the header section is replaced by a full-width dominant banner showing: arena name (34pt bold), live countdown timer (38pt, arena color), arena subtitle, and a PAUSE / RESUME button. Tapping anywhere on the banner opens the active session screen.
+- **Arena color flood** — the entire HomeView background tints with the active arena's color at 22% opacity while a session is running; fades out when no session is active.
+- **Vivid top accent bar** — 4pt full-width rectangle at full arena color at the top of the banner.
+- **Pause/resume from home** — PAUSE / RESUME button in the banner calls `store.togglePause()` without leaving HomeView.
+- **Floating pill removed** — the bottom foreground session pill is replaced entirely by the banner. Stacked (minimized) session pills remain at the bottom.
+
+### Internal
+- `DataStore.swift` — added `togglePause()`: flips `isPaused`, recalculates `endTime` from `pausedRemaining` on resume
+- `HomeView.swift` — `headerSection` now `@ViewBuilder` switching between `activeBanner(_:)` and `idleHeader`; ZStack gains arena color flood layer; session tray removes foreground `timerPill`
+
+---
+
 ## v2.11.0 — 2026-03-19
 
 **New arenas. Social modifier. Customisable protocols.**

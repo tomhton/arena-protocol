@@ -24,6 +24,15 @@ struct HomeView: View {
             // Ember particles background
             EmberParticles()
 
+            // Active arena color flood
+            if let active = store.activeSession {
+                Color(hex: active.arena.color)
+                    .opacity(0.22)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .animation(.easeInOut(duration: 0.5), value: active.arena.id)
+            }
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     headerSection
@@ -45,12 +54,12 @@ struct HomeView: View {
                     .zIndex(999)
             }
 
-            // Session tray — foreground pill + stashed pills
-            if store.activeSession != nil || !store.stackedSessions.isEmpty {
+            // Session tray — stacked (minimized) pills only; active session shown as banner
+            if !store.stackedSessions.isEmpty {
                 VStack {
                     Spacer()
                     VStack(spacing: 6) {
-                        // Egg bonus badge when multiple arenas stacked
+                        // Egg bonus badge when multiple arenas running
                         if store.stackedSessions.count >= 1 {
                             HStack(spacing: 6) {
                                 Text("◆")
@@ -69,17 +78,11 @@ struct HomeView: View {
                             .transition(.scale.combined(with: .opacity))
                         }
 
-                        // Stashed sessions (shown above foreground)
+                        // Stashed sessions
                         ForEach(store.stackedSessions, id: \.arena.id) { stashed in
                             stackedPill(stashed)
                                 .frame(maxWidth: .infinity)
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-
-                        // Foreground session pill
-                        if let active = store.activeSession {
-                            timerPill(active)
-                                .frame(maxWidth: .infinity)
                         }
                     }
                     .padding(.bottom, 16)
@@ -261,7 +264,110 @@ struct HomeView: View {
 
     // MARK: - Header
 
+    @ViewBuilder
     private var headerSection: some View {
+        if let active = store.activeSession {
+            activeBanner(active)
+        } else {
+            idleHeader
+        }
+    }
+
+    private func activeBanner(_ active: ActiveSessionState) -> some View {
+        let arenaColor = Color(hex: active.arena.color)
+        return VStack(spacing: 0) {
+            // Thick vivid top accent bar
+            Rectangle()
+                .fill(arenaColor)
+                .frame(maxWidth: .infinity)
+                .frame(height: 4)
+
+            VStack(alignment: .leading, spacing: 0) {
+                // Nav buttons row (keep access to IDEA/STATS/⚙)
+                HStack {
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 7) {
+                        topButton("IDEA !", color: "#E8C547")  { navigate(.notes)   }
+                        topButton("STATS",  color: "#B794F4")  { navigate(.history) }
+                        topButton("⚙",      color: "rgba(255,255,255,0.4)") { navigate(.settings) }
+                    }
+                }
+                .padding(.top, 48)
+                .padding(.horizontal, 20)
+
+                // Main banner content — tappable to open session
+                Button {
+                    navigate(.active(active.arena, active.durationMins, active.note, active.social))
+                } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("IN SESSION")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(arenaColor.opacity(0.8))
+                            .kerning(5)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 14) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(active.arena.label)
+                                    .font(.system(size: 34, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.white)
+                                    .kerning(2)
+                                Text(active.arena.subtitle)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.4))
+                                    .kerning(2)
+                            }
+                            Spacer()
+                            // Live countdown (or paused remaining)
+                            Group {
+                                if active.isPaused {
+                                    let secs = Int(active.pausedRemaining)
+                                    Text(String(format: "%d:%02d", secs / 60, secs % 60))
+                                } else {
+                                    Text(active.endTime, style: .timer)
+                                }
+                            }
+                            .font(.system(size: 38, weight: .bold, design: .monospaced))
+                            .foregroundStyle(arenaColor)
+                            .monospacedDigit()
+                        }
+
+                        HStack(spacing: 12) {
+                            // Pause / resume
+                            Button {
+                                store.togglePause()
+                            } label: {
+                                Text(active.isPaused ? "▶  RESUME" : "⏸  PAUSE")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(arenaColor)
+                                    .kerning(2)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(arenaColor.opacity(0.15))
+                                    .overlay(RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(arenaColor.opacity(0.5), lineWidth: 1))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+
+                            Spacer()
+
+                            Text("TAP TO OPEN →")
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.25))
+                                .kerning(3)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+                    .padding(.bottom, 20)
+                }
+                .buttonStyle(.plain)
+            }
+            .background(arenaColor.opacity(0.18))
+        }
+    }
+
+    private var idleHeader: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("ARENA PROTOCOL")
