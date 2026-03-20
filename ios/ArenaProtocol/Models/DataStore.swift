@@ -84,6 +84,13 @@ struct IdeaNote: Identifiable, Codable {
     var ts: String
 }
 
+struct CompletedSession: Equatable {
+    let arena: Arena
+    let durationMins: Int
+    let note: String
+    let social: Bool
+}
+
 struct DockApp: Identifiable, Codable {
     var id: String
     var name: String
@@ -562,6 +569,8 @@ final class DataStore {
 
     var activeSession: ActiveSessionState? = nil
     var stackedSessions: [ActiveSessionState] = []
+    /// Set when a session expires. Observed by HomeView to trigger .complete navigation.
+    var pendingCompletion: CompletedSession? = nil
 
     // Tracks the last arena whose identity was broadcast to the Live Activity.
     // Updated by syncLiveActivity() so duplicate pushes are skipped.
@@ -673,6 +682,33 @@ final class DataStore {
 
     func endSession() {
         activeSession = nil
+    }
+
+    /// Central session tick — called every second from HomeView's always-running timer
+    /// and from ActiveSessionView's own tick. Idempotent: first caller ends the session,
+    /// subsequent calls are no-ops because activeSession is already nil.
+    func tickSession(now: Date) {
+        guard let session = activeSession, !session.isPaused else { return }
+        guard session.endTime <= now else { return }
+        // Log joint arenas before ending
+        for entry in session.jointEntries {
+            addSession(Session(
+                arenaId: entry.arena.id,
+                duration: entry.minutes,
+                date: todayString(),
+                note: session.note,
+                ts: now.timeIntervalSince1970 * 1000,
+                social: session.social
+            ))
+        }
+        let completed = CompletedSession(
+            arena: session.arena,
+            durationMins: session.durationMins,
+            note: session.note,
+            social: session.social
+        )
+        endSession()
+        pendingCompletion = completed
     }
 
     func togglePause() {

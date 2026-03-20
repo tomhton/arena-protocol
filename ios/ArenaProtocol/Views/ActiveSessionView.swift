@@ -438,14 +438,9 @@ struct ActiveSessionView: View {
         if remaining <= 0 {
             timeLeft = 0
             endLiveActivity()
-            for entry in jointEntries {
-                store.addSession(Session(arenaId: entry.arena.id, duration: entry.minutes,
-                                         date: todayString(), note: note,
-                                         ts: Date().timeIntervalSince1970 * 1000,
-                                         social: social))
-            }
-            store.endSession()
-            navigate(.complete(arena, duration, note, social))
+            // Delegate joint logging + endSession + navigation trigger to DataStore.
+            // HomeView observes store.pendingCompletion and calls navigate(.complete).
+            store.tickSession(now: Date())
         } else {
             timeLeft = remaining
             // Detect arena transition (primary → joint) and push updated identity to Live Activity

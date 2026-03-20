@@ -101,9 +101,15 @@ struct HomeView: View {
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { t in
             guard store.activeSession != nil || !store.stackedSessions.isEmpty else { return }
             sessionNow = t
+            store.tickSession(now: t)
             #if canImport(ActivityKit)
             store.syncLiveActivity(now: t)
             #endif
+        }
+        .onChange(of: store.pendingCompletion) { _, completion in
+            guard let c = completion else { return }
+            store.pendingCompletion = nil
+            navigate(.complete(c.arena, c.durationMins, c.note, c.social))
         }
         .onAppear {
             refreshNextBlock()
@@ -172,10 +178,15 @@ struct HomeView: View {
                         .font(.system(size: 22, weight: .bold, design: .monospaced))
                         .foregroundStyle(liveColor.opacity(0.55))
                         .monospacedDigit()
-                } else {
+                } else if liveEnd > sessionNow {
                     Text(liveEnd, style: .timer)
                         .font(.system(size: 22, weight: .bold, design: .monospaced))
                         .foregroundStyle(liveColor)
+                        .monospacedDigit()
+                } else {
+                    Text("0:00")
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .foregroundStyle(liveColor.opacity(0.5))
                         .monospacedDigit()
                 }
 
@@ -404,10 +415,15 @@ struct HomeView: View {
                                         .font(.system(size: 36, weight: .bold, design: .monospaced))
                                         .foregroundStyle(liveColor)
                                         .monospacedDigit()
-                                } else {
+                                } else if liveEnd > sessionNow {
                                     Text(liveEnd, style: .timer)
                                         .font(.system(size: 36, weight: .bold, design: .monospaced))
                                         .foregroundStyle(liveColor)
+                                        .monospacedDigit()
+                                } else {
+                                    Text("0:00")
+                                        .font(.system(size: 36, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(liveColor.opacity(0.5))
                                         .monospacedDigit()
                                 }
                                 Text("ENDS  \(formattedStartTime(liveEnd))")
@@ -446,10 +462,17 @@ struct HomeView: View {
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 4) {
-                                Text(firstEnd, style: .timer)
-                                    .font(.system(size: 36, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(firstColor.opacity(0.55))
-                                    .monospacedDigit()
+                                if firstEnd > sessionNow {
+                                    Text(firstEnd, style: .timer)
+                                        .font(.system(size: 36, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(firstColor.opacity(0.55))
+                                        .monospacedDigit()
+                                } else {
+                                    Text("0:00")
+                                        .font(.system(size: 36, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(firstColor.opacity(0.35))
+                                        .monospacedDigit()
+                                }
                                 Text("ENDS  \(formattedStartTime(firstEnd))")
                                     .font(.system(size: 9, design: .monospaced))
                                     .foregroundStyle(firstColor.opacity(0.4))
@@ -565,10 +588,17 @@ struct HomeView: View {
                                 .kerning(2)
                             Spacer()
                             VStack(alignment: .trailing, spacing: 2) {
-                                Text(sEnd, style: .timer)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .foregroundStyle(sColor.opacity(0.7))
-                                    .monospacedDigit()
+                                if sEnd > sessionNow {
+                                    Text(sEnd, style: .timer)
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .foregroundStyle(sColor.opacity(0.7))
+                                        .monospacedDigit()
+                                } else {
+                                    Text("0:00")
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .foregroundStyle(sColor.opacity(0.45))
+                                        .monospacedDigit()
+                                }
                                 Text("ENDS  \(formattedStartTime(sEnd))")
                                     .font(.system(size: 8, design: .monospaced))
                                     .foregroundStyle(sColor.opacity(0.45))
