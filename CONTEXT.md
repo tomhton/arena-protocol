@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.17.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.18.0).
 
 ---
 
@@ -91,7 +91,7 @@
 
 ### v2.0.4 Changes
 - `ArenaProtocolWidgetLiveActivity.swift` — removed inline `ArenaActivityAttributes` (wrong type — caused black Dynamic Island); now uses shared `ArenaLiveActivityAttributes`
-- `ArenaProtocolWidgetLiveActivity.swift` — static fields (`arenaLabel`, `arenaColor`, `arenaIcon`, `questNote`) moved to `context.attributes.*`; dynamic fields (`endTime`, `isPaused`) remain `context.state.*`
+- `ArenaProtocolWidgetLiveActivity.swift` — arena identity fields (`arenaLabel`, `arenaColor`, `arenaIcon`) moved to `context.state.*` (v2.18.0); `questNote` remains `context.attributes.*`
 - `ArenaProtocolWidgetLiveActivity.swift` — compact leading fixed to `frame(width: 20, height: 20)`; compact trailing capped at `frame(maxWidth: 60)`
 - `ArenaProtocolWidgetLiveActivity.swift` — expanded regions use `frame(maxWidth: .infinity, alignment:)` with consistent `padding(.horizontal, 12).padding(.vertical, 8)`
 
@@ -349,24 +349,26 @@ Use these everywhere you need "what is running now" or "what starts next". Never
 struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
     // Static (set once at Activity.request — never changes during session)
     let arenaId: String
-    let arenaLabel: String
-    let arenaColor: String      // hex e.g. "#C0392B"
-    let arenaIcon: String       // single unicode char e.g. "◉"
     let questNote: String
+    let startTime: Date
 
     static let appGroupID = "group.arena.protocol"
 
-    // Dynamic (updated via Activity.update on pause/resume/joint add)
+    // Dynamic (updated via Activity.update on pause/resume/joint add/arena transition)
     struct ContentState: Codable, Hashable, Sendable {
         var endTime: Date
         var isPaused: Bool
         var pausedRemaining: TimeInterval
         var isIdle: Bool = false
         var isMandatory: Bool = false
-        var jointCount: Int = 0  // number of queued joint arenas
+        var jointCount: Int = 0
+        var arenaLabel: String = ""
+        var arenaColor: String = "#E8C547"
+        var arenaIcon: String = "◉"
     }
 }
 ```
+**IMPORTANT:** `arenaLabel`, `arenaColor`, `arenaIcon` are in `ContentState` (not static attributes) so `Activity.update()` can change the displayed arena when a joint takes over. All widget/lock-screen rendering reads `context.state.arenaLabel/Color/Icon`.
 Defined in `ArenaProtocol/ArenaLiveActivityAttributes.swift` — compiled into **both** the main app target and the widget extension target.
 
 ### ArenaProtocolModel / ProtocolBlock

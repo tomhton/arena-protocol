@@ -5,6 +5,23 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.18.0 — 2026-03-20
+
+**Xcode build fix + Live Activity arena identity on transition.**
+
+### Bug Fixes
+- **"Multiple commands produce .app" build error resolved** — the main app target's `Debug` and `Release` build configurations were missing `PRODUCT_NAME = ArenaProtocol`. Xcode was producing an unnamed `.app` bundle, triggering a duplicate-output conflict at link time. Added `PRODUCT_NAME = ArenaProtocol` to both configs in `project.pbxproj`.
+- **Live Activity arena name/color now updates on arena transition** — `arenaLabel`, `arenaColor`, `arenaIcon` were in the static `ActivityAttributes` struct; ActivityKit does not allow updating static attributes after `Activity.request`. Moved all three to `ContentState` so `Activity.update()` can push new arena identity. `tick()` in `ActiveSessionView` detects transitions via `liveArenaId` comparison and fires an update exactly when the active slot changes.
+
+### Internal
+- `project.pbxproj` — `PRODUCT_NAME = ArenaProtocol` added to Debug and Release build configuration blocks for the main app target
+- `ArenaLiveActivityAttributes.swift` — `arenaLabel`, `arenaColor`, `arenaIcon` moved from static `ActivityAttributes` to `ContentState` (with defaults)
+- `ActiveSessionView.swift` — `updateLiveActivity()` always includes arena identity; `currentLiveArena()` resolves active joint or falls back to primary; `@State liveArenaId` tracks last-pushed arena for transition detection
+- `ArenaProtocolWidgetLiveActivity.swift` — all `context.attributes.arenaLabel/Color/Icon` → `context.state.arenaLabel/Color/Icon`
+- `StuckView.swift` / `ProtocolsView.swift` — updated activity start/pause to put arena identity fields in `ContentState`
+
+---
+
 ## v2.17.0 — 2026-03-20
 
 **Timeline-based session banner — CURRENTLY IN + UP NEXT.**
