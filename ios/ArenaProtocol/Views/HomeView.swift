@@ -93,8 +93,8 @@ struct HomeView: View {
         }
         .onAppear {
             refreshNextBlock()
-            // Start idle Live Activity when no session is running
-            if store.activeSession == nil {
+            // Start idle Live Activity only when no sessions exist at all (active or stacked)
+            if store.activeSession == nil && store.stackedSessions.isEmpty {
                 #if canImport(ActivityKit)
                 store.startIdleActivity()
                 #endif
