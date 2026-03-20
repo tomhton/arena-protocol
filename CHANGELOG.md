@@ -5,6 +5,27 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.15.0 — 2026-03-19
+
+**Event type distinction across HomeView, Active Session, and Live Activity.**
+
+### Features
+- **PRIMARY / JOINT / STACKED labels** — three types of running arenas are now visually distinct everywhere:
+  - **PRIMARY** — the active foreground session
+  - **JOINT** — arenas queued after the primary via + ADD ARENA
+  - **STACKED** — sessions minimized via swipe-down running independently
+- **HomeView session banner** — "JOINT QUEUE" section header with icon + label + `+Xm` queued duration; "STACKED" section header above independent sessions; arena count includes joint arenas
+- **ActiveSessionView breakdown** — `PRIMARY` pill tag on the first row, `JOINT` pill tag on each joint row, shown inline next to the arena label
+- **Live Activity lock screen** — `+N JOINT` badge next to the arena label when joint arenas are queued
+- **Dynamic Island expanded bottom** — `PRIMARY + N JOINT` indicator when joints are active
+
+### Internal
+- `ArenaLiveActivityAttributes.ContentState` — added `jointCount: Int = 0` (default, backwards-compatible)
+- `ActiveSessionView.updateLiveActivityEndTime()` — passes `jointEntries.count` as `jointCount` on every update
+- `ArenaProtocolWidgetLiveActivity.swift` — lock screen banner and expanded bottom consume `jointCount`
+
+---
+
 ## v2.14.0 — 2026-03-19
 
 **Multi-arena session banner. Stacked sessions in header. Bug fixes.**
