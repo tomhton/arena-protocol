@@ -215,6 +215,15 @@ struct HomeView: View {
                 .fill(Color.white.opacity(0.05))
                 .frame(height: 1)
         }
+        // Swipe up anywhere on this bar to return to HOME
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { value in
+                    if value.translation.height < -30 {
+                        withAnimation(.spring(response: 0.3)) { viewMode = .home }
+                    }
+                }
+        )
     }
 
     // MARK: - Nav Buttons (shared by both tabs)
@@ -684,7 +693,7 @@ struct HomeView: View {
                             sessions: sessions
                         )
                         .rotationEffect(.degrees(editMode ? editShakeAngle : 0))
-                        .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                        .highPriorityGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
                             withAnimation(.spring(response: 0.3)) { editMode = true }
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         })
@@ -708,7 +717,7 @@ struct HomeView: View {
                             sessions: sessions
                         )
                         .rotationEffect(.degrees(editMode ? editShakeAngle : 0))
-                        .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                        .highPriorityGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
                             withAnimation(.spring(response: 0.3)) { editMode = true }
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         })
