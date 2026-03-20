@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.16.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.17.0).
 
 ---
 
@@ -77,6 +77,7 @@
 | 2.14.0 | 2026-03-19 | Multi-arena session banner: all stacked sessions shown in top banner. Bug fix: banner no longer reverts to idle on swipe-down stash. Bottom tray removed. |
 | 2.15.0 | 2026-03-19 | PRIMARY / JOINT / STACKED event type distinction on HomeView banner, ActiveSessionView breakdown, and Live Activity lock screen + expanded. Per-arena individual timers in banner (primary counts to own end; joints show scheduledEnd countdown or "in Xm"). Color flood tracks currently-running arena. |
 | 2.16.0 | 2026-03-19 | Fully live per-arena timers in session banner. 5-second clock drives branch switching (pending → active → done) for all joint rows. Banner accent bar and background animate to currently-running arena color. Primary row shows DONE when joint takes over. |
+| 2.17.0 | 2026-03-20 | Timeline-based session banner. `ActiveSessionState` gets `timeline`/`currentSlot`/`nextSlot` backend. Banner label → "CURRENTLY IN". Big row always shows live current arena. Single "UP NEXT" row with live countdown to next arena start. All controls and colors track `currentSlot`. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -249,7 +250,7 @@ The app also handles the `arenaprotocol://active` deep link via `.onOpenURL` in 
 
 | Screen | File | What it does |
 |---|---|---|
-| **Home** | `HomeView.swift` | 2-column arena grid, session banner (replaces idle header when any session is active/stacked), edit toggle, social toggle, app shortcuts bar, Intervals row, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Session banner shows all active arenas with per-arena live timers, JOINT QUEUE with pending/active/done states, STACKED section, and PAUSE/RESUME. Banner accent bar + background animate to the currently-running arena's color (5 s clock). |
+| **Home** | `HomeView.swift` | 2-column arena grid, session banner (replaces idle header when any session is active/stacked), edit toggle, social toggle, app shortcuts bar, Intervals row, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Session banner: "CURRENTLY IN" label, big current-arena row (timeline-driven — always the live slot), single "UP NEXT" row with live countdown, optional "+N MORE QUEUED", STACKED sub-rows, PAUSE/RESUME. All banner colors track `currentSlot` via 5 s `sessionNow` clock. |
 | **Morning Check-in** | `MorningCheckinView.swift` | 3-step ritual (Reading 5m, Goals 5m, Movement 5m), animated progress bar, skip option. Shows once per day. |
 | **Select** | `SelectView.swift` | Arena detail + quest note textarea, sub-arena pills → example task list, duration picker (5/10/30/60/90/custom), Google Calendar option, launches session |
 | **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. Manages Live Activity lifecycle (start on session begin, update on pause/resume, end on done/abandon). Tapping the Dynamic Island or lock screen banner deep-links to this screen via `arenaprotocol://active`. |
@@ -329,6 +330,19 @@ struct JointArenaEntry: Identifiable {
 - **PRIMARY** — `store.activeSession.arena` — foreground timer
 - **JOINT** — `store.activeSession.jointEntries` — queued arenas with individual `scheduledStart`/`scheduledEnd`
 - **STACKED** — `store.stackedSessions` — independently-running sessions minimized via swipe-down
+
+**Timeline helpers (extension on `ActiveSessionState`):**
+```swift
+// Ordered slots: primary first, then each joint in sequence
+var timeline: [(arena: Arena, start: Date, end: Date)]
+
+// Slot where start ≤ now < end — nil if between slots or complete
+func currentSlot(now: Date = Date()) -> (arena: Arena, start: Date, end: Date)?
+
+// Slot immediately after current, or first upcoming if none active
+func nextSlot(now: Date = Date()) -> (arena: Arena, start: Date, end: Date)?
+```
+Use these everywhere you need "what is running now" or "what starts next". Never manually walk `jointEntries` to determine the current arena.
 
 ### ArenaLiveActivityAttributes (ActivityKit — shared by app + widget extension)
 ```swift

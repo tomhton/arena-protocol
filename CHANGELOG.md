@@ -5,6 +5,24 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.17.0 — 2026-03-20
+
+**Timeline-based session banner — CURRENTLY IN + UP NEXT.**
+
+### Features
+- **Session timeline backend** — `ActiveSessionState` gains three new computed helpers: `timeline` (ordered `[(arena, start, end)]` slots for primary + all joints), `currentSlot(now:)` (slot where `start ≤ now < end`), `nextSlot(now:)` (slot immediately after current, or first upcoming). Works for any arena combination: primary-only, primary + N joints, stacked sessions with their own joints.
+- **"CURRENTLY IN" label** — replaces "IN SESSION". Always shows whichever arena is running right now regardless of whether it is the primary or a joint that has taken over.
+- **Big current-arena row is timeline-driven** — icon, label, subtitle, countdown, and color all pull from `currentSlot`. When Work ends and Recovery begins, the entire big row switches automatically: new icon, new label, new color, new live countdown.
+- **UP NEXT row** — single focused row below the current arena showing the next slot's icon, label, duration, and a live `in X:XX` countdown to when it starts. `+N MORE QUEUED` indicator appears if additional slots exist beyond the next one.
+- **Stacked sessions also timeline-aware** — the STACKED sub-rows use `currentSlot(now:)` so a stacked session with its own joints surfaces the correct currently-running arena.
+- **All controls follow the live arena** — accent bar, background tint, PAUSE button color all track `liveColor` from `currentSlot`, not the primary arena's static color.
+
+### Internal
+- `DataStore.swift` — `extension ActiveSessionState` with `timeline`, `currentSlot(now:)`, `nextSlot(now:)`
+- `HomeView.swift` — `sessionBanner` fully rewritten around `currentSlot`/`nextSlot`; `currentlyRunningArena` simplified to delegate to `currentSlot`; legacy `primaryIsDone`, `primaryOwnEnd`, `runningColor` intermediate vars removed
+
+---
+
 ## v2.16.0 — 2026-03-19
 
 **Live session banner — per-arena timers, running-arena color tracking.**
