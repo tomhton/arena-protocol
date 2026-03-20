@@ -149,9 +149,7 @@ struct HomeView: View {
 
             HStack(spacing: 12) {
                 Button {
-                    if let a = active {
-                        navigate(.active(a.arena, a.durationMins, a.note, a.social))
-                    }
+                    withAnimation(.spring(response: 0.3)) { viewMode = .session }
                 } label: {
                     HStack(spacing: 8) {
                         Text(liveArena.icon)
