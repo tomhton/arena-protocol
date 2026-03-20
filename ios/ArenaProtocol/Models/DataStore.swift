@@ -93,6 +93,9 @@ struct JointArenaEntry: Identifiable {
     let id = UUID()
     let arena: Arena
     let minutes: Int
+    var calEventId: String? = nil
+    var scheduledStart: Date = Date()
+    var scheduledEnd: Date = Date()
 }
 
 struct ActiveSessionState {
@@ -105,6 +108,7 @@ struct ActiveSessionState {
     var pausedRemaining: TimeInterval = 0
     var jointArenas: [Arena] = []
     var jointEntries: [JointArenaEntry] = []
+    var calEventId: String? = nil
 }
 
 struct MorningCheckin: Codable {

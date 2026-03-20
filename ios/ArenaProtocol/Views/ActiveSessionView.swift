@@ -280,6 +280,9 @@ struct ActiveSessionView: View {
     }
 
     private func removeJoint(_ entry: JointArenaEntry) {
+        if let id = entry.calEventId {
+            CalendarManager.shared.deleteEvent(id: id)
+        }
         jointEntries.removeAll { $0.id == entry.id }
         endTime = endTime.addingTimeInterval(-TimeInterval(entry.minutes * 60))
         totalTime -= entry.minutes * 60
@@ -288,14 +291,30 @@ struct ActiveSessionView: View {
     }
 
     private func addJoint(arena: Arena, minutes: Int) {
-        jointEntries.append(JointArenaEntry(arena: arena, minutes: minutes))
-        let start = endTime   // this joint block starts where the current timer ends
-        endTime = endTime.addingTimeInterval(TimeInterval(minutes * 60))
+        let jointStart = endTime
+        let jointEnd = jointStart.addingTimeInterval(TimeInterval(minutes * 60))
+        var entry = JointArenaEntry(arena: arena, minutes: minutes)
+        entry.scheduledStart = jointStart
+        entry.scheduledEnd = jointEnd
+        jointEntries.append(entry)
+        endTime = jointEnd
         totalTime += minutes * 60
         store.activeSession?.jointEntries = jointEntries
         store.activeSession?.endTime = endTime
         showJointPicker = false
-        addToGCal(arena: arena, start: start, end: endTime)
+        let entryId = entry.id
+        let arenaLabel = arena.label
+        let desc = arena.description
+        Task { @MainActor in
+            if !CalendarManager.shared.isReadAuthorized {
+                _ = await CalendarManager.shared.requestFullAccess()
+            }
+            let calId = CalendarManager.shared.addEvent(title: "[\(arenaLabel)]", start: jointStart, end: jointEnd, notes: desc)
+            if let idx = jointEntries.firstIndex(where: { $0.id == entryId }) {
+                jointEntries[idx].calEventId = calId
+                store.activeSession?.jointEntries = jointEntries
+            }
+        }
     }
 
     private func addToGCal(arena: Arena, start: Date, end: Date, note: String = "") {
@@ -307,7 +326,8 @@ struct ActiveSessionView: View {
             if !CalendarManager.shared.isReadAuthorized {
                 _ = await CalendarManager.shared.requestFullAccess()
             }
-            CalendarManager.shared.addEvent(title: title, start: start, end: end, notes: desc)
+            let id = CalendarManager.shared.addEvent(title: title, start: start, end: end, notes: desc)
+            store.activeSession?.calEventId = id
         }
     }
 
@@ -451,6 +471,21 @@ struct ActiveSessionView: View {
 
     private func finishEarly() {
         cancelNotification(id: "session_1")
+        let now = Date()
+        // Update primary event to actual end
+        if let id = store.activeSession?.calEventId {
+            CalendarManager.shared.updateEventEnd(id: id, newEnd: now)
+        }
+        // Update or delete joint events based on whether they started
+        for entry in jointEntries {
+            if let id = entry.calEventId {
+                if entry.scheduledStart <= now {
+                    CalendarManager.shared.updateEventEnd(id: id, newEnd: min(entry.scheduledEnd, now))
+                } else {
+                    CalendarManager.shared.deleteEvent(id: id)
+                }
+            }
+        }
         endLiveActivity()
         for entry in jointEntries {
             store.addSession(Session(arenaId: entry.arena.id, duration: entry.minutes,
@@ -463,6 +498,20 @@ struct ActiveSessionView: View {
 
     private func abandonSession() {
         cancelNotification(id: "session_1")
+        let now = Date()
+        let elapsed = store.activeSession.map { now.timeIntervalSince($0.startTime) } ?? 0
+        if let id = store.activeSession?.calEventId {
+            if elapsed < 60 {
+                CalendarManager.shared.deleteEvent(id: id)
+            } else {
+                CalendarManager.shared.updateEventEnd(id: id, newEnd: now)
+            }
+        }
+        for entry in jointEntries {
+            if let id = entry.calEventId {
+                CalendarManager.shared.deleteEvent(id: id)
+            }
+        }
         endLiveActivity()
         store.endSession()
         navigate(.home)

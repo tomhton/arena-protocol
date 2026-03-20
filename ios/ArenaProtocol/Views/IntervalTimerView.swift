@@ -12,6 +12,7 @@ struct IntervalTimerView: View {
     @State private var timeLeft: Int
     @State private var isPaused = false
     @State private var endTime = Date()
+    @State private var calEventId: String?
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init(label: String, minutes: Int, navigate: @escaping (Screen) -> Void) {
@@ -90,7 +91,7 @@ struct IntervalTimerView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button { navigate(.home) } label: {
+                    Button { finishInterval() } label: {
                         Text("DONE")
                             .font(.system(size: 11, weight: .bold, design: .monospaced))
                             .foregroundStyle(accentColor)
@@ -108,12 +109,30 @@ struct IntervalTimerView: View {
                 Spacer()
             }
         }
-        .onAppear { endTime = Date().addingTimeInterval(TimeInterval(timeLeft)) }
+        .onAppear {
+            endTime = Date().addingTimeInterval(TimeInterval(timeLeft))
+            let start = Date()
+            let end = endTime
+            let title = "[INTERVAL] \(label)"
+            Task { @MainActor in
+                if !CalendarManager.shared.isReadAuthorized {
+                    _ = await CalendarManager.shared.requestFullAccess()
+                }
+                calEventId = CalendarManager.shared.addEvent(title: title, start: start, end: end)
+            }
+        }
         .onReceive(ticker) { _ in
             guard !isPaused else { return }
             let r = Int(endTime.timeIntervalSinceNow)
-            if r <= 0 { navigate(.home) } else { timeLeft = r }
+            if r <= 0 { finishInterval() } else { timeLeft = r }
         }
         .onDisappear { ticker.upstream.connect().cancel() }
+    }
+
+    private func finishInterval() {
+        if let id = calEventId {
+            CalendarManager.shared.updateEventEnd(id: id, newEnd: Date())
+        }
+        navigate(.home)
     }
 }

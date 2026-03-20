@@ -41,10 +41,11 @@ final class CalendarManager {
         return store.defaultCalendarForNewEvents
     }
 
-    func addEvent(title: String, start: Date, end: Date, notes: String = "") {
+    @discardableResult
+    func addEvent(title: String, start: Date, end: Date, notes: String = "") -> String? {
         guard isReadAuthorized, let cal = arenaCalendar() else {
             print("[CalendarManager] addEvent skipped — fullAccess:\(isReadAuthorized) cal:\(arenaCalendar() != nil)")
-            return
+            return nil
         }
         let event = EKEvent(eventStore: store)
         event.title = title
@@ -54,8 +55,37 @@ final class CalendarManager {
         event.calendar = cal
         do {
             try store.save(event, span: .thisEvent, commit: true)
+            return event.eventIdentifier
         } catch {
             print("[CalendarManager] save event failed: \(error)")
+            return nil
+        }
+    }
+
+    func updateEventEnd(id: String, newEnd: Date) {
+        guard isReadAuthorized else { return }
+        guard let event = store.event(withIdentifier: id) else {
+            print("[CalendarManager] updateEventEnd — event not found: \(id)")
+            return
+        }
+        event.endDate = newEnd
+        do {
+            try store.save(event, span: .thisEvent, commit: true)
+        } catch {
+            print("[CalendarManager] updateEventEnd failed: \(error)")
+        }
+    }
+
+    func deleteEvent(id: String) {
+        guard isReadAuthorized else { return }
+        guard let event = store.event(withIdentifier: id) else {
+            print("[CalendarManager] deleteEvent — event not found: \(id)")
+            return
+        }
+        do {
+            try store.remove(event, span: .thisEvent, commit: true)
+        } catch {
+            print("[CalendarManager] deleteEvent failed: \(error)")
         }
     }
 
