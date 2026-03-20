@@ -1,12 +1,12 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.11.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.11.0 — Dev Setup added).
 
 ---
 
 ## App Identity
 
 **Name:** Arena Protocol
-**One-liner:** A dark-themed iOS life-management app built around timed focus sessions across four life "arenas" (Preparation, Labor, Mental Recovery, Physical Activity) with a Social modifier, gamification, habit tracking, and daily rituals.
+**One-liner:** A dark-themed iOS life-management app built around timed focus sessions across four life "arenas" (Alignment, Labor, Recharge, Movement) with a Social modifier, gamification, habit tracking, and daily rituals.
 **Bundle ID:** `com.arenaprotocol.app`
 **Repo:** `tomhton/arena-protocol`
 **Active branch:** `main`
@@ -29,6 +29,19 @@
 | Package | `ios/Package.swift` (SPM — retained for CI / `swift test`) |
 | Tests | Swift Testing framework (`@Suite`, `@Test`) |
 | Legacy (archived) | React 18 + Vite + Capacitor 6 — still in `src/` for reference only |
+
+---
+
+## Development Setup
+
+| Role | Tool |
+|---|---|
+| Planning + prompting | Claude.ai (web, any device) |
+| File edits + git operations | Claude Code (terminal, MacBook) |
+| Building + signing + device deploy | Xcode (MacBook) |
+| Testing | iPhone 17 Pro Max — OTA via TestFlight or direct from Xcode |
+
+**Workflow rule:** Claude Code pushes require a `git pull` before touching Xcode. Xcode config changes require a `git push` afterward. Claude.ai handles planning and diagnosis only — never touches the repo directly.
 
 ---
 
