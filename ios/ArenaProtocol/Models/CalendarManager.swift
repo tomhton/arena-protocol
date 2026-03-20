@@ -91,6 +91,21 @@ final class CalendarManager {
 
     // MARK: - Read feed
 
+    /// Returns events currently in progress (started before now, ending after now).
+    func activeEvents() -> [EKEvent] {
+        guard isReadAuthorized else { return [] }
+        let now = Date()
+        let lookback = now.addingTimeInterval(-24 * 3600)
+        let lookahead = now.addingTimeInterval(8 * 3600)
+        let pred = store.predicateForEvents(withStart: lookback, end: lookahead, calendars: nil)
+        return store.events(matching: pred)
+            .filter { event in
+                guard let cal = event.calendar else { return false }
+                return cal.title != "Arena Protocol" && !event.isAllDay
+                    && event.startDate <= now && event.endDate > now
+            }
+    }
+
     /// Returns upcoming calendar events (all calendars except "Arena Protocol") in the next `hours` hours.
     func upcomingEvents(hours: Int = 12) -> [EKEvent] {
         guard isReadAuthorized else { return [] }

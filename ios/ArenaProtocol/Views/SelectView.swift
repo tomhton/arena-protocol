@@ -15,6 +15,7 @@ struct SelectView: View {
     @State private var customMinutes = ""
     @State private var activeSubArena: String? = nil
     @State private var calEvents: [EKEvent] = []
+    @State private var ongoingMatch: EKEvent? = nil
     @FocusState private var customFocused: Bool
 
     private var arenaColor: Color { Color(hex: arena.color) }
@@ -41,6 +42,7 @@ struct SelectView: View {
                 arenaHeader
                 questField
                 if !subArenaKeys.isEmpty { subArenaSection }
+                if let event = ongoingMatch { resumeFromCalBanner(event: event) }
                 if !calEvents.isEmpty { calFeedSection }
                 durationSection
                 launchSection
@@ -49,7 +51,14 @@ struct SelectView: View {
             .padding(.bottom, 32)
         }
         .scrollDismissesKeyboard(.interactively)
-        .onAppear { calEvents = CalendarManager.shared.upcomingEvents(hours: 8) }
+        .onAppear {
+            calEvents = CalendarManager.shared.upcomingEvents(hours: 8)
+            ongoingMatch = CalendarManager.shared.activeEvents().first(where: { event in
+                let matched = CalendarManager.shared.matchArena(for: event, arenas: store.arenas)
+                return matched?.id == arena.id
+                    || (event.title ?? "").hasPrefix("[\(arena.label)]")
+            })
+        }
     }
 
     // MARK: - Back
@@ -417,7 +426,72 @@ struct SelectView: View {
         }
     }
 
+    // MARK: - Calendar Resume Banner
+
+    private func resumeFromCalBanner(event: EKEvent) -> some View {
+        let remaining = max(1, Int(event.endDate.timeIntervalSinceNow / 60))
+        let rawTitle = event.title ?? ""
+        let prefix = "[\(arena.label)] "
+        let eventNote = rawTitle.hasPrefix(prefix)
+            ? String(rawTitle.dropFirst(prefix.count))
+            : rawTitle
+        let accent = arenaColor
+
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Text("▶")
+                    .font(.system(size: 9))
+                    .foregroundStyle(accent)
+                Text("IN PROGRESS")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(accent.opacity(0.8))
+                    .kerning(5)
+            }
+            .padding(.bottom, 8)
+
+            Button { resumeSession(event: event, minutes: remaining, note: eventNote) } label: {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(rawTitle)
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(accent)
+                            .lineLimit(1)
+                        Text("\(remaining)m remaining · ends \(event.endDate.relativeShort())")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(accent.opacity(0.55))
+                    }
+                    Spacer()
+                    Text("RESUME")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(hex: "#080810"))
+                        .kerning(3)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(accent.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(accent.opacity(0.5), lineWidth: 1.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.bottom, 20)
+    }
+
     // MARK: - Actions
+
+    private func resumeSession(event: EKEvent, minutes: Int, note: String) {
+        scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
+                             body: "Your focus block has ended.",
+                             secondsFromNow: TimeInterval(minutes * 60))
+        navigate(.active(arena, minutes, note))
+    }
 
     private func startSession() {
         let dur = effectiveDuration

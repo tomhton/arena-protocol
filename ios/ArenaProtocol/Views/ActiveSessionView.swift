@@ -288,6 +288,7 @@ struct ActiveSessionView: View {
         totalTime -= entry.minutes * 60
         store.activeSession?.jointEntries = jointEntries
         store.activeSession?.endTime = endTime
+        updateLiveActivityEndTime(endTime)
     }
 
     private func addJoint(arena: Arena, minutes: Int) {
@@ -302,6 +303,7 @@ struct ActiveSessionView: View {
         store.activeSession?.jointEntries = jointEntries
         store.activeSession?.endTime = endTime
         showJointPicker = false
+        updateLiveActivityEndTime(endTime)
         let entryId = entry.id
         let arenaLabel = arena.label
         let desc = arena.description
@@ -445,6 +447,22 @@ struct ActiveSessionView: View {
                 pausedRemaining: currentRemaining
             )
             await activity?.update(.init(state: newState, staleDate: nil))
+        }
+        #endif
+    }
+
+    private func updateLiveActivityEndTime(_ newEnd: Date) {
+        #if canImport(ActivityKit)
+        let activity = liveActivity
+        let paused = isPaused
+        let remaining = TimeInterval(timeLeft)
+        Task {
+            let newState = ArenaLiveActivityAttributes.ContentState(
+                endTime: newEnd,
+                isPaused: paused,
+                pausedRemaining: paused ? remaining : 0
+            )
+            await activity?.update(.init(state: newState, staleDate: newEnd))
         }
         #endif
     }
