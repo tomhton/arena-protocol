@@ -175,6 +175,13 @@ Git: ready to push / pushed
 5. If a `/wrap` step fails (compile error, merge conflict, dirty state), stop and report before continuing
 6. Always flag widget/Live Activity changes for physical device verification — simulator is not sufficient
 7. If unsure whether a change is in scope, ask before writing code
+8. **Before editing any file, always declare:**
+   - 📄 File: `filename.swift`
+   - ✏️ Changing: exact description of what is being added/modified/removed
+   - 🚫 Not touching: what is explicitly being left alone in that file
+   
+   Wait for Tom to confirm ("yes", "go", "ok", or similar) before writing any code.
+   If multiple files need changing, declare all of them upfront as a grouped plan before touching any.
 
 ---
 

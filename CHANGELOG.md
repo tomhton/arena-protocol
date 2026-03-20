@@ -5,6 +5,21 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.21.0 — 2026-03-20
+
+**Home UX rework: unified layout with session info inline, iOS-style jiggle edit mode for arena grid.**
+
+### Features
+- **Unified home layout** — IDEAS, STATS, SETTINGS, and session total are now inline in each tab's own content header (not a fixed overlay). No empty space left of the nav buttons.
+- **CURRENTLY IN tab: full timeline** — shows the live countdown with "ENDS [HH:MM]" beneath the timer, then a TIMELINE section listing every future arena slot with `start → end` clock times in the user's configured timezone.
+- **CURRENTLY IN tab: stacked sessions** — each stacked session shown with its own countdown + "ENDS [HH:MM]" clock time.
+- **iOS-style jiggle edit mode** — arena grid stays in 2-column layout in edit mode. Cards shake with a shared `editShakeAngle` animation. Tapping a card in edit mode navigates to the arena editor. An ADD card appears inline below the grid. No more jarring switch to a list of 4.
+
+### Internal
+- `HomeView.swift` — `editReorderList` removed entirely; `twoColumnGrid` handles both normal and edit states; `navButtonsRow` computed var shared between tabs; `formattedStartTime()` uses `store.settings.clockTimezone`; `@State editShakeAngle: Double` drives `repeatForever` shake via `.onChange(of: editMode)`
+
+---
+
 ## v2.20.0 — 2026-03-20
 
 **App shortcuts dock with curated app catalog and edit mode.**
