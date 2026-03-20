@@ -5,6 +5,23 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.25.0 — 2026-03-20
+
+**Arena card custom background images.**
+
+### Features
+- **`Arena.backgroundImageName: String?`** — new optional Codable field. When set, the card loads the image by name (asset catalog first, Documents directory fallback) and renders it as a full-bleed blurred background (`.blur(radius: 12)` + 60% black overlay) behind all existing card content. When nil, card renders exactly as before.
+- **Default image names** — `DEFAULT_ARENAS` and `SOCIAL_ARENA` pre-populated: `bg_alignment`, `bg_labor`, `bg_recharge`, `bg_movement`, `bg_social`.
+- **`Assets.xcassets`** — new asset catalog at `ArenaProtocol/Resources/Assets.xcassets` with five placeholder imagesets (`bg_alignment`, `bg_labor`, `bg_recharge`, `bg_movement`, `bg_social`). Drop PNG files into these slots in Xcode; they appear automatically on the cards.
+- **Arena editor — BACKGROUND IMAGE section** — bundled preset picker (horizontal scroll, 5 slots with live thumbnail once images are dropped in) + "CHOOSE FROM PHOTOS" button (PHPickerViewController). Photo library images are saved to the app's Documents directory and referenced by filename.
+
+### Changed
+- `DataStore.swift` — `Arena` struct gains `var backgroundImageName: String? = nil`; `DEFAULT_ARENAS` + `SOCIAL_ARENA` updated with default names.
+- `ArenaCardView.swift` — `ArenaBackgroundImage` view added; rendered in card ZStack when `arena.backgroundImageName` is non-nil.
+- `ArenaEditorView.swift` — `import PhotosUI` added; `BUNDLED_BG_IMAGES` constant, `loadPreviewImage`, `saveImageToDocuments` helpers, `PHImagePicker` UIViewControllerRepresentable; `populate()`/`persist()` wired.
+
+---
+
 ## v2.22.0 — 2026-03-20
 
 **Session intelligence backbone + Forge narrative framework. On-device, zero-API personalization.**

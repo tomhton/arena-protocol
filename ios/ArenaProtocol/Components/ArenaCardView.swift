@@ -2,6 +2,7 @@
 // Native SwiftUI arena card with illustrations and forge marks
 
 import SwiftUI
+import UIKit
 
 struct ArenaCardView: View {
     let arena: Arena
@@ -27,6 +28,14 @@ struct ArenaCardView: View {
                             .strokeBorder(isPressed ? arenaColor.opacity(0.45) : arenaColor.opacity(0.18), lineWidth: 1)
                     )
                     .shadow(color: isPressed ? arenaColor.opacity(0.22) : .clear, radius: 12, y: 4)
+
+                // Custom background image (when set)
+                if let bgName = arena.backgroundImageName {
+                    ArenaBackgroundImage(name: bgName)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .allowsHitTesting(false)
+                }
 
                 // Top accent bar
                 VStack {
@@ -165,6 +174,31 @@ struct AddArenaCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Background image loader (asset catalog → Documents directory fallback)
+
+struct ArenaBackgroundImage: View {
+    let name: String
+
+    private var uiImage: UIImage? {
+        if let img = UIImage(named: name) { return img }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        if let data = try? Data(contentsOf: docs.appendingPathComponent(name)) {
+            return UIImage(data: data)
+        }
+        return nil
+    }
+
+    var body: some View {
+        if let img = uiImage {
+            Image(uiImage: img)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .blur(radius: 12)
+                .overlay(Color.black.opacity(0.6))
+        }
     }
 }
 

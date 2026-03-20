@@ -2,6 +2,7 @@
 // Create and edit arenas: name, subtitle, icon, color, description, examples, sub-arenas
 
 import SwiftUI
+import PhotosUI
 
 struct ArenaListEditorView: View {
     @Environment(DataStore.self) private var store
@@ -99,6 +100,8 @@ struct ArenaEditorView: View {
     @State private var pickerColor: Color = Color(hex: "#E8C547")
     @State private var subArenaRows: [SubArenaRow] = []
     @State private var persistedId: String? = nil
+    @State private var backgroundImageName: String? = nil
+    @State private var showPhotoPicker = false
 
     private var isNew: Bool { arena == nil }
     private var selectedColor: Color { Color(hex: color) }
@@ -342,6 +345,105 @@ struct ArenaEditorView: View {
                     }
                 }
 
+                // Background Image
+                fieldSection("BACKGROUND IMAGE", optional: true) {
+                    VStack(spacing: 12) {
+                        // Current selection status
+                        HStack(spacing: 10) {
+                            if let name = backgroundImageName {
+                                if let img = loadPreviewImage(name) {
+                                    Image(uiImage: img)
+                                        .resizable().aspectRatio(contentMode: .fill)
+                                        .frame(width: 44, height: 44)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                } else {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white.opacity(0.06))
+                                        .frame(width: 44, height: 44)
+                                        .overlay(Text("◈").font(.system(size: 16)).foregroundStyle(Color.white.opacity(0.25)))
+                                }
+                                Text(name)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(selectedColor.opacity(0.8))
+                                    .kerning(1)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                Spacer()
+                                Button { backgroundImageName = nil } label: {
+                                    Text("REMOVE")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundStyle(Color.red.opacity(0.55))
+                                        .kerning(3)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                Text("NONE")
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.22))
+                                    .kerning(3)
+                                Spacer()
+                            }
+                        }
+
+                        // Bundled presets
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(BUNDLED_BG_IMAGES, id: \.name) { preset in
+                                    Button { backgroundImageName = preset.name } label: {
+                                        VStack(spacing: 4) {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(backgroundImageName == preset.name
+                                                          ? selectedColor.opacity(0.18)
+                                                          : Color.white.opacity(0.05))
+                                                    .frame(width: 54, height: 54)
+                                                if let img = loadPreviewImage(preset.name) {
+                                                    Image(uiImage: img)
+                                                        .resizable().aspectRatio(contentMode: .fill)
+                                                        .frame(width: 54, height: 54)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                } else {
+                                                    Text("◈")
+                                                        .font(.system(size: 16))
+                                                        .foregroundStyle(Color.white.opacity(0.18))
+                                                }
+                                            }
+                                            .overlay(RoundedRectangle(cornerRadius: 8)
+                                                .strokeBorder(backgroundImageName == preset.name
+                                                              ? selectedColor : Color.white.opacity(0.1),
+                                                              lineWidth: backgroundImageName == preset.name ? 2 : 1))
+                                            Text(preset.label)
+                                                .font(.system(size: 7, design: .monospaced))
+                                                .foregroundStyle(backgroundImageName == preset.name
+                                                                 ? selectedColor : Color.white.opacity(0.28))
+                                                .kerning(2)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .animation(.easeInOut(duration: 0.15), value: backgroundImageName)
+                                }
+                            }
+                        }
+
+                        // Photo library picker
+                        Button { showPhotoPicker = true } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "photo")
+                                    .font(.system(size: 12))
+                                Text("CHOOSE FROM PHOTOS")
+                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                    .kerning(3)
+                            }
+                            .foregroundStyle(selectedColor.opacity(0.7))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .overlay(RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(selectedColor.opacity(0.3), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
                 // Save button
                 Button { handleSave() } label: {
                     Text(isNew ? "CREATE ARENA" : "SAVE CHANGES")
@@ -376,6 +478,13 @@ struct ArenaEditorView: View {
         }
         .onAppear { populate() }
         .onDisappear { persist() }
+        .sheet(isPresented: $showPhotoPicker) {
+            PHImagePicker { image in
+                guard let img = image,
+                      let filename = saveImageToDocuments(img) else { return }
+                backgroundImageName = filename
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -410,6 +519,7 @@ struct ArenaEditorView: View {
         subArenaRows = a.subArenas.map { key, vals in
             SubArenaRow(name: key, examples: vals.joined(separator: "\n"))
         }.sorted { $0.name < $1.name }
+        backgroundImageName = a.backgroundImageName
         // If icon isn't in presets, treat it as custom
         if !ARENA_ICONS.contains(a.icon) {
             customIcon = a.icon
@@ -442,7 +552,8 @@ struct ArenaEditorView: View {
             description: description.trimmingCharacters(in: .whitespaces),
             icon: resolvedIcon,
             examples: examplesList,
-            subArenas: builtSubArenas
+            subArenas: builtSubArenas,
+            backgroundImageName: backgroundImageName
         )
         if let idx = store.arenas.firstIndex(where: { $0.id == resolvedId }) {
             store.arenas[idx] = updated
@@ -463,6 +574,66 @@ struct ArenaEditorView: View {
         store.saveArenas()
         label = "" // prevent onDisappear persist() from re-adding
         dismiss()
+    }
+}
+
+// MARK: - Background image helpers (ArenaEditorView)
+
+private let BUNDLED_BG_IMAGES: [(name: String, label: String)] = [
+    ("bg_alignment", "ALIGN"),
+    ("bg_labor",     "LABOR"),
+    ("bg_recharge",  "CHARGE"),
+    ("bg_movement",  "MOVE"),
+    ("bg_social",    "SOCIAL"),
+]
+
+private func loadPreviewImage(_ name: String) -> UIImage? {
+    if let img = UIImage(named: name) { return img }
+    let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    if let data = try? Data(contentsOf: docs.appendingPathComponent(name)) {
+        return UIImage(data: data)
+    }
+    return nil
+}
+
+private func saveImageToDocuments(_ image: UIImage) -> String? {
+    let filename = "arena_bg_\(UUID().uuidString).png"
+    let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    guard let data = image.pngData() else { return nil }
+    try? data.write(to: docs.appendingPathComponent(filename))
+    return filename
+}
+
+// MARK: - PHPicker wrapper
+
+private struct PHImagePicker: UIViewControllerRepresentable {
+    var onPick: (UIImage?) -> Void
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration(photoLibrary: .shared())
+        config.filter = .images
+        config.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate, @unchecked Sendable {
+        let onPick: (UIImage?) -> Void
+        init(onPick: @escaping (UIImage?) -> Void) { self.onPick = onPick }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+            guard let result = results.first else { onPick(nil); return }
+            result.itemProvider.loadObject(ofClass: UIImage.self) { obj, _ in
+                let img = obj as? UIImage
+                DispatchQueue.main.async { self.onPick(img) }
+            }
+        }
     }
 }
 

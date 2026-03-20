@@ -21,6 +21,7 @@ struct Arena: Identifiable, Codable, Equatable, Hashable {
     var icon: String
     var examples: [String]
     var subArenas: [String: [String]]
+    var backgroundImageName: String? = nil   // asset catalog name or Documents filename
 
     static func reletter(_ arenas: [Arena]) -> [Arena] {
         arenas.enumerated().map { i, a in
@@ -280,7 +281,8 @@ let DEFAULT_ARENAS: [Arena] = [
                          "Read for 20 min on a relevant topic", "Summarise what you learned"],
             "ORGANISE": ["Clear your workspace", "Process your inbox to zero",
                          "Capture all open loops", "File or delete things that aren't actions"]
-        ]
+        ],
+        backgroundImageName: "bg_alignment"
     ),
     Arena(
         id: "work", label: "WORK", letter: "B", color: "#E8C547",
@@ -298,7 +300,8 @@ let DEFAULT_ARENAS: [Arena] = [
                       "Sketch a prototype or outline", "Build one thing, start to finish"],
             "MASTERY": ["Learn one skill for 20 min", "Study something outside your comfort zone",
                         "Practice deliberately for 15 min", "Teach what you learned today"]
-        ]
+        ],
+        backgroundImageName: "bg_labor"
     ),
     Arena(
         id: "recovery", label: "RECOVERY", letter: "C", color: "#A78BFA",
@@ -316,7 +319,8 @@ let DEFAULT_ARENAS: [Arena] = [
                         "Reflect on what went well today", "Review what you'd do differently"],
             "LEARN": ["Read something non-urgent", "Watch an educational video",
                       "Take notes on a book chapter", "Study something you're curious about"]
-        ]
+        ],
+        backgroundImageName: "bg_recharge"
     ),
     Arena(
         id: "movement", label: "MOVEMENT", letter: "D", color: "#34D399",
@@ -330,7 +334,8 @@ let DEFAULT_ARENAS: [Arena] = [
             "TRAIN": ["Strength training", "10 min walk", "20 min run", "Cold shower"],
             "RECOVER": ["Stretch for 10 min", "5 min breathwork", "Sleep before midnight", "20 min nap"],
             "FUEL": ["Cook a real meal", "Drink 2L of water", "Prep meals for tomorrow", "No sugar today"]
-        ]
+        ],
+        backgroundImageName: "bg_movement"
     )
 ]
 
@@ -344,7 +349,8 @@ let SOCIAL_ARENA = Arena(
     examples: ["Coffee with a friend", "Group workout", "Team collaboration",
                "Family time", "Social event", "Catch up with someone",
                "Shared meal", "Coworking session"],
-    subArenas: [:]
+    subArenas: [:],
+    backgroundImageName: "bg_social"
 )
 
 let DEFAULT_PROTOCOLS: [ArenaProtocolModel] = [
