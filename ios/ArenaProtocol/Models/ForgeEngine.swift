@@ -480,6 +480,245 @@ extension ForgeEngine {
     }
 }
 
+// MARK: - Protocol Recommendations
+
+extension ForgeEngine {
+
+    /// Generates up to 3 personalised protocol suggestions from session history.
+    /// IDs are prefixed "_forge_" — never stored in seenDrops or user's protocol library
+    /// unless the user explicitly saves one.
+    ///
+    /// Returned in priority order:
+    ///   1. Neglect recovery — reactivates a dormant arena via a known-good warmup
+    ///   2. Archetype protocol — matches the user's current engagement pattern
+    ///   3. Transition protocol — codifies the user's most common arena sequence
+    static func recommendProtocols(profile p: SessionProfile, arenas: [Arena]) -> [ArenaProtocolModel] {
+        guard p.totalSessions >= 3, !arenas.isEmpty else { return [] }
+
+        var recs: [ArenaProtocolModel] = []
+
+        // --- 1. Neglect recovery ---
+        if let rec = neglectRecoveryProtocol(p, arenas: arenas) { recs.append(rec) }
+
+        // --- 2. Archetype protocol ---
+        if let rec = archetypeProtocol(p, arenas: arenas),
+           !recs.contains(where: { $0.id == rec.id }) { recs.append(rec) }
+
+        // --- 3. Transition protocol ---
+        if recs.count < 3, let rec = transitionProtocol(p, arenas: arenas),
+           !recs.contains(where: { $0.id == rec.id }) { recs.append(rec) }
+
+        return Array(recs.prefix(3))
+    }
+
+    // MARK: - Builders
+
+    private static func neglectRecoveryProtocol(_ p: SessionProfile, arenas: [Arena]) -> ArenaProtocolModel? {
+        guard let neglectedId = p.neglectedArenaIds.first,
+              let neglected = arenas.first(where: { $0.id == neglectedId }),
+              let primaryId = p.primaryArenaId, primaryId != neglectedId,
+              let primary = arenas.first(where: { $0.id == primaryId }) else { return nil }
+
+        let warmup = _dur(p, arenaId: primaryId,  low: 15, high: 25)
+        let main   = _dur(p, arenaId: neglectedId, low: 15, high: 25)
+
+        return ArenaProtocolModel(
+            id: "_forge_neglect_\(neglectedId)",
+            name: "REACTIVATE \(neglected.label)",
+            glyph: neglected.icon,
+            color: neglected.color,
+            description: "\(neglected.label) has been quiet. Ease back in through \(primary.label) first.",
+            blocks: [
+                ProtocolBlock(arenaId: primary.id,   label: primary.label,   duration: warmup, color: primary.color),
+                ProtocolBlock(arenaId: neglected.id, label: neglected.label, duration: main,   color: neglected.color),
+            ]
+        )
+    }
+
+    private static func archetypeProtocol(_ p: SessionProfile, arenas: [Arena]) -> ArenaProtocolModel? {
+        // Sorted by usage — most used first, with live arena objects
+        let ranked = arenas.sorted {
+            (p.arenaSessionCounts[$0.id] ?? 0) > (p.arenaSessionCounts[$1.id] ?? 0)
+        }
+        guard let top = ranked.first else { return nil }
+
+        // Standard arenas by known ID (falls back to ranked position if missing)
+        func arena(_ id: String, fallback: Int = 0) -> Arena? {
+            arenas.first(where: { $0.id == id }) ?? (fallback < ranked.count ? ranked[fallback] : nil)
+        }
+
+        switch p.archetype {
+
+        case .newcomer:
+            let a = arena("alignment", fallback: 0)
+            let w = arena("work",      fallback: 1)
+            guard let a, let w else { return nil }
+            return ArenaProtocolModel(
+                id: "_forge_arch_newcomer",
+                name: "QUICK START",
+                glyph: "▸",
+                color: w.color,
+                description: "Plan your session, then execute. A solid foundation for new habits.",
+                blocks: [
+                    ProtocolBlock(arenaId: a.id, label: a.label, duration: 10, color: a.color),
+                    ProtocolBlock(arenaId: w.id, label: w.label, duration: 25, color: w.color),
+                ]
+            )
+
+        case .sprinter:
+            let second = ranked.count > 1 ? ranked[1] : top
+            let d1 = _dur(p, arenaId: top.id,    low: 15, high: 25)
+            let d2 = _dur(p, arenaId: second.id, low: 15, high: 25)
+            return ArenaProtocolModel(
+                id: "_forge_arch_sprinter",
+                name: "DOUBLE SPRINT",
+                glyph: "▸",
+                color: top.color,
+                description: "Two fast-hit arenas back to back. Max output, minimal time.",
+                blocks: [
+                    ProtocolBlock(arenaId: top.id,    label: top.label,    duration: d1, color: top.color),
+                    ProtocolBlock(arenaId: second.id, label: second.label, duration: d2, color: second.color),
+                ]
+            )
+
+        case .deepWorker:
+            let d = _dur(p, arenaId: top.id, low: 45, high: 90)
+            return ArenaProtocolModel(
+                id: "_forge_arch_deep",
+                name: "DEEP SESSION",
+                glyph: "◈",
+                color: top.color,
+                description: "No distractions. Long block. This is how you do your best work.",
+                blocks: [
+                    ProtocolBlock(arenaId: top.id, label: top.label, duration: d, color: top.color),
+                ]
+            )
+
+        case .streakChaser:
+            let rec = arena("recovery", fallback: ranked.count > 1 ? 1 : 0)
+            guard let rec else { return nil }
+            let d = _dur(p, arenaId: top.id, low: 25, high: 40)
+            return ArenaProtocolModel(
+                id: "_forge_arch_streak",
+                name: "STREAK LOOP",
+                glyph: "◆",
+                color: top.color,
+                description: "Hit your primary arena, then recover. Repeat daily. That's a streak.",
+                blocks: [
+                    ProtocolBlock(arenaId: top.id, label: top.label, duration: d,  color: top.color),
+                    ProtocolBlock(arenaId: rec.id, label: rec.label, duration: 15, color: rec.color),
+                ]
+            )
+
+        case .specialist:
+            let align = arena("alignment", fallback: ranked.count > 1 ? 1 : 0)
+            guard let align else { return nil }
+            let d = _dur(p, arenaId: top.id, low: 40, high: 60)
+            return ArenaProtocolModel(
+                id: "_forge_arch_specialist",
+                name: "DEPTH PROTOCOL",
+                glyph: "◆",
+                color: top.color,
+                description: "Set the plan, then go deep. Your specialty deserves your best conditions.",
+                blocks: [
+                    ProtocolBlock(arenaId: align.id, label: align.label, duration: 10, color: align.color),
+                    ProtocolBlock(arenaId: top.id,   label: top.label,   duration: d,  color: top.color),
+                ]
+            )
+
+        case .balancer:
+            // All arenas with equal-ish time based on typical durations
+            let total = arenas.reduce(0) { $0 + _dur(p, arenaId: $1.id, low: 15, high: 30) }
+            return ArenaProtocolModel(
+                id: "_forge_arch_balance",
+                name: "FULL ARENA CYCLE",
+                glyph: "✦",
+                color: "#E8C547",
+                description: "Every arena. One session. \(total)m of complete coverage.",
+                blocks: arenas.map { a in
+                    ProtocolBlock(arenaId: a.id, label: a.label,
+                                  duration: _dur(p, arenaId: a.id, low: 15, high: 30), color: a.color)
+                }
+            )
+
+        case .returning, .recovering:
+            let mov = arena("movement", fallback: 0)
+            let rec = arena("recovery", fallback: ranked.count > 1 ? 1 : 0)
+            guard let mov, let rec else { return nil }
+            return ArenaProtocolModel(
+                id: "_forge_arch_return",
+                name: "GENTLE RETURN",
+                glyph: "▸",
+                color: mov.color,
+                description: "Move the body first. Then let it rest. Low bar, high value.",
+                blocks: [
+                    ProtocolBlock(arenaId: mov.id, label: mov.label, duration: 15, color: mov.color),
+                    ProtocolBlock(arenaId: rec.id, label: rec.label, duration: 20, color: rec.color),
+                ]
+            )
+
+        case .surging:
+            let align = arena("alignment", fallback: 0)
+            let work  = arena("work",      fallback: ranked.count > 1 ? 1 : 0)
+            guard let align, let work else { return nil }
+            return ArenaProtocolModel(
+                id: "_forge_arch_surge",
+                name: "MOMENTUM BLOCK",
+                glyph: "⬟",
+                color: work.color,
+                description: "You're trending up. Don't waste it. Plan tight, execute long.",
+                blocks: [
+                    ProtocolBlock(arenaId: align.id, label: align.label, duration: 15, color: align.color),
+                    ProtocolBlock(arenaId: work.id,  label: work.label,  duration: 45, color: work.color),
+                ]
+            )
+
+        case .veteran:
+            let rec = arena("recovery", fallback: ranked.count > 1 ? 1 : 0)
+            let d = _dur(p, arenaId: top.id, low: 25, high: 40)
+            guard let rec else { return nil }
+            return ArenaProtocolModel(
+                id: "_forge_arch_veteran",
+                name: "VETERAN CYCLE",
+                glyph: "❋",
+                color: top.color,
+                description: "You know the formula. Align, execute, recover. Run it clean.",
+                blocks: [
+                    ProtocolBlock(arenaId: top.id, label: top.label, duration: d,  color: top.color),
+                    ProtocolBlock(arenaId: rec.id, label: rec.label, duration: 15, color: rec.color),
+                ]
+            )
+        }
+    }
+
+    private static func transitionProtocol(_ p: SessionProfile, arenas: [Arena]) -> ArenaProtocolModel? {
+        guard let trans = p.commonTransitions.first,
+              let fromArena = arenas.first(where: { $0.id == trans.from }),
+              let toArena   = arenas.first(where: { $0.id == trans.to }) else { return nil }
+
+        let d1 = _dur(p, arenaId: trans.from, low: 20, high: 45)
+        let d2 = _dur(p, arenaId: trans.to,   low: 15, high: 40)
+
+        return ArenaProtocolModel(
+            id: "_forge_trans_\(trans.from)_\(trans.to)",
+            name: "\(fromArena.label) → \(toArena.label)",
+            glyph: "▸",
+            color: fromArena.color,
+            description: "Your most common sequence, formalised. \(d1 + d2)m total.",
+            blocks: [
+                ProtocolBlock(arenaId: fromArena.id, label: fromArena.label, duration: d1, color: fromArena.color),
+                ProtocolBlock(arenaId: toArena.id,   label: toArena.label,   duration: d2, color: toArena.color),
+            ]
+        )
+    }
+
+    /// Typical duration for an arena, clamped to [low, high].
+    private static func _dur(_ p: SessionProfile, arenaId: String, low: Int, high: Int) -> Int {
+        let base = p.typicalDurationByArena[arenaId] ?? p.averageDuration
+        return Swift.max(low, Swift.min(high, base == 0 ? 25 : base))
+    }
+}
+
 // MARK: - Int clamping helper (local)
 
 private extension Int {

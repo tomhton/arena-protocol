@@ -14,8 +14,13 @@ struct ProtocolsView: View {
 
     @State private var editingProtocol: ArenaProtocolModel? = nil
     @State private var isCreating = false
+    @State private var savedForgeIds: Set<String> = []
 
     private var protocols: [ArenaProtocolModel] { store.protocols }
+
+    private var recommendations: [ArenaProtocolModel] {
+        ForgeEngine.recommendProtocols(profile: store.sessionProfile, arenas: store.arenas)
+    }
 
     var body: some View {
         if isCreating {
@@ -106,6 +111,21 @@ struct ProtocolsView: View {
                 }
                 .padding(.bottom, 28)
 
+                // AI recommendations
+                if !recommendations.isEmpty {
+                    forYouSection
+                        .padding(.bottom, 28)
+                }
+
+                // User's protocols
+                if !protocols.isEmpty {
+                    Text("YOUR PROTOCOLS")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.22))
+                        .kerning(6)
+                        .padding(.bottom, 14)
+                }
+
                 VStack(spacing: 14) {
                     ForEach(protocols) { p in
                         protocolCard(p)
@@ -115,6 +135,162 @@ struct ProtocolsView: View {
             .padding(.horizontal, 22)
             .padding(.bottom, 32)
         }
+    }
+
+    // MARK: - FOR YOU section
+
+    private var forYouSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Text("◈")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color(hex: "#E8C547").opacity(0.8))
+                Text("FOR YOU")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.22))
+                    .kerning(6)
+                Spacer()
+                Text("based on your patterns")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.15))
+                    .kerning(1)
+            }
+
+            ForEach(recommendations) { p in
+                forYouCard(p)
+            }
+        }
+    }
+
+    private func forYouCard(_ p: ArenaProtocolModel) -> some View {
+        let total  = p.blocks.reduce(0) { $0 + $1.duration }
+        let pColor = Color(hex: p.color)
+        let isSaved = savedForgeIds.contains(p.id)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 10) {
+                        Text(p.glyph)
+                            .font(.system(size: 18))
+                            .foregroundStyle(pColor)
+                            .shadow(color: pColor.opacity(0.6), radius: 6)
+                        Text(p.name)
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundStyle(pColor)
+                            .kerning(3)
+                    }
+                    Text(p.description)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.white.opacity(0.35))
+                        .lineSpacing(4)
+                }
+                Spacer()
+                Text("◈ AI")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(hex: "#E8C547").opacity(0.6))
+                    .kerning(2)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color(hex: "#E8C547").opacity(0.08))
+                    .overlay(RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color(hex: "#E8C547").opacity(0.25), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+
+            // Block strip
+            GeometryReader { geo in
+                HStack(spacing: 4) {
+                    ForEach(p.blocks.indices, id: \.self) { i in
+                        let b = p.blocks[i]
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color(hex: b.color).opacity(0.7))
+                            .frame(width: max(8, geo.size.width * CGFloat(b.duration) / CGFloat(max(1, total)) - 4), height: 6)
+                    }
+                }
+            }
+            .frame(height: 6)
+
+            // Block labels
+            HStack {
+                ForEach(p.blocks.indices, id: \.self) { i in
+                    let b = p.blocks[i]
+                    Text("\(b.label) \(b.duration)m")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color(hex: b.color).opacity(0.8))
+                        .kerning(1)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text("\(total)m total")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.3))
+                    .kerning(2)
+            }
+
+            // Actions
+            HStack(spacing: 10) {
+                // Save to library
+                Button {
+                    guard !isSaved else { return }
+                    // Strip the _forge_ prefix so it becomes a regular user protocol
+                    var saved = p
+                    saved = ArenaProtocolModel(
+                        id: UUID().uuidString,
+                        name: p.name,
+                        glyph: p.glyph,
+                        color: p.color,
+                        description: p.description,
+                        blocks: p.blocks
+                    )
+                    store.protocols.append(saved)
+                    store.saveProtocols()
+                    savedForgeIds.insert(p.id)
+                } label: {
+                    Text(isSaved ? "✓ SAVED" : "SAVE")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isSaved ? Color.white.opacity(0.3) : pColor)
+                        .kerning(3)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(isSaved ? Color.white.opacity(0.04) : pColor.opacity(0.12))
+                        .overlay(RoundedRectangle(cornerRadius: 11)
+                            .strokeBorder(isSaved ? Color.white.opacity(0.1) : pColor.opacity(0.4), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 11))
+                }
+                .buttonStyle(.plain)
+                .animation(.easeInOut(duration: 0.2), value: isSaved)
+
+                // Begin immediately
+                Button { navigate(.activeProtocol(p)) } label: {
+                    Text("BEGIN →")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(pColor)
+                        .kerning(4)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(pColor.opacity(0.18))
+                        .overlay(RoundedRectangle(cornerRadius: 11)
+                            .strokeBorder(pColor.opacity(0.6), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 11))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(20)
+        .background(pColor.opacity(0.06))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color(hex: "#E8C547").opacity(0.3), pColor.opacity(0.2)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
     private func protocolCard(_ p: ArenaProtocolModel) -> some View {
