@@ -5,6 +5,26 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.19.0 — 2026-03-20
+
+**Live Activity arena transitions work from anywhere — no longer require the session screen to be open.**
+
+### Bug Fixes
+- **Live Activity frozen on arena transition** — the lock screen banner, Dynamic Island, and HomeView session banner would all freeze at the previous arena's timer (counting into positive) whenever the user navigated away from the active session screen. They would only correct when the user tapped the banner and re-opened the session view. Root cause: `tick()` in `ActiveSessionView` was the sole arena-transition detector and only ran while that view was in the navigation stack.
+- **HomeView banner slow to switch arenas** — the session banner's `sessionNow` clock ticked every 5 seconds, meaning up to 5 seconds of stale display after an arena transition.
+
+### How it works now
+- `DataStore.syncLiveActivity(now:)` is a new method that reads `activeSession ?? stackedSessions.first`, calls `currentSlot(now:)`, and pushes an updated ContentState to all live activities only when the active arena has changed. Guarded by `liveArenaId` to prevent no-op pushes.
+- HomeView's session timer reduced from 5 s → 1 s. Every tick calls `store.syncLiveActivity(now:)`. Since HomeView is the root of the `NavigationStack` and is never removed from the hierarchy, this timer runs continuously — whether the user is on the session screen, the home screen, or any other screen.
+- `ActiveSessionView` seeds `store.liveArenaId` on session start and on each `tick()` transition so the DataStore tracker stays in sync and doesn't double-push when the session view is active.
+
+### Internal
+- `DataStore.swift` — `var liveArenaId: String`, `func syncLiveActivity(now:)` (inside `#if canImport(ActivityKit)`)
+- `HomeView.swift` — `Timer.publish(every: 1)` replaces 5 s; `store.syncLiveActivity(now: t)` called each tick
+- `ActiveSessionView.swift` — `store.liveArenaId = arena.id` seeded on setup and on `tick()` transition
+
+---
+
 ## v2.18.0 — 2026-03-20
 
 **Xcode build fix + Live Activity arena identity on transition.**

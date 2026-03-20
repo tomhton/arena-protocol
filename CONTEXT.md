@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.18.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.19.0).
 
 ---
 
@@ -78,6 +78,8 @@
 | 2.15.0 | 2026-03-19 | PRIMARY / JOINT / STACKED event type distinction on HomeView banner, ActiveSessionView breakdown, and Live Activity lock screen + expanded. Per-arena individual timers in banner (primary counts to own end; joints show scheduledEnd countdown or "in Xm"). Color flood tracks currently-running arena. |
 | 2.16.0 | 2026-03-19 | Fully live per-arena timers in session banner. 5-second clock drives branch switching (pending → active → done) for all joint rows. Banner accent bar and background animate to currently-running arena color. Primary row shows DONE when joint takes over. |
 | 2.17.0 | 2026-03-20 | Timeline-based session banner. `ActiveSessionState` gets `timeline`/`currentSlot`/`nextSlot` backend. Banner label → "CURRENTLY IN". Big row always shows live current arena. Single "UP NEXT" row with live countdown to next arena start. All controls and colors track `currentSlot`. |
+| 2.18.0 | 2026-03-20 | Xcode build fix (`PRODUCT_NAME` added to main app target). Live Activity arena identity (`arenaLabel/Color/Icon`) moved to `ContentState` so `Activity.update()` can change displayed arena on transition. |
+| 2.19.0 | 2026-03-20 | Live Activity + HomeView banner now update on arena transitions from any screen. `DataStore.syncLiveActivity(now:)` drives updates; HomeView 1 s timer calls it continuously. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -410,6 +412,7 @@ struct HabitLog: Codable {
     var checkin:       MorningCheckin     // { date, completed: [habitId] }
     var activeSession: ActiveSessionState? = nil    // transient — nil when no session running
     var stackedSessions: [ActiveSessionState] = [] // minimized sessions
+    var liveArenaId: String = ""  // last arena id pushed to Live Activity; guards syncLiveActivity
 
     // Computed
     var letteredArenas: [Arena]       // auto-assigns A/B/C/D letters
@@ -422,6 +425,13 @@ struct HabitLog: Codable {
     func stashSession()              // moves activeSession → stackedSessions
     func unstashSession(arenaId: String)  // pops from stackedSessions → activeSession
     func abandonStackedSession(arenaId: String)
+
+    // Live Activity — called by HomeView's 1 s timer; also by ActiveSessionView on transitions
+    func syncLiveActivity(now: Date = Date())
+    // Compares currentSlot().arena.id to liveArenaId; if changed, builds ContentState
+    // from activeSession (or stackedSessions.first) and pushes to Activity.activities.
+    // No-op if arena hasn't changed. Guarded by #if canImport(ActivityKit).
+    // IMPORTANT: HomeView is the always-running root view and drives this every second.
 }
 ```
 
