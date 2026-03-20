@@ -1,12 +1,12 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.10.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.11.0).
 
 ---
 
 ## App Identity
 
 **Name:** Arena Protocol
-**One-liner:** A dark-themed iOS life-management app built around timed focus sessions across four life "arenas" (Body, Spirit, Tribe, Craft) with gamification, habit tracking, and daily rituals.
+**One-liner:** A dark-themed iOS life-management app built around timed focus sessions across four life "arenas" (Preparation, Labor, Mental Recovery, Physical Activity) with a Social modifier, gamification, habit tracking, and daily rituals.
 **Bundle ID:** `com.arenaprotocol.app`
 **Repo:** `tomhton/arena-protocol`
 **Active branch:** `main`
@@ -58,6 +58,7 @@
 | 2.9.1 | 2026-03-19 | Bug fixes: STUCK + mandatory Live Activities. Calendar writes use default source, auto-request permission, log errors. Event titles show quest note. |
 | 2.9.2 | 2026-03-19 | Bug fix: calendar events write to defaultCalendarForNewEvents (Google Calendar). Dropped custom calendar creation — blocked by CalDAV (EKErrorDomain Code=17). |
 | 2.10.0 | 2026-03-19 | Calendar ↔ app full sync: EKEvent ID tracking, update/delete on finishEarly/abandon/joint remove. Interval timers log to calendar. Calendar resume banner in SelectView. Live Activity fixed for joint arenas + stash. |
+| 2.11.0 | 2026-03-19 | New arenas (Preparation, Labor, Mental Recovery, Physical Activity). Social modifier on HomeView — tags any session or runs standalone. Customisable protocols (ProtocolEditorView). Social Bool threaded through all navigation. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order

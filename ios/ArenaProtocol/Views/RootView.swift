@@ -8,7 +8,7 @@ import SwiftUI
 enum Screen: Hashable {
     case home       // not a destination — navigate(.home) always pops to root
     case checkin
-    case select(Arena)
+    case select(Arena, Bool)    // arena, social modifier
     case active(Arena, Int, String, Bool)    // arena, durationMins, note, social
     case complete(Arena, Int, String, Bool)  // arena, durationMins, note, social
     case protocols
@@ -84,8 +84,8 @@ struct RootView: View {
                     navigate(.home)
                 }
             )
-        case .select(let arena):
-            SelectView(arena: arena, navigate: navigate)
+        case .select(let arena, let social):
+            SelectView(arena: arena, social: social, navigate: navigate)
         case .active(let arena, let duration, let note, let social):
             ActiveSessionView(arena: arena, duration: duration, note: note, social: social, navigate: navigate)
                 .navigationBarBackButtonHidden(true)

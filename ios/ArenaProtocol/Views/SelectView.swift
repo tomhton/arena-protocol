@@ -7,6 +7,7 @@ import EventKit
 struct SelectView: View {
     @Environment(DataStore.self) private var store
     let arena: Arena
+    let social: Bool
     var navigate: (Screen) -> Void
 
     @State private var note = ""
@@ -16,8 +17,13 @@ struct SelectView: View {
     @State private var activeSubArena: String? = nil
     @State private var calEvents: [EKEvent] = []
     @State private var ongoingMatch: EKEvent? = nil
-    @State private var isSocial = false
     @FocusState private var customFocused: Bool
+
+    init(arena: Arena, social: Bool = false, navigate: @escaping (Screen) -> Void) {
+        self.arena = arena
+        self.social = social
+        self.navigate = navigate
+    }
 
     private var arenaColor: Color { Color(hex: arena.color) }
     private var effectiveDuration: Int {
@@ -46,7 +52,7 @@ struct SelectView: View {
                 if let event = ongoingMatch { resumeFromCalBanner(event: event) }
                 if !calEvents.isEmpty { calFeedSection }
                 durationSection
-                socialToggle
+                if social { socialBadge }
                 launchSection
             }
             .padding(.horizontal, 24)
@@ -428,32 +434,30 @@ struct SelectView: View {
         }
     }
 
-    // MARK: - Social Toggle
+    // MARK: - Social Badge (read-only indicator when social mode is on)
 
-    private var socialToggle: some View {
+    private var socialBadge: some View {
         let socialColor = Color(hex: "#B794F4")
-        return HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("SOCIAL")
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(isSocial ? socialColor : Color.white.opacity(0.4))
-                    .kerning(5)
-                Text("with others")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.25))
-            }
+        return HStack(spacing: 10) {
+            Text("◇")
+                .font(.system(size: 14))
+                .foregroundStyle(socialColor)
+                .shadow(color: socialColor.opacity(0.5), radius: 6)
+            Text("SOCIAL")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(socialColor)
+                .kerning(5)
+            Text("·")
+                .foregroundStyle(Color.white.opacity(0.2))
+            Text("session will be logged as social")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(Color.white.opacity(0.35))
             Spacer()
-            Toggle("", isOn: $isSocial)
-                .tint(socialColor)
-                .labelsHidden()
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(isSocial ? socialColor.opacity(0.08) : Color.white.opacity(0.03))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isSocial ? socialColor.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 1)
-        )
+        .padding(.vertical, 10)
+        .background(socialColor.opacity(0.08))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(socialColor.opacity(0.3), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.bottom, 20)
     }
@@ -522,7 +526,7 @@ struct SelectView: View {
         scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
                              body: "Your focus block has ended.",
                              secondsFromNow: TimeInterval(minutes * 60))
-        navigate(.active(arena, minutes, note, isSocial))
+        navigate(.active(arena, minutes, note, social))
     }
 
     private func startSession() {
@@ -531,7 +535,7 @@ struct SelectView: View {
         scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
                              body: "Your focus block has ended.",
                              secondsFromNow: TimeInterval(dur * 60))
-        navigate(.active(arena, dur, note, isSocial))
+        navigate(.active(arena, dur, note, social))
     }
 }
 

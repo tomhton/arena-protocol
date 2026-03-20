@@ -191,6 +191,19 @@ let DEFAULT_ARENAS: [Arena] = [
     )
 ]
 
+// Social is not a regular arena — it's a modifier/standalone mode.
+// This constant is used when the user starts a Social-only session.
+let SOCIAL_ARENA = Arena(
+    id: "social", label: "SOCIAL", letter: "S", color: "#B794F4",
+    subtitle: "connect · share · be present",
+    description: "Time with others. Every session can be social — this one is dedicated to it.",
+    icon: "◇",
+    examples: ["Coffee with a friend", "Group workout", "Team collaboration",
+               "Family time", "Social event", "Catch up with someone",
+               "Shared meal", "Coworking session"],
+    subArenas: [:]
+)
+
 let DEFAULT_PROTOCOLS: [ArenaProtocolModel] = [
     ArenaProtocolModel(
         id: "launcher", name: "THE LAUNCHER", glyph: "◎", color: "#60A5FA",

@@ -12,6 +12,9 @@ struct HomeView: View {
     @State private var editMode = false
     @State private var showAbandonConfirm = false
     @State private var nextBlock: EKEvent? = nil
+    @State private var socialActive = false
+
+    private let socialColor = Color(hex: "#B794F4")
 
     private var arenas: [Arena] { store.letteredArenas }
     private var sessions: [Session] { store.sessions }
@@ -27,6 +30,7 @@ struct HomeView: View {
                     if let event = nextBlock { nextBlockBanner(event: event) }
                     editToggle
                     arenaGrid
+                    socialSection
                     AppShortcutsBar()
                     intervalsSection
                     bottomButtons
@@ -121,7 +125,7 @@ struct HomeView: View {
 
         Button {
             if let arena = matched {
-                navigate(.select(arena))
+                navigate(.select(arena, socialActive))
             }
         } label: {
             HStack(spacing: 12) {
@@ -429,7 +433,7 @@ struct HomeView: View {
                         sessCount: sessions.filter { $0.arenaId == arena.id && $0.date == todayString() }.count,
                         streak: store.streak(for: arena.id),
                         editMode: false,
-                        onTap: { navigate(.select(arena)) },
+                        onTap: { navigate(.select(arena, socialActive)) },
                         sessions: sessions
                     )
                     .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
@@ -446,7 +450,7 @@ struct HomeView: View {
                         sessCount: sessions.filter { $0.arenaId == arena.id && $0.date == todayString() }.count,
                         streak: store.streak(for: arena.id),
                         editMode: false,
-                        onTap: { navigate(.select(arena)) },
+                        onTap: { navigate(.select(arena, socialActive)) },
                         sessions: sessions
                     )
                     .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
@@ -455,6 +459,86 @@ struct HomeView: View {
                     })
                     .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 18)), removal: .opacity))
                 }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Social Section
+
+    private var socialSection: some View {
+        VStack(spacing: 8) {
+            // Toggle row
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    socialActive.toggle()
+                }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                HStack(spacing: 12) {
+                    Text("◇")
+                        .font(.system(size: 18))
+                        .foregroundStyle(socialColor)
+                        .shadow(color: socialActive ? socialColor.opacity(0.6) : .clear, radius: 8)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("SOCIAL")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(socialActive ? socialColor : Color.white.opacity(0.45))
+                            .kerning(4)
+                        Text(socialActive ? "active — pick an arena or start solo" : "tap to add social to any session")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(socialActive ? 0.4 : 0.2))
+                            .kerning(1)
+                    }
+
+                    Spacer()
+
+                    // Custom toggle pill
+                    ZStack {
+                        Capsule()
+                            .fill(socialActive ? socialColor : Color.white.opacity(0.08))
+                            .frame(width: 44, height: 24)
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 18, height: 18)
+                            .offset(x: socialActive ? 10 : -10)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(socialActive ? socialColor.opacity(0.1) : Color.white.opacity(0.03))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(socialActive ? socialColor.opacity(0.5) : Color.white.opacity(0.07),
+                                      lineWidth: socialActive ? 1.5 : 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+
+            // Social-only session button (shown when active)
+            if socialActive {
+                Button { navigate(.select(SOCIAL_ARENA, true)) } label: {
+                    HStack(spacing: 10) {
+                        Text("◇")
+                            .font(.system(size: 14))
+                            .foregroundStyle(socialColor)
+                        Text("SOCIAL ONLY SESSION →")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(socialColor)
+                            .kerning(3)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(socialColor.opacity(0.07))
+                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(socialColor.opacity(0.35), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity.combined(with: .offset(y: -6)))
             }
         }
         .padding(.horizontal, 12)

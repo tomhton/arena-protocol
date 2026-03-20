@@ -5,6 +5,31 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.11.0 — 2026-03-19
+
+**New arenas. Social modifier. Customisable protocols.**
+
+### Features
+- **New default arenas** — replaced the 4 default arenas with: A. Preparation (◎ #60A5FA), B. Labor (◆ #E8C547), C. Mental Recovery (◑ #A78BFA), D. Physical Activity (◉ #34D399). Default protocols updated to reference the new arena IDs.
+- **Social modifier** — a `◇ SOCIAL` toggle lives on HomeView between the arena grid and shortcuts bar. Toggle it on to tag any upcoming session as social. Works as:
+  - A modifier on any arena (sessions logged with `social: true`, Live Activity shows `◎` prefix, calendar events tagged `◎`)
+  - A standalone session via "SOCIAL ONLY SESSION →" button (uses `SOCIAL_ARENA` synthetic arena, not shown in grid/editor)
+  - Flows through `Screen.select(Arena, Bool)` → `SelectView` (read-only purple badge) → `Screen.active` → `ActiveSessionView` → `Session.social` + `calEventId`
+- **Customisable protocols** — Protocols tab fully rewritten. Users can create, edit, and delete their own arena combinations (name, icon, color, list of arena+duration blocks). Each block uses a `Menu` arena picker. 8-colour palette + free-text glyph field. Running a saved protocol unchanged.
+
+### Bug Fixes
+- **Social toggle in wrong screen** — previously the social toggle was embedded per-arena in SelectView. Now it lives globally on HomeView; SelectView shows a read-only badge confirming the social state.
+
+### Internal
+- `DataStore.swift` — `SOCIAL_ARENA` constant (id: `"social"`, NOT in `DEFAULT_ARENAS`); `Session.social: Bool`; `ActiveSessionState.social: Bool`; `DEFAULT_ARENAS` and `DEFAULT_PROTOCOLS` replaced
+- `RootView.swift` — `Screen.select(Arena, Bool)`, `Screen.active(Arena, Int, String, Bool)`, `Screen.complete(Arena, Int, String, Bool)` — social Bool threaded through all nav destinations
+- `HomeView.swift` — `socialActive: Bool` state; `socialSection` computed view; all arena navigate calls pass `socialActive`
+- `SelectView.swift` — `let social: Bool` replaces `@State isSocial`; removed interactive toggle, replaced with `socialBadge` (read-only purple pill)
+- `ActiveSessionView.swift` — `let social: Bool`; `addToGCal` prefixes title with `◎` when social; joint sessions carry `social`
+- `ProtocolsView.swift` — full rewrite: `ProtocolEditorView` struct with `EditableBlock`, `ForEach($blocks)`, arena `Menu` picker, colour palette, name/icon/colour fields, save/delete
+
+---
+
 ## v2.10.0 — 2026-03-19
 
 **Calendar ↔ app full sync. Calendar resume. Live Activity fixes.**

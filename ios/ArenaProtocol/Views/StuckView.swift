@@ -349,7 +349,7 @@ struct StuckView: View {
                     ForEach(arenas.indices, id: \.self) { i in
                         ArenaCardView(
                             arena: arenas[i], sessCount: 0, streak: 0, editMode: false,
-                            onTap: { navigate(.select(arenas[i])) },
+                            onTap: { navigate(.select(arenas[i], false)) },
                             sessions: store.sessions
                         )
                     }
