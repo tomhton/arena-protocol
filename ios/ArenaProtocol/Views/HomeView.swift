@@ -912,6 +912,13 @@ struct HomeView: View {
                         Circle().fill(.white).frame(width: 18, height: 18)
                             .offset(x: socialActive ? 10 : -10)
                     }
+                    Button { navigate(.editArena(store.socialArena)) } label: {
+                        Text("✎")
+                            .font(.system(size: 12))
+                            .foregroundStyle(socialColor.opacity(0.45))
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 12)
                 .background(socialActive ? socialColor.opacity(0.1) : Color.white.opacity(0.03))
@@ -923,7 +930,7 @@ struct HomeView: View {
             .buttonStyle(.plain)
 
             if socialActive {
-                Button { navigate(.select(SOCIAL_ARENA, true)) } label: {
+                Button { navigate(.select(store.socialArena, true)) } label: {
                     HStack(spacing: 10) {
                         Text("🤝").font(.system(size: 14))
                         Text("SOCIAL ONLY SESSION →")

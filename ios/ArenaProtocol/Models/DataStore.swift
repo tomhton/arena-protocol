@@ -649,6 +649,7 @@ final class DataStore {
 
     // State
     var arenas:     [Arena]              = loadFromDefaults("arena_custom_arenas",   fallback: DEFAULT_ARENAS)
+    var socialArena: Arena              = loadFromDefaults("arena_social",           fallback: SOCIAL_ARENA)
     var sessions:   [Session]            = loadFromDefaults("arena_sessions",        fallback: [])
     var habits:     [Habit]              = loadFromDefaults("arena_habits",          fallback: [])
     var habitLogs:  [HabitLog]           = loadFromDefaults("arena_habit_logs",      fallback: [])
@@ -689,7 +690,8 @@ final class DataStore {
     var sessionProfile: SessionProfile { buildSessionProfile(from: sessions, arenas: arenas) }
 
     // Save helpers
-    func saveArenas()    { saveToDefaults("arena_custom_arenas",  arenas) }
+    func saveArenas()      { saveToDefaults("arena_custom_arenas",  arenas) }
+    func saveSocialArena() { saveToDefaults("arena_social",         socialArena) }
     func moveArena(from source: IndexSet, to destination: Int) {
         arenas.move(fromOffsets: source, toOffset: destination)
         saveArenas()

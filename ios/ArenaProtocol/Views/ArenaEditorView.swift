@@ -458,8 +458,8 @@ struct ArenaEditorView: View {
                 .buttonStyle(.plain)
                 .padding(.bottom, 12)
 
-                // Delete button (edit only)
-                if !isNew {
+                // Delete button (edit only, not for social arena)
+                if !isNew && arena?.id != "social" {
                     Button { handleDelete() } label: {
                         Text("DELETE ARENA")
                             .font(.system(size: 11, design: .monospaced))
@@ -555,12 +555,16 @@ struct ArenaEditorView: View {
             subArenas: builtSubArenas,
             backgroundImageName: backgroundImageName
         )
-        if let idx = store.arenas.firstIndex(where: { $0.id == resolvedId }) {
+        if resolvedId == "social" {
+            store.socialArena = updated
+            store.saveSocialArena()
+        } else if let idx = store.arenas.firstIndex(where: { $0.id == resolvedId }) {
             store.arenas[idx] = updated
+            store.saveArenas()
         } else {
             store.arenas.append(updated)
+            store.saveArenas()
         }
-        store.saveArenas()
     }
 
     private func handleSave() {

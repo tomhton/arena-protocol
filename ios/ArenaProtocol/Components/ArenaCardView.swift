@@ -196,7 +196,7 @@ struct ArenaBackgroundImage: View {
             Image(uiImage: img)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .blur(radius: 12)
+                .blur(radius: 4)
                 .overlay(Color.black.opacity(0.6))
         }
     }
