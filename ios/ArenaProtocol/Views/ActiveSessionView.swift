@@ -72,13 +72,13 @@ struct ActiveSessionView: View {
                 VStack(spacing: 0) {
                     // Primary row
                     arenaRow(icon: arena.icon, label: arena.label, color: arenaColor,
-                             minutes: duration, removable: false, onRemove: {})
+                             minutes: duration, removable: false, tag: "PRIMARY", onRemove: {})
 
                     // Joint rows
                     ForEach(jointEntries) { entry in
                         arenaRow(icon: entry.arena.icon, label: entry.arena.label,
                                  color: Color(hex: entry.arena.color),
-                                 minutes: entry.minutes, removable: true) {
+                                 minutes: entry.minutes, removable: true, tag: "JOINT") {
                             removeJoint(entry)
                         }
                     }
@@ -234,7 +234,7 @@ struct ActiveSessionView: View {
 
     @ViewBuilder
     private func arenaRow(icon: String, label: String, color: Color, minutes: Int,
-                          removable: Bool, onRemove: @escaping () -> Void) -> some View {
+                          removable: Bool, tag: String = "", onRemove: @escaping () -> Void) -> some View {
         HStack(spacing: 10) {
             // Colored bar
             RoundedRectangle(cornerRadius: 2)
@@ -246,10 +246,22 @@ struct ActiveSessionView: View {
                 .foregroundStyle(color)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(label)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(color)
-                    .kerning(2)
+                HStack(spacing: 6) {
+                    Text(label)
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(color)
+                        .kerning(2)
+                    if !tag.isEmpty {
+                        Text(tag)
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(color.opacity(0.55))
+                            .kerning(1)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(color.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                }
                 // proportional bar
                 GeometryReader { geo in
                     let fraction = totalTime > 0 ? CGFloat(minutes * 60) / CGFloat(totalTime) : 0
@@ -466,11 +478,13 @@ struct ActiveSessionView: View {
         let activity = liveActivity
         let paused = isPaused
         let remaining = TimeInterval(timeLeft)
+        let jCount = jointEntries.count
         Task {
             let newState = ArenaLiveActivityAttributes.ContentState(
                 endTime: newEnd,
                 isPaused: paused,
-                pausedRemaining: paused ? remaining : 0
+                pausedRemaining: paused ? remaining : 0,
+                jointCount: jCount
             )
             await activity?.update(.init(state: newState, staleDate: newEnd))
         }

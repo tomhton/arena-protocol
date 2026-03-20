@@ -146,10 +146,21 @@ private struct LockScreenBannerView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(context.attributes.arenaLabel)
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
-                        .tracking(1.5)
+                    HStack(spacing: 6) {
+                        Text(context.attributes.arenaLabel)
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white)
+                            .tracking(1.5)
+                        if context.state.jointCount > 0 {
+                            Text("+\(context.state.jointCount) JOINT")
+                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                .foregroundColor(arenaColor.opacity(0.7))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(arenaColor.opacity(0.18))
+                                .clipShape(Capsule())
+                        }
+                    }
 
                     if !context.attributes.questNote.isEmpty {
                         Text(context.attributes.questNote)
@@ -341,15 +352,25 @@ private struct ExpandedBottomView: View {
     let context: ActivityViewContext<ArenaLiveActivityAttributes>
 
     var body: some View {
-        if !context.attributes.questNote.isEmpty {
-            Text(context.attributes.questNote)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+        HStack(spacing: 10) {
+            if !context.attributes.questNote.isEmpty {
+                Text(context.attributes.questNote)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            if context.state.jointCount > 0 {
+                let arenaColor = Color(hex: context.attributes.arenaColor)
+                Text("PRIMARY  +  \(context.state.jointCount) JOINT")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundColor(arenaColor.opacity(0.7))
+                    .tracking(1)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 }
 

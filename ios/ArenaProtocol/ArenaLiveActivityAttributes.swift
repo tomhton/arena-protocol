@@ -19,5 +19,6 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
         var pausedRemaining: TimeInterval
         var isIdle: Bool = false        // true = no session, show motivational text
         var isMandatory: Bool = false   // true = post-stuck grace, must pick an arena
+        var jointCount: Int = 0         // number of joint arenas queued after primary
     }
 }

@@ -143,7 +143,8 @@ struct HomeView: View {
             if let s = stacked.first { return Color(hex: s.arena.color) }
             return Color(hex: "#E8C547")
         }()
-        let totalCount = (active != nil ? 1 : 0) + stacked.count
+        let jointEntries: [JointArenaEntry] = active?.jointEntries ?? []
+        let totalCount = (active != nil ? 1 : 0) + jointEntries.count + stacked.count
         // Sub-rows: all stacked when active exists; all-but-first when no active (first shown as primary)
         let subStacked: [ActiveSessionState] = active != nil ? stacked : Array(stacked.dropFirst())
 
@@ -247,6 +248,42 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                 }
 
+                // Joint arenas queued after primary
+                if !jointEntries.isEmpty {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.06))
+                        .frame(height: 1)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+
+                    Text("JOINT QUEUE")
+                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.22))
+                        .kerning(4)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        .padding(.bottom, 2)
+
+                    ForEach(jointEntries, id: \.id) { entry in
+                        let jc = Color(hex: entry.arena.color)
+                        HStack(spacing: 10) {
+                            Text(entry.arena.icon)
+                                .font(.system(size: 13))
+                                .foregroundStyle(jc)
+                            Text(entry.arena.label)
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundStyle(jc.opacity(0.8))
+                                .kerning(2)
+                            Spacer()
+                            Text("+\(entry.minutes)m")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(jc.opacity(0.55))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 6)
+                    }
+                }
+
                 // Sub-rows for remaining stacked sessions
                 if !subStacked.isEmpty {
                     Rectangle()
@@ -254,6 +291,14 @@ struct HomeView: View {
                         .frame(height: 1)
                         .padding(.horizontal, 20)
                         .padding(.top, 12)
+
+                    Text("STACKED")
+                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.22))
+                        .kerning(4)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        .padding(.bottom, 2)
 
                     ForEach(subStacked, id: \.arena.id) { s in
                         let sc = Color(hex: s.arena.color)
