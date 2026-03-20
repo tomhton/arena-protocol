@@ -79,7 +79,8 @@ struct ActiveSessionView: View {
                     ForEach(jointEntries) { entry in
                         arenaRow(icon: entry.arena.icon, label: entry.arena.label,
                                  color: Color(hex: entry.arena.color),
-                                 minutes: entry.minutes, removable: true, tag: "JOINT") {
+                                 minutes: entry.minutes, removable: true, tag: "JOINT",
+                                 note: entry.note) {
                             removeJoint(entry)
                         }
                     }
@@ -214,8 +215,8 @@ struct ActiveSessionView: View {
         .sheet(isPresented: $showJointPicker) {
             JointArenaPicker(
                 allArenas: store.letteredArenas
-            ) { pickedArena, pickedMinutes in
-                addJoint(arena: pickedArena, minutes: pickedMinutes)
+            ) { pickedArena, pickedMinutes, pickedNote in
+                addJoint(arena: pickedArena, minutes: pickedMinutes, note: pickedNote)
             }
             .presentationDetents([.fraction(0.6)])
             .presentationBackground(Color(hex: "#080810"))
@@ -235,7 +236,8 @@ struct ActiveSessionView: View {
 
     @ViewBuilder
     private func arenaRow(icon: String, label: String, color: Color, minutes: Int,
-                          removable: Bool, tag: String = "", onRemove: @escaping () -> Void) -> some View {
+                          removable: Bool, tag: String = "", note: String = "",
+                          onRemove: @escaping () -> Void) -> some View {
         HStack(spacing: 10) {
             // Colored bar
             RoundedRectangle(cornerRadius: 2)
@@ -262,6 +264,13 @@ struct ActiveSessionView: View {
                             .background(color.opacity(0.12))
                             .clipShape(Capsule())
                     }
+                }
+                if !note.isEmpty {
+                    Text(note)
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(color.opacity(0.55))
+                        .kerning(1)
+                        .lineLimit(1)
                 }
                 // proportional bar
                 GeometryReader { geo in
@@ -306,10 +315,10 @@ struct ActiveSessionView: View {
         updateLiveActivity()
     }
 
-    private func addJoint(arena: Arena, minutes: Int) {
+    private func addJoint(arena: Arena, minutes: Int, note: String = "") {
         let jointStart = endTime
         let jointEnd = jointStart.addingTimeInterval(TimeInterval(minutes * 60))
-        var entry = JointArenaEntry(arena: arena, minutes: minutes)
+        var entry = JointArenaEntry(arena: arena, minutes: minutes, note: note)
         entry.scheduledStart = jointStart
         entry.scheduledEnd = jointEnd
         jointEntries.append(entry)
@@ -688,12 +697,14 @@ struct CompleteView: View {
 
 private struct JointArenaPicker: View {
     let allArenas: [Arena]
-    let onAdd: (Arena, Int) -> Void
+    let onAdd: (Arena, Int, String) -> Void
 
     @State private var selected: Arena? = nil
     @State private var minutes = 25
     @State private var isCustom = false
     @State private var customText = ""
+    @State private var taskName = ""
+    @FocusState private var taskNameFocused: Bool
 
     private let presets = [5, 10, 15, 25, 30, 45, 60]
 
@@ -807,10 +818,32 @@ private struct JointArenaPicker: View {
             }
             .padding(.bottom, 24)
 
+            // Task name
+            VStack(alignment: .leading, spacing: 8) {
+                Text("TASK  (optional)")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.25))
+                    .kerning(7)
+                TextField("what are you working on?", text: $taskName)
+                    .font(.system(size: 13, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .focused($taskNameFocused)
+                    .submitLabel(.done)
+                    .onSubmit { taskNameFocused = false }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(Color.white.opacity(0.05))
+                    .overlay(RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .padding(.horizontal, 22)
+            .padding(.bottom, 20)
+
             // Confirm button
             Button {
                 guard let arena = selected, effectiveMinutes > 0 else { return }
-                onAdd(arena, effectiveMinutes)
+                onAdd(arena, effectiveMinutes, taskName.trimmingCharacters(in: .whitespaces))
             } label: {
                 HStack(spacing: 8) {
                     if let sel = selected {

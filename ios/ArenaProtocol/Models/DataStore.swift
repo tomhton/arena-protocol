@@ -109,6 +109,7 @@ struct JointArenaEntry: Identifiable {
     let id = UUID()
     let arena: Arena
     let minutes: Int
+    var note: String = ""
     var calEventId: String? = nil
     var scheduledStart: Date = Date()
     var scheduledEnd: Date = Date()
