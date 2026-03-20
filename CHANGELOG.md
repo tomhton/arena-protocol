@@ -5,6 +5,18 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.9.2 — 2026-03-19
+
+**Bug fix: calendar events now write to Google Calendar.**
+
+### Bug Fixes
+- **Calendar writes to default calendar** — Google Calendar's CalDAV account blocks programmatic calendar creation (`EKErrorDomain Code=17 "That account does not allow calendars to be added or removed."`). Dropped the custom "Arena Protocol" calendar creation entirely. Events now write directly to `store.defaultCalendarForNewEvents` — wherever the user's default is set (Google Calendar, iCloud, etc.).
+
+### Internal
+- `CalendarManager.swift` — `arenaCalendar()` simplified to one line: `return store.defaultCalendarForNewEvents`
+
+---
+
 ## v2.9.1 — 2026-03-19
 
 **Bug fixes: Live Activities for protocols + stuck. Calendar writes fixed.**

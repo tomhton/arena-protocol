@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.9.1).
+> Paste this at the start of every Claude session. Last updated: 2026-03-19 (v2.9.2).
 
 ---
 
@@ -56,6 +56,7 @@
 | 2.8.1 | 2026-03-18 | Bug fix: deleted arena no longer reappears (onDisappear persist() re-insertion). |
 | 2.9.0 | 2026-03-19 | Protocol Live Activity: each block drives lock screen + Dynamic Island. In-app changelog synced to v2.9.0. README rewritten. |
 | 2.9.1 | 2026-03-19 | Bug fixes: STUCK + mandatory Live Activities. Calendar writes use default source, auto-request permission, log errors. Event titles show quest note. |
+| 2.9.2 | 2026-03-19 | Bug fix: calendar events write to defaultCalendarForNewEvents (Google Calendar). Dropped custom calendar creation — blocked by CalDAV (EKErrorDomain Code=17). |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
