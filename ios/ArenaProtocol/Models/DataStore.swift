@@ -572,6 +572,10 @@ final class DataStore {
 
     // Save helpers
     func saveArenas()    { saveToDefaults("arena_custom_arenas",  arenas) }
+    func moveArena(from source: IndexSet, to destination: Int) {
+        arenas.move(fromOffsets: source, toOffset: destination)
+        saveArenas()
+    }
     func saveSessions()  { saveToDefaults("arena_sessions",       sessions) }
     func saveHabits()    { saveToDefaults("arena_habits",         habits) }
     func saveHabitLogs() { saveToDefaults("arena_habit_logs",     habitLogs) }

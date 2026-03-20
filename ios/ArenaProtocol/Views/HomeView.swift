@@ -12,11 +12,18 @@ struct HomeView: View {
     @Binding var pendingDrop: EmberDrop?
 
     @State private var editMode = false
-    @State private var editShakeAngle: Double = 0
     @State private var nextBlock: EKEvent? = nil
     @State private var socialActive = false
     @State private var sessionNow: Date = Date()
     @State private var viewMode: HomeViewMode = .home
+
+    // Long-press gate — prevents button tap firing after a long-press activates edit mode
+    @State private var longPressedArenaId: String? = nil
+
+    // Drag-to-reorder state
+    @State private var draggingId: String? = nil
+    @State private var dragTargetIdx: Int = -1
+    private let reorderRowH: CGFloat = 62
 
     private let socialColor = Color(hex: "#B794F4")
 
@@ -28,6 +35,14 @@ struct HomeView: View {
         store.activeSession?.currentSlot(now: sessionNow)?.arena
             ?? store.stackedSessions.first?.currentSlot(now: sessionNow)?.arena
             ?? store.stackedSessions.first?.arena
+    }
+
+    // Binding<Int> that drives the TabView and stays in sync with viewMode
+    private var pageBinding: Binding<Int> {
+        Binding(
+            get: { viewMode == .home ? 0 : 1 },
+            set: { viewMode = $0 == 0 ? .home : .session }
+        )
     }
 
     var body: some View {
@@ -43,20 +58,32 @@ struct HomeView: View {
             }
 
             VStack(spacing: 0) {
-                // Compact session strip — replaces tab pills, shows timer inline
+                // Compact session strip — shows timer inline when session running
                 if hasSession {
                     compactSessionStrip
                 }
 
-                // View selector dropdown — always accessible at top when session running
+                // View selector — tap for menu, swipe pages via TabView below
                 if hasSession {
                     viewSelectorMenu
                 }
 
-                ScrollView(showsIndicators: false) {
-                    if hasSession && viewMode == .session {
-                        sessionContent
-                    } else {
+                // Content — TabView enables native horizontal page-swipe when session running
+                if hasSession {
+                    TabView(selection: pageBinding) {
+                        ScrollView(showsIndicators: false) {
+                            homeContent
+                        }
+                        .tag(0)
+
+                        ScrollView(showsIndicators: false) {
+                            sessionContent
+                        }
+                        .tag(1)
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                } else {
+                    ScrollView(showsIndicators: false) {
                         homeContent
                     }
                 }
@@ -98,7 +125,7 @@ struct HomeView: View {
         nextBlock = upcoming.first(where: { Int($0.startDate.timeIntervalSinceNow / 60) <= 90 })
     }
 
-    // MARK: - Compact Session Strip (replaces tab pills)
+    // MARK: - Compact Session Strip
 
     private var compactSessionStrip: some View {
         let active    = store.activeSession
@@ -115,7 +142,6 @@ struct HomeView: View {
                 .frame(height: 2)
 
             HStack(spacing: 12) {
-                // Arena name + end time — tappable to open full session view
                 Button {
                     if let a = active {
                         navigate(.active(a.arena, a.durationMins, a.note, a.social))
@@ -140,7 +166,6 @@ struct HomeView: View {
 
                 Spacer()
 
-                // Live countdown
                 if let a = active, a.isPaused {
                     let s = Int(a.pausedRemaining)
                     Text(String(format: "%d:%02d", s / 60, s % 60))
@@ -154,7 +179,6 @@ struct HomeView: View {
                         .monospacedDigit()
                 }
 
-                // Pause / Resume
                 if let a = active {
                     Button { store.togglePause() } label: {
                         Text(a.isPaused ? "▶" : "⏸")
@@ -174,7 +198,7 @@ struct HomeView: View {
         .animation(.easeInOut(duration: 0.5), value: liveColor.description)
     }
 
-    // MARK: - View Selector Dropdown
+    // MARK: - View Selector Menu
 
     private var viewSelectorMenu: some View {
         let liveColor = Color(hex: currentlyRunningArena?.color ?? "#E8C547")
@@ -215,18 +239,9 @@ struct HomeView: View {
                 .fill(Color.white.opacity(0.05))
                 .frame(height: 1)
         }
-        // Swipe up anywhere on this bar to return to HOME
-        .gesture(
-            DragGesture(minimumDistance: 20)
-                .onEnded { value in
-                    if value.translation.height < -30 {
-                        withAnimation(.spring(response: 0.3)) { viewMode = .home }
-                    }
-                }
-        )
     }
 
-    // MARK: - Nav Buttons (shared by both tabs)
+    // MARK: - Nav Buttons Row
 
     private var navButtonsRow: some View {
         HStack(alignment: .top) {
@@ -258,7 +273,7 @@ struct HomeView: View {
         .padding(.bottom, 12)
     }
 
-    // MARK: - Home Tab Content
+    // MARK: - Home Content
 
     private var homeContent: some View {
         VStack(spacing: 0) {
@@ -319,7 +334,7 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Session Tab Content
+    // MARK: - Session Content
 
     private var sessionContent: some View {
         let active   = store.activeSession
@@ -477,7 +492,7 @@ struct HomeView: View {
             .background(liveColor.opacity(0.10))
             .animation(.easeInOut(duration: 0.5), value: liveColor.description)
 
-            // ── FULL TIMELINE (all future arenas) ────────────────────────
+            // ── FULL TIMELINE ────────────────────────────────────────────
             if !futureSlots.isEmpty {
                 Rectangle()
                     .fill(Color.white.opacity(0.06))
@@ -639,7 +654,7 @@ struct HomeView: View {
     private var editToggle: some View {
         HStack {
             Spacer()
-            Button { withAnimation { editMode.toggle() } } label: {
+            Button { withAnimation(.spring(response: 0.35)) { editMode.toggle() } } label: {
                 Text(editMode ? "DONE" : "EDIT ARENAS")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(editMode ? Color(hex: "#E8C547") : Color.white.opacity(0.25))
@@ -655,23 +670,20 @@ struct HomeView: View {
         .padding(.horizontal, 20).padding(.bottom, 8)
     }
 
-    // MARK: - Arena Grid (stays as grid in edit mode)
+    // MARK: - Arena Grid (grid in normal mode; reorder list in edit mode)
 
+    @ViewBuilder
     private var arenaGrid: some View {
-        twoColumnGrid
-            .animation(.spring(response: 0.4), value: editMode)
-            .onChange(of: editMode) { _, new in
-                if new {
-                    withAnimation(.easeInOut(duration: 0.12).repeatForever(autoreverses: true)) {
-                        editShakeAngle = 1.5
-                    }
-                } else {
-                    withAnimation(.spring(response: 0.25)) {
-                        editShakeAngle = 0
-                    }
-                }
-            }
+        if editMode {
+            arenaReorderList
+                .transition(.opacity.combined(with: .offset(y: 6)))
+        } else {
+            twoColumnGrid
+                .transition(.opacity)
+        }
     }
+
+    // MARK: - Two-column grid (normal view)
 
     private var twoColumnGrid: some View {
         let left  = Array(arenas.prefix(Int(ceil(Double(arenas.count) / 2))))
@@ -685,17 +697,20 @@ struct HomeView: View {
                             arena: arena,
                             sessCount: sessions.filter { $0.arenaId == arena.id && $0.date == todayString() }.count,
                             streak: store.streak(for: arena.id),
-                            editMode: editMode,
+                            editMode: false,
                             onTap: {
-                                if editMode { navigate(.editArena(arena)) }
-                                else { navigate(.select(arena, socialActive)) }
+                                guard longPressedArenaId != arena.id else {
+                                    longPressedArenaId = nil
+                                    return
+                                }
+                                navigate(.select(arena, socialActive))
                             },
                             sessions: sessions
                         )
-                        .rotationEffect(.degrees(editMode ? editShakeAngle : 0))
-                        .highPriorityGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
-                            withAnimation(.spring(response: 0.3)) { editMode = true }
+                        .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+                            longPressedArenaId = arena.id
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            withAnimation(.spring(response: 0.35)) { editMode = true }
                         })
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 18)),
@@ -709,17 +724,20 @@ struct HomeView: View {
                             arena: arena,
                             sessCount: sessions.filter { $0.arenaId == arena.id && $0.date == todayString() }.count,
                             streak: store.streak(for: arena.id),
-                            editMode: editMode,
+                            editMode: false,
                             onTap: {
-                                if editMode { navigate(.editArena(arena)) }
-                                else { navigate(.select(arena, socialActive)) }
+                                guard longPressedArenaId != arena.id else {
+                                    longPressedArenaId = nil
+                                    return
+                                }
+                                navigate(.select(arena, socialActive))
                             },
                             sessions: sessions
                         )
-                        .rotationEffect(.degrees(editMode ? editShakeAngle : 0))
-                        .highPriorityGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
-                            withAnimation(.spring(response: 0.3)) { editMode = true }
+                        .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+                            longPressedArenaId = arena.id
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            withAnimation(.spring(response: 0.35)) { editMode = true }
                         })
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 18)),
@@ -728,14 +746,110 @@ struct HomeView: View {
                     }
                 }
             }
-
-            if editMode {
-                AddArenaCardView { navigate(.newArena) }
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
+    }
+
+    // MARK: - Reorder list (edit mode)
+
+    private var arenaReorderList: some View {
+        VStack(spacing: 4) {
+            ForEach(Array(store.letteredArenas.enumerated()), id: \.element.id) { idx, arena in
+                reorderRow(arena: arena, idx: idx, total: store.arenas.count)
+            }
+            AddArenaCardView { navigate(.newArena) }
+                .padding(.top, 4)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+        .animation(.spring(response: 0.25), value: dragTargetIdx)
+    }
+
+    private func reorderRow(arena: Arena, idx: Int, total: Int) -> some View {
+        let isDragging = draggingId == arena.id
+        let isTarget   = !isDragging && dragTargetIdx == idx && draggingId != nil
+        let c          = Color(hex: arena.color)
+
+        return HStack(spacing: 12) {
+            // Drag handle — gesture lives here so scrolling still works on the row body
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.white.opacity(isDragging ? 0.6 : 0.25))
+                .frame(width: 28, height: reorderRowH)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 4, coordinateSpace: .local)
+                        .onChanged { val in
+                            if draggingId == nil {
+                                draggingId = arena.id
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            }
+                            let delta = Int((val.translation.height / reorderRowH).rounded())
+                            dragTargetIdx = max(0, min(total - 1, idx + delta))
+                        }
+                        .onEnded { _ in
+                            if let id = draggingId,
+                               let fromIdx = store.arenas.firstIndex(where: { $0.id == id }) {
+                                let toIdx   = dragTargetIdx
+                                let insertAt = fromIdx <= toIdx ? toIdx + 1 : toIdx
+                                withAnimation(.spring(response: 0.3)) {
+                                    store.moveArena(from: IndexSet(integer: fromIdx), to: insertAt)
+                                }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            }
+                            draggingId    = nil
+                            dragTargetIdx = -1
+                        }
+                )
+
+            Text(arena.icon).font(.system(size: 20))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(arena.label)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .kerning(2)
+                if !arena.subtitle.isEmpty {
+                    Text(arena.subtitle)
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(c.opacity(0.5))
+                        .kerning(1)
+                }
+            }
+
+            Spacer()
+
+            Button { navigate(.editArena(arena)) } label: {
+                Text("EDIT")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(c.opacity(0.65))
+                    .kerning(2)
+                    .padding(.horizontal, 9).padding(.vertical, 5)
+                    .background(c.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .frame(height: reorderRowH)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isDragging ? c.opacity(0.18)
+                      : isTarget  ? c.opacity(0.07)
+                      : Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(isDragging ? c.opacity(0.55)
+                                      : isTarget  ? c.opacity(0.3)
+                                      : Color.white.opacity(0.07),
+                                      lineWidth: isDragging ? 1.5 : 1)
+                )
+        )
+        .scaleEffect(isDragging ? 1.02 : 1.0)
+        .opacity(isDragging ? 0.65 : 1.0)
+        .animation(.spring(response: 0.2), value: isDragging)
+        .animation(.spring(response: 0.2), value: isTarget)
     }
 
     // MARK: - Social Section
