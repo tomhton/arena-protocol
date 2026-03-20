@@ -5,6 +5,31 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.10.0 — 2026-03-19
+
+**Calendar ↔ app full sync. Calendar resume. Live Activity fixes.**
+
+### Features
+- **Calendar ↔ app sync** — sessions now track their `EKEvent` identifier so events can be updated or deleted when sessions change:
+  - `finishEarly()` trims the primary event end to actual finish; trims joint events that started, deletes joints that hadn't begun
+  - `abandonSession()` deletes the primary event if elapsed < 60s, otherwise trims to now; deletes all joint events
+  - Joint removed mid-session → calendar event deleted immediately
+  - Interval timers (`[INTERVAL] FLOW` etc.) create a calendar event on start, trimmed to actual end on DONE or natural complete
+- **Calendar resume** — SelectView detects currently-ongoing calendar events matching the current arena (by keyword or `[ArenaName]` prefix). Shows a green "IN PROGRESS / RESUME" banner with remaining time. Tapping RESUME launches directly into the active session timer — no duration picker needed.
+
+### Bug Fixes
+- **Live Activity reverts to idle when adding joint arenas** — `addJoint` and `removeJoint` now call `updateLiveActivityEndTime()` to push the new `endTime` + `staleDate` to the running activity. Previously the activity kept the original end time and went stale when that expired.
+- **Live Activity killed on swipe-down stash** — `HomeView.onAppear` was calling `startIdleActivity()` whenever `activeSession == nil`, which includes after stashing. Guard now requires `activeSession == nil && stackedSessions.isEmpty` so stacked session Live Activities survive.
+
+### Internal
+- `CalendarManager.swift` — `addEvent` returns `@discardableResult String?` (event identifier); new `updateEventEnd(id:newEnd:)` and `deleteEvent(id:)` methods; new `activeEvents()` fetches currently-ongoing events
+- `DataStore.swift` — `ActiveSessionState` gains `calEventId: String?`; `JointArenaEntry` gains `calEventId: String?`, `scheduledStart: Date`, `scheduledEnd: Date`
+- `ActiveSessionView.swift` — `addToGCal` stores returned ID; `addJoint` stores per-joint ID + scheduled times; `removeJoint` calls `deleteEvent`; `finishEarly` / `abandonSession` call `updateEventEnd` / `deleteEvent`; `updateLiveActivityEndTime()` helper
+- `IntervalTimerView.swift` — creates calendar event on appear; `finishInterval()` updates end then navigates
+- `SelectView.swift` — `ongoingMatch: EKEvent?` detected on appear; `resumeFromCalBanner` + `resumeSession()` for direct timer launch
+
+---
+
 ## v2.9.2 — 2026-03-19
 
 **Bug fix: calendar events now write to Google Calendar.**
