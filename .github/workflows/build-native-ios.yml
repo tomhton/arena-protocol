@@ -85,7 +85,6 @@ jobs:
       - name: Archive
         working-directory: ios
         run: |
-          set -o pipefail
           xcodebuild \
             -scheme ArenaProtocol \
             -destination "generic/platform=iOS" \
@@ -95,8 +94,7 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
             -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }} \
-          | xcpretty
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
 
       - name: Export IPA
         working-directory: ios
