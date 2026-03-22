@@ -7,7 +7,7 @@ import SwiftUI
 @MainActor
 final class CalendarManager {
     static let shared = CalendarManager()
-    private let store = EKEventStore()
+    nonisolated(unsafe) private let store = EKEventStore()
 
     var authStatus: EKAuthorizationStatus {
         EKEventStore.authorizationStatus(for: .event)
