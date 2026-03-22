@@ -47,7 +47,42 @@ jobs:
             GCC_TREAT_WARNINGS_AS_ERRORS=NO \
           | xcpretty || true
 
-      - name: Archive (unsigned IPA)
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.sha }}
+          path: ios/test-results.txt
+          retention-days: 14
+
+  deploy-testflight:
+    name: Deploy to TestFlight
+    runs-on: macos-15
+    timeout-minutes: 60
+    needs: test-and-build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Set up App Store Connect API key
+        env:
+          ASC_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$ASC_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+      - name: Bump build number
+        working-directory: ios
+        run: |
+          agvtool new-version -all ${{ github.run_number }}
+
+      - name: Archive
         working-directory: ios
         run: |
           xcodebuild \
@@ -56,23 +91,42 @@ jobs:
             -configuration Release \
             archive \
             -archivePath ArenaProtocol.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-          | xcpretty || true
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }} \
+          | xcpretty
+
+      - name: Export IPA
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath ArenaProtocol.xcarchive \
+            -exportPath ArenaProtocol-export \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }} \
+          | xcpretty
+
+      - name: Upload to TestFlight
+        working-directory: ios
+        run: |
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "ArenaProtocol-export/ArenaProtocol.ipa" \
+            --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            --apiIssuer ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }} \
+            --verbose
 
       - name: Upload archive artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: ArenaProtocol-${{ github.ref_name }}-${{ github.sha }}
+          name: ArenaProtocol-${{ github.run_number }}-${{ github.sha }}
           path: ios/ArenaProtocol.xcarchive
           retention-days: 30
           if-no-files-found: warn
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ github.sha }}
-          path: ios/test-results.txt
-          retention-days: 14
