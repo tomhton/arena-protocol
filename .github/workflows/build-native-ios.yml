@@ -85,6 +85,7 @@ jobs:
       - name: Archive
         working-directory: ios
         run: |
+          set -o pipefail
           xcodebuild \
             -scheme ArenaProtocol \
             -destination "generic/platform=iOS" \
@@ -100,6 +101,7 @@ jobs:
       - name: Export IPA
         working-directory: ios
         run: |
+          set -o pipefail
           xcodebuild \
             -exportArchive \
             -archivePath ArenaProtocol.xcarchive \
@@ -110,17 +112,21 @@ jobs:
             -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
             -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }} \
           | xcpretty
+          echo "--- Export contents ---"
+          ls -la ArenaProtocol-export/ || true
 
       - name: Find IPA
         working-directory: ios
         run: |
-          IPA_PATH=$(find ArenaProtocol-export -name "*.ipa" | head -1)
-          echo "IPA_PATH=$IPA_PATH" >> $GITHUB_ENV
-          echo "Found IPA: $IPA_PATH"
-          ls -la ArenaProtocol-export/ || true
+          IPA=$(find "$PWD/ArenaProtocol-export" -name "*.ipa" | head -1)
+          if [ -z "$IPA" ]; then
+            echo "No IPA found in export directory"
+            exit 1
+          fi
+          echo "IPA_PATH=$IPA" >> $GITHUB_ENV
+          echo "Found IPA: $IPA"
 
       - name: Upload to TestFlight
-        working-directory: ios
         run: |
           xcrun altool \
             --upload-app \
