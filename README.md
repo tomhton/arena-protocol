@@ -2,7 +2,7 @@
 
 A dark-themed native iOS focus app built around timed sessions across four life arenas. Timer rings, Live Activities on the lock screen, joint multi-arena sessions, habit tracking, calendar sync, and daily protocols.
 
-**Current version:** v2.9.0 — [CHANGELOG](CHANGELOG.md)
+**Current version:** v2.24.0 — [CHANGELOG](CHANGELOG.md)
 
 ---
 
