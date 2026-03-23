@@ -299,14 +299,14 @@ struct ProtocolModelTests {
         #expect(warrior?.blocks.count == 2)
     }
 
-    @Test func emberHasThreeBlocks() {
-        let ember = DEFAULT_PROTOCOLS.first { $0.id == "ember" }
-        #expect(ember?.blocks.count == 3)
+    @Test func fullDayHasFourBlocks() {
+        let fullDay = DEFAULT_PROTOCOLS.first { $0.id == "full-day" }
+        #expect(fullDay?.blocks.count == 4)
     }
 
     @Test func totalDurationIsCorrect() {
         let warrior = DEFAULT_PROTOCOLS.first { $0.id == "warrior" }!
         let total = warrior.blocks.reduce(0) { $0 + $1.duration }
-        #expect(total == 45) // 20 + 25
+        #expect(total == 50) // 20 + 30
     }
 }
