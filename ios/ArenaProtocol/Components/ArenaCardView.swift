@@ -2,7 +2,9 @@
 // Native SwiftUI arena card with illustrations and forge marks
 
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
 struct ArenaCardView: View {
     let arena: Arena
@@ -183,6 +185,19 @@ struct AddArenaCardView: View {
 struct ArenaBackgroundImage: View {
     let name: String
 
+    var body: some View {
+#if canImport(UIKit)
+        if let img = uiImage {
+            Image(uiImage: img)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .blur(radius: 4)
+                .overlay(Color.black.opacity(0.6))
+        }
+#endif
+    }
+
+#if canImport(UIKit)
     private var uiImage: UIImage? {
         if let img = UIImage(named: name) { return img }
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -191,16 +206,7 @@ struct ArenaBackgroundImage: View {
         }
         return nil
     }
-
-    var body: some View {
-        if let img = uiImage {
-            Image(uiImage: img)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .blur(radius: 4)
-                .overlay(Color.black.opacity(0.6))
-        }
-    }
+#endif
 }
 
 // MARK: - Arena Illustrations (SwiftUI vector)
