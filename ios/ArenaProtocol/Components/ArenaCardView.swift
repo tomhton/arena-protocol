@@ -24,18 +24,19 @@ struct ArenaCardView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(cardBackground)
                     .overlay(
+                        Group {
+                            if let bgName = arena.backgroundImageName {
+                                ArenaBackgroundImage(name: bgName)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    )
+                    .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .strokeBorder(isPressed ? arenaColor.opacity(0.45) : arenaColor.opacity(0.18), lineWidth: 1)
                     )
                     .shadow(color: isPressed ? arenaColor.opacity(0.22) : .clear, radius: 12, y: 4)
-
-                // Custom background image (when set)
-                if let bgName = arena.backgroundImageName {
-                    ArenaBackgroundImage(name: bgName)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .allowsHitTesting(false)
-                }
 
                 // Top accent bar
                 VStack {

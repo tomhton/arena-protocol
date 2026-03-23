@@ -1,3 +1,4 @@
+#if canImport(ActivityKit)
 import ActivityKit
 import SwiftUI
 
@@ -28,3 +29,4 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
         var nextArenaIcon: String = ""
     }
 }
+#endif

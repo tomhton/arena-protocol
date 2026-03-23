@@ -213,31 +213,64 @@ struct HomeView: View {
         let liveColor = Color(hex: currentlyRunningArena?.color ?? "#E8C547")
 
         return HStack(spacing: 0) {
-            Menu {
+            if hasSession {
+                // Tap → go to active timer; chevron → switch home/session view mode
                 Button {
-                    withAnimation(.spring(response: 0.3)) { viewMode = .home }
+                    let src = store.activeSession ?? store.stackedSessions.first
+                    if let a = src {
+                        navigate(.active(a.arena, a.durationMins, a.note, a.social))
+                    }
                 } label: {
-                    Label("Home", systemImage: "square.grid.2x2")
-                }
-                Button {
-                    withAnimation(.spring(response: 0.3)) { viewMode = .session }
-                } label: {
-                    Label("Currently In", systemImage: "timer")
-                }
-            } label: {
-                HStack(spacing: 6) {
                     Text(viewMode == .home ? "HOME" : "CURRENTLY IN")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .foregroundStyle(viewMode == .session ? liveColor.opacity(0.8) : Color.white.opacity(0.45))
                         .kerning(3)
+                        .padding(.leading, 16)
+                        .padding(.vertical, 9)
+                }
+                .buttonStyle(.plain)
+
+                Menu {
+                    Button {
+                        withAnimation(.spring(response: 0.3)) { viewMode = .home }
+                    } label: {
+                        Label("Home", systemImage: "square.grid.2x2")
+                    }
+                    Button {
+                        withAnimation(.spring(response: 0.3)) { viewMode = .session }
+                    } label: {
+                        Label("Currently In", systemImage: "timer")
+                    }
+                } label: {
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8, weight: .semibold))
                         .foregroundStyle(Color.white.opacity(0.3))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 9)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 9)
+                .menuStyle(.automatic)
+            } else {
+                Menu {
+                    Button {
+                        withAnimation(.spring(response: 0.3)) { viewMode = .home }
+                    } label: {
+                        Label("Home", systemImage: "square.grid.2x2")
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("HOME")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.45))
+                            .kerning(3)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.3))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                }
+                .menuStyle(.automatic)
             }
-            .menuStyle(.automatic)
 
             Spacer()
         }
