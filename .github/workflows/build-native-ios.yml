@@ -82,17 +82,22 @@ jobs:
           security find-identity -v -p codesigning build.keychain
           rm distribution.p12
 
-      - name: Install Provisioning Profile
+      - name: Install Provisioning Profiles
         env:
           PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE }}
+          PROVISIONING_PROFILE_WIDGET: ${{ secrets.PROVISIONING_PROFILE_WIDGET }}
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$PROVISIONING_PROFILE" | base64 --decode > profile.mobileprovision
-          UUID=$(security cms -D -i profile.mobileprovision | plutil -extract UUID raw -)
-          NAME=$(security cms -D -i profile.mobileprovision | plutil -extract Name raw -)
-          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
-          echo "Installed: $NAME ($UUID)"
-          rm profile.mobileprovision
+          install_profile() {
+            echo "$1" | base64 --decode > /tmp/prof.mobileprovision
+            UUID=$(security cms -D -i /tmp/prof.mobileprovision | plutil -extract UUID raw -)
+            NAME=$(security cms -D -i /tmp/prof.mobileprovision | plutil -extract Name raw -)
+            cp /tmp/prof.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+            echo "Installed: $NAME ($UUID)"
+            rm /tmp/prof.mobileprovision
+          }
+          install_profile "$PROVISIONING_PROFILE"
+          install_profile "$PROVISIONING_PROFILE_WIDGET"
 
       - name: Bump build number
         working-directory: ios
@@ -111,7 +116,6 @@ jobs:
             ENABLE_ON_DEMAND_RESOURCES=NO \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="bf748489-5377-4cb0-a034-c7720a4f0399" \
             -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
             -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
