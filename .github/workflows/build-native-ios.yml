@@ -50,7 +50,15 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.2.app
+          echo "=== Available Xcode versions ==="
+          ls /Applications | grep Xcode
+          echo "=== Available simulator runtimes ==="
+          xcrun simctl list runtimes
+          echo "=== Selecting latest Xcode ==="
+          LATEST=$(ls /Applications | grep "^Xcode_" | sort -V | tail -1)
+          echo "Using: $LATEST"
+          sudo xcode-select -s "/Applications/$LATEST"
+          xcodebuild -version
 
       - name: Set up App Store Connect API key
         env:
@@ -63,14 +71,6 @@ jobs:
         working-directory: ios
         run: |
           agvtool new-version -all ${{ github.run_number }}
-
-      - name: Install iOS 18 Simulator Runtime
-        run: |
-          # Download and register iOS 18 simulator runtime so actool can
-          # validate asset catalogs during the archive step.
-          xcrun simctl runtime add "com.apple.CoreSimulator.SimRuntime.iOS-18-2" || \
-          xcrun simctl runtime add "com.apple.CoreSimulator.SimRuntime.iOS-18-0" || \
-          echo "Runtime install failed — archive may still succeed if runtime already present"
 
       - name: Archive
         working-directory: ios
