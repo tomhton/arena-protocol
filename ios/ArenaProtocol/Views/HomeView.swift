@@ -710,7 +710,6 @@ struct HomeView: View {
     private func scheduledBlockBanner(_ block: ScheduledBlock) -> some View {
         let color = Color(hex: block.itemColor)
         let secsUntil = block.scheduledAt.timeIntervalSinceNow
-        let minsUntil = Int(secsUntil / 60)
         let when = secsUntil < 86400
             ? block.scheduledAt.relativeShort()
             : block.scheduledAt.formatted(date: .abbreviated, time: .shortened)
