@@ -70,7 +70,6 @@ jobs:
           DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.DISTRIBUTION_CERTIFICATE_PASSWORD }}
         run: |
           security create-keychain -p "" build.keychain
-          security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings -lut 3600 build.keychain
           echo "$DISTRIBUTION_CERTIFICATE" | base64 --decode > distribution.p12
@@ -78,6 +77,8 @@ jobs:
             -P "$DISTRIBUTION_CERTIFICATE_PASSWORD" \
             -T /usr/bin/codesign -T /usr/bin/xcodebuild
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+          # Add to search list so xcodebuild finds the cert (critical step)
+          security list-keychains -d user -s build.keychain login.keychain
           security find-identity -v -p codesigning build.keychain
           rm distribution.p12
 
@@ -88,10 +89,9 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "$PROVISIONING_PROFILE" | base64 --decode > profile.mobileprovision
           UUID=$(security cms -D -i profile.mobileprovision | plutil -extract UUID raw -)
+          NAME=$(security cms -D -i profile.mobileprovision | plutil -extract Name raw -)
           cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
-          echo "Installed profile UUID: $UUID"
-          security cms -D -i profile.mobileprovision | plutil -extract Name xml1 - || true
-          security cms -D -i profile.mobileprovision | grep -A2 "application-identifier" || true
+          echo "Installed: $NAME ($UUID)"
           rm profile.mobileprovision
 
       - name: Bump build number
