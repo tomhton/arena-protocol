@@ -34,6 +34,7 @@ enum Screen: Hashable {
 struct RootView: View {
     @Environment(DataStore.self) private var store
     @State private var pendingDrop: EmberDrop? = nil
+    @State private var pendingForgeResult: ForgeDropResult? = nil
 
     // Initial path: push checkin if not yet dismissed today
     @State private var path: NavigationPath = {
@@ -50,7 +51,7 @@ struct RootView: View {
             Color(hex: "#080810").ignoresSafeArea()
 
             NavigationStack(path: $path) {
-                HomeView(navigate: navigate, pendingDrop: $pendingDrop)
+                HomeView(navigate: navigate, pendingDrop: $pendingDrop, pendingForgeResult: $pendingForgeResult)
                     .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: Screen.self) { screen in
                         destination(for: screen)
@@ -75,7 +76,7 @@ struct RootView: View {
     private func destination(for screen: Screen) -> some View {
         switch screen {
         case .home:
-            HomeView(navigate: navigate, pendingDrop: $pendingDrop)
+            HomeView(navigate: navigate, pendingDrop: $pendingDrop, pendingForgeResult: $pendingForgeResult)
         case .checkin:
             MorningCheckinView(
                 onComplete: { _ in
@@ -99,7 +100,9 @@ struct RootView: View {
                                 ts: Date().timeIntervalSince1970 * 1000,
                                 social: social)
                 store.addSession(s)
-                pendingDrop = store.checkAndClaimEmberDrop()
+                let result = store.checkAndClaimForgeResult()
+                pendingDrop = result.narrative
+                if result.hasContent { pendingForgeResult = result }
                 navigate(.home)
             }
             .navigationBarBackButtonHidden(true)
@@ -113,7 +116,9 @@ struct RootView: View {
                                     ts: Date().timeIntervalSince1970 * 1000)
                     store.addSession(s)
                 }
-                pendingDrop = store.checkAndClaimEmberDrop()
+                let result = store.checkAndClaimForgeResult()
+                pendingDrop = result.narrative
+                if result.hasContent { pendingForgeResult = result }
                 navigate(.home)
             } onAbandon: { navigate(.home) }
             .navigationBarBackButtonHidden(true)

@@ -71,11 +71,11 @@ private struct LockScreenBannerView: View {
                 .shadow(color: Color(hex: "#FF8FA3").opacity(0.8), radius: 8)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("MANDATORY")
+                Text("TIME'S UP")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(Color(hex: "#FF8FA3"))
                     .tracking(2)
-                Text("CHOOSE AN ARENA NOW")
+                Text("TAP TO PICK AN ARENA")
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                     .tracking(1.5)
@@ -257,7 +257,7 @@ private struct CompactTrailingView: View {
         let arenaColor = Color(hex: context.state.arenaColor)
 
         if context.state.isMandatory {
-            Text("PICK")
+            Text("GO")
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .foregroundColor(Color(hex: "#FF8FA3"))
                 .fixedSize()
@@ -335,7 +335,7 @@ private struct ExpandedTrailingView: View {
 
         Group {
             if context.state.isMandatory {
-                Text("CHOOSE")
+                Text("READY?")
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundColor(Color(hex: "#FF8FA3"))
             } else if context.state.isPaused {

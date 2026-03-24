@@ -92,6 +92,19 @@ struct CompletedSession: Equatable {
     let social: Bool
 }
 
+// MARK: - Forge Drop Result
+
+/// Carries the full outcome of a session completion through the drop pipeline.
+/// The modal reads this to show narrative + egg + hatch in a seamless flow.
+struct ForgeDropResult: Identifiable {
+    let id = UUID()
+    var narrative: EmberDrop?            // forge narrative or legacy drop
+    var eggDrop: InventoryEgg?           // egg that just dropped (nil if none)
+    var hatchedItems: [InventoryItem]    // eggs that auto-hatched this session
+
+    var hasContent: Bool { narrative != nil || eggDrop != nil || !hatchedItems.isEmpty }
+}
+
 struct DockApp: Identifiable, Codable {
     var id: String
     var name: String
@@ -957,11 +970,18 @@ final class DataStore {
     func forgeMark(for arenaId: String) -> ForgeMark? { getForgeMarkForArena(arenaId: arenaId, sessions: sessions) }
 
     // Ember drop + egg drop
+    /// Legacy entry point — still works for callers that only need EmberDrop.
     func checkAndClaimEmberDrop() -> EmberDrop? {
-        let profile    = buildSessionProfile(from: sessions, arenas: arenas)
-        let lastSession = sessions.max(by: { $0.ts < $1.ts })
+        checkAndClaimForgeResult().narrative
+    }
 
-        // Egg drops — independent of narrative, fire as a side effect
+    /// Full forge pipeline: narrative + egg drop + auto-hatch. Returns everything the modal needs.
+    func checkAndClaimForgeResult() -> ForgeDropResult {
+        let profile     = buildSessionProfile(from: sessions, arenas: arenas)
+        let lastSession = sessions.max(by: { $0.ts < $1.ts })
+        var result = ForgeDropResult(narrative: nil, eggDrop: nil, hatchedItems: [])
+
+        // 1. Egg drops — independent of narrative
         if let (rarity, triggerId) = ForgeEngine.evaluateEggDrop(
             profile: profile,
             lastSession: lastSession,
@@ -970,9 +990,21 @@ final class DataStore {
             seenEggDrops.append(triggerId)
             saveSeenEggDrops()
             addEgg(rarity: rarity, sourceArenaId: lastSession?.arenaId, sourceTrigger: triggerId)
+            result.eggDrop = eggs.last
         }
 
-        // Forge narratives (personalized, higher priority)
+        // 2. Auto-hatch any ready eggs — zero friction, immediate reward
+        for egg in eggs where !egg.isHatched && isEggReady(egg) {
+            hatchEgg(egg)
+            if let reward = inventory.last {
+                result.hatchedItems.append(reward)
+            }
+        }
+
+        // 3. Egg proximity nudge — schedule ambient notification if close to hatching
+        checkEggProximityNotification()
+
+        // 4. Forge narratives (personalized, highest priority)
         if let narrative = ForgeEngine.evaluate(
             profile: profile,
             arenas: arenas,
@@ -982,16 +1014,102 @@ final class DataStore {
             let drop = narrative.toEmberDrop()
             seenDrops.append(drop.id)
             saveSeenDrops()
-            return drop
+            result.narrative = drop
+            // Smart notification: only for significant milestones when app is backgrounded
+            scheduleForgeNotificationIfNeeded(narrative: narrative, profile: profile)
+            return result
         }
-        // Fallback: legacy ember drops
-        guard let drop = checkEmberDrop(sessions: sessions, seenDrops: seenDrops) else { return nil }
-        seenDrops.append(drop.id)
-        saveSeenDrops()
-        return drop
+
+        // 5. Fallback: legacy ember drops
+        if let drop = checkEmberDrop(sessions: sessions, seenDrops: seenDrops) {
+            seenDrops.append(drop.id)
+            saveSeenDrops()
+            result.narrative = drop
+        }
+
+        return result
+    }
+
+    // MARK: - Smart Notifications
+
+    /// Schedule a notification only for significant forge milestones — never spam.
+    /// Fires when the app is backgrounded and something meaningful happened.
+    private func scheduleForgeNotificationIfNeeded(narrative: ForgeNarrative, profile: SessionProfile) {
+        // Only notify on high-value events
+        let notifyCategories: Set<ForgeCategory> = [.streak, .milestone, .recovery, .arenaDepth]
+        guard notifyCategories.contains(narrative.category) else { return }
+        guard narrative.urgency == .drop else { return }
+
+        // Rate limit: max 1 forge notification per day
+        let lastNotifKey = "arena_last_forge_notif_date"
+        let today = todayString()
+        if UserDefaults.standard.string(forKey: lastNotifKey) == today { return }
+        UserDefaults.standard.set(today, forKey: lastNotifKey)
+
+        // Schedule for 2 hours later — ambient reminder, not immediate
+        scheduleNotification(
+            id: "forge_milestone",
+            title: "\(narrative.glyph) \(narrative.headline)",
+            body: narrative.flavor,
+            secondsFromNow: 7200
+        )
     }
 
     // MARK: - Egg & Inventory
+
+    /// Check if any incubating eggs are close to hatching and schedule a single nudge notification.
+    /// Called after session completion. Max 1 egg nudge per day, never for eggs with 5+ sessions remaining.
+    func checkEggProximityNotification() {
+        let nudgedKey = "arena_last_egg_nudge_date"
+        let today = todayString()
+        guard UserDefaults.standard.string(forKey: nudgedKey) != today else { return }
+
+        for egg in eggs where !egg.isHatched {
+            let progress = eggProgress(egg)
+            let remaining = egg.hatchThreshold - progress
+            // Only nudge when 1-3 sessions away
+            guard remaining > 0 && remaining <= 3 else { continue }
+            UserDefaults.standard.set(today, forKey: nudgedKey)
+            scheduleNotification(
+                id: "egg_proximity",
+                title: "\(egg.rarity.glyph) \(egg.rarity.displayName) egg is close",
+                body: "\(remaining) session\(remaining == 1 ? "" : "s") until it hatches.",
+                secondsFromNow: 3600  // 1 hour later — ambient, not immediate
+            )
+            return  // Only 1 nudge
+        }
+    }
+
+    /// Schedule a streak-protection notification if the user has a streak ≥3 and hasn't done a session today.
+    /// Called on app foreground. Max 1 per day, fires at 8pm local time.
+    func checkStreakProtectionNotification() {
+        let profile = buildSessionProfile(from: sessions, arenas: arenas)
+        guard profile.currentGlobalStreak >= 3 else { return }
+        guard todaySessions == 0 else {
+            // Already done a session today — cancel any pending streak notification
+            cancelNotification(id: "streak_protect")
+            return
+        }
+        let protectKey = "arena_last_streak_protect_date"
+        let today = todayString()
+        guard UserDefaults.standard.string(forKey: protectKey) != today else { return }
+        UserDefaults.standard.set(today, forKey: protectKey)
+
+        // Schedule for 8pm today
+        let cal = Calendar.current
+        let now = Date()
+        var comps = cal.dateComponents([.year, .month, .day], from: now)
+        comps.hour = 20; comps.minute = 0
+        guard let target = cal.date(from: comps), target > now else { return }
+        let interval = target.timeIntervalSince(now)
+
+        scheduleNotification(
+            id: "streak_protect",
+            title: "\(profile.currentGlobalStreak)-day streak at risk",
+            body: "One session keeps it alive. The arena is waiting.",
+            secondsFromNow: interval
+        )
+    }
 
     func addEgg(rarity: EggRarity, sourceArenaId: String?, sourceTrigger: String) {
         let egg = InventoryEgg(

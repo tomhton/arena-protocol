@@ -302,6 +302,19 @@ struct StuckView: View {
             }
             .buttonStyle(.plain)
 
+            Button {
+                #if canImport(ActivityKit)
+                endStuckActivity()
+                #endif
+                navigate(.home)
+            } label: {
+                Text("CANCEL")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.18))
+                    .kerning(3)
+            }
+            .buttonStyle(.plain)
+
             Spacer()
         }
         .onReceive(ticker) { _ in
@@ -353,6 +366,41 @@ struct StuckView: View {
                             sessions: store.sessions
                         )
                     }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
+
+                // Dismiss / snooze options
+                VStack(spacing: 12) {
+                    Button {
+                        #if canImport(ActivityKit)
+                        endStuckActivity()
+                        #endif
+                        navigate(.home)
+                    } label: {
+                        Text("NOT NOW")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.3))
+                            .kerning(4)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .overlay(RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        selectedDuration = 5
+                        isCustomActive = false
+                        startCountdown()
+                    } label: {
+                        Text("SNOOZE 5 MIN")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.2))
+                            .kerning(3)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 32)

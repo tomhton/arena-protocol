@@ -10,6 +10,7 @@ struct HomeView: View {
     @Environment(DataStore.self) private var store
     var navigate: (Screen) -> Void
     @Binding var pendingDrop: EmberDrop?
+    @Binding var pendingForgeResult: ForgeDropResult?
 
     @State private var editMode = false
     @State private var nextBlock: EKEvent? = nil
@@ -96,12 +97,20 @@ struct HomeView: View {
                 }
             }
 
-            if let drop = pendingDrop {
+            if let result = pendingForgeResult, result.hasContent {
+                ForgeDropModal(result: result) {
+                    pendingForgeResult = nil
+                    pendingDrop = nil
+                }
+                .transition(.opacity)
+                .zIndex(999)
+            } else if let drop = pendingDrop {
                 EmberDropModal(drop: drop) { pendingDrop = nil }
                     .transition(.opacity)
                     .zIndex(999)
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: pendingForgeResult?.id)
         .animation(.easeInOut(duration: 0.25), value: pendingDrop?.id)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: hasSession)
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: store.stackedSessions.count)
@@ -381,6 +390,7 @@ struct HomeView: View {
             socialSection
             AppShortcutsBar()
             intervalsSection
+            eggStrip
             bottomButtons
             footer
         }
@@ -1063,6 +1073,64 @@ struct HomeView: View {
             }
         }
         .padding(.bottom, 10)
+    }
+
+    // MARK: - Egg Strip
+
+    @ViewBuilder
+    private var eggStrip: some View {
+        let incubating = store.eggs.filter { !$0.isHatched }
+        if !incubating.isEmpty {
+            Button { navigate(.inventory) } label: {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(incubating) { egg in
+                            let color = Color(hex: egg.rarity.hexColor)
+                            let progress = store.eggProgress(egg)
+                            let fraction = min(1.0, Double(progress) / Double(max(1, egg.hatchThreshold)))
+                            let ready = store.isEggReady(egg)
+
+                            HStack(spacing: 8) {
+                                ZStack {
+                                    Circle()
+                                        .stroke(color.opacity(0.15), lineWidth: 2)
+                                        .frame(width: 24, height: 24)
+                                    Circle()
+                                        .trim(from: 0, to: fraction)
+                                        .stroke(color.opacity(ready ? 1 : 0.6), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                                        .frame(width: 24, height: 24)
+                                        .rotationEffect(.degrees(-90))
+                                    Text(egg.rarity.glyph)
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(color)
+                                }
+
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(egg.rarity.displayName)
+                                        .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(color.opacity(0.8))
+                                        .kerning(1)
+                                    Text(ready ? "READY" : "\(progress)/\(egg.hatchThreshold)")
+                                        .font(.system(size: 7, design: .monospaced))
+                                        .foregroundStyle(ready ? color : Color.white.opacity(0.25))
+                                        .kerning(1)
+                                }
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(color.opacity(ready ? 0.12 : 0.05))
+                            .overlay(RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(color.opacity(ready ? 0.4 : 0.12), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .animation(.easeInOut(duration: 0.3), value: ready)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 6)
+        }
     }
 
     // MARK: - Bottom Buttons

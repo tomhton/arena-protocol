@@ -21,7 +21,7 @@ struct ActiveSessionView: View {
     @State private var jointEntries: [JointArenaEntry] = []
     @State private var showJointPicker = false
     @State private var totalTime: Int
-    @State private var liveArenaId: String = ""  // tracks last arena pushed to Live Activity
+    @State private var updateThrottleTask: Task<Void, Never>? = nil
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private var arenaColor: Color { Color(hex: arena.color) }
@@ -312,7 +312,7 @@ struct ActiveSessionView: View {
         totalTime -= entry.minutes * 60
         store.activeSession?.jointEntries = jointEntries
         store.activeSession?.endTime = endTime
-        updateLiveActivity()
+        debouncedUpdateLiveActivity()
     }
 
     private func addJoint(arena: Arena, minutes: Int, note: String = "") {
@@ -327,7 +327,7 @@ struct ActiveSessionView: View {
         store.activeSession?.jointEntries = jointEntries
         store.activeSession?.endTime = endTime
         showJointPicker = false
-        updateLiveActivity()
+        debouncedUpdateLiveActivity()
         let entryId = entry.id
         let arenaLabel = arena.label
         let desc = arena.description
@@ -379,7 +379,8 @@ struct ActiveSessionView: View {
             liveActivity = Activity<ArenaLiveActivityAttributes>.activities.first
             #endif
         } else {
-            // Fresh start
+            // Fresh start — end idle Live Activity before requesting session one
+            store.endIdleActivity()
             store.startSession(arena: arena, durationMins: duration, note: note, social: social)
             let start = Date()
             endTime = start.addingTimeInterval(TimeInterval(timeLeft))
@@ -436,7 +437,6 @@ struct ActiveSessionView: View {
             }
             #endif
         }
-        liveArenaId = arena.id   // seed local transition tracker
         store.liveArenaId = arena.id  // seed DataStore tracker so HomeView's 1s timer doesn't re-push on first tick
         if let example = arena.examples.randomElement() { focusHint = example }
     }
@@ -452,13 +452,6 @@ struct ActiveSessionView: View {
             store.tickSession(now: Date())
         } else {
             timeLeft = remaining
-            // Detect arena transition (primary → joint) and push updated identity to Live Activity
-            let cur = currentLiveArena()
-            if cur.id != liveArenaId {
-                liveArenaId = cur.id
-                store.liveArenaId = cur.id  // keep DataStore in sync so HomeView timer doesn't double-push
-                updateLiveActivity()
-            }
         }
     }
 
@@ -512,6 +505,16 @@ struct ActiveSessionView: View {
             await activity?.update(.init(state: newState, staleDate: sessionEnd))
         }
         #endif
+    }
+
+    /// Debounced Live Activity update — prevents rapid-fire pushes when adding/removing joints.
+    private func debouncedUpdateLiveActivity() {
+        updateThrottleTask?.cancel()
+        updateThrottleTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            updateLiveActivity()
+        }
     }
 
     /// The arena actively running right now — whichever joint slot is live, else primary.

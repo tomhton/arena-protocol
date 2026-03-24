@@ -234,11 +234,11 @@ private extension ForgeEngine {
               p.totalSessions >= 5 else { return nil }
         let days = p.previousSessionGapDays
         let flavor = days >= 30
-            ? "A month away. That's a real gap. But you came back. That's the whole game."
-            : "Back after \(days) days. The arena doesn't judge the gap — only the return."
+            ? "You were gone. Now you're here. That's the only thing that matters."
+            : "Back after \(days) days. Welcome back. The arena is yours."
         return ForgeNarrative(
-            id: id, glyph: "▸",
-            headline: "THE RETURN",
+            id: id, glyph: "◈",
+            headline: "WELCOME BACK",
             flavor: flavor,
             category: .recovery, urgency: .drop
         )
