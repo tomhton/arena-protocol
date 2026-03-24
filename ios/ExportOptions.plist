@@ -10,6 +10,13 @@
     <string>3JSC7C9U7N</string>
     <key>signingStyle</key>
     <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.arenaprotocol.app</key>
+        <string>ArenaProtocol AppStore</string>
+        <key>com.arenaprotocol.app.ArenaProtocolWidget</key>
+        <string>Mobile widget provisioning</string>
+    </dict>
     <key>uploadSymbols</key>
     <true/>
     <key>compileBitcode</key>
