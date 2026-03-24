@@ -64,6 +64,12 @@ jobs:
         run: |
           agvtool new-version -all ${{ github.run_number }}
 
+      - name: Register iOS simulator runtime
+        run: |
+          xcrun simctl runtime add \
+            /Applications/Xcode_16.2.app/Contents/Developer/Platforms/iPhoneOS.platform/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS.simruntime \
+          || true
+
       - name: Archive
         working-directory: ios
         run: |
