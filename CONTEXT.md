@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-20 (v2.22.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-24 (v2.26.0).
 
 ---
 
@@ -83,6 +83,7 @@
 | 2.20.0 | 2026-03-20 | App shortcuts dock: scrollable row of 56 pt rounded-square icons, long-press edit mode (shake + × delete + + add), 20-app curated catalog, custom app form, UserDefaults persistence. |
 | 2.21.0 | 2026-03-20 | Home UX rework: unified inline nav buttons, CURRENTLY IN tab with full timeline + clock end times, iOS-style jiggle edit mode for arena grid (no list switch). |
 | 2.22.0 | 2026-03-20 | Session intelligence backbone + Forge narrative framework. `SessionIntelligence.swift`: `SessionProfile` (25+ fields), `UserArchetype` (10 cases), `buildSessionProfile()`. `ForgeEngine.swift`: 17 narrative branches, 25 testable queries, `ForgeNarrative → EmberDrop` pipeline. `checkAndClaimEmberDrop()` now runs ForgeEngine first, falls back to legacy drops. `AI_BRAIN_MAP.md` developer reference added. |
+| 2.26.0 | 2026-03-24 | Schedule & deadline system. `ScheduledBlock` (future session/protocol + notification) and `ArenaDeadline` (session-count goal with due date + auto-completion) added to DataStore. `ScheduleView` new screen with creation sheets for both types. HomeView "UP NEXT" banner for imminent scheduled blocks. SCHEDULE button in HomeView bottom row. ⏰ button on protocol cards opens `ScheduleProtocolSheet`. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -162,6 +163,7 @@ arena-protocol/
 │   │   │   ├── NotesView.swift            ← Quick idea capture
 │   │   │   ├── SettingsView.swift         ← Wind-down time, nav to habits/arenas
 │   │   │   ├── StuckView.swift            ← Emergency: grace period → arena pick
+│   │   │   ├── ScheduleView.swift         ← Schedule blocks + deadlines management
 │   │   │   └── ArenaEditorView.swift      ← Arena CRUD (list + individual editor)
 │   │   ├── Components/
 │   │   │   ├── ArenaCardView.swift        ← Card UI + Canvas illustrations + AddArenaCardView
@@ -228,9 +230,9 @@ Navigation uses `NavigationStack(path: $path)` in `RootView.swift`. A `navigate(
 enum Screen: Hashable {
     case home       // sentinel — navigate(.home) pops to root, never pushed
     case checkin
-    case select(Arena)
-    case active(Arena, Int, String)         // arena, durationMins, note
-    case complete(Arena, Int, String)
+    case select(Arena, Bool)                // arena, social modifier
+    case active(Arena, Int, String, Bool)   // arena, durationMins, note, social
+    case complete(Arena, Int, String, Bool)
     case protocols
     case activeProtocol(ArenaProtocolModel)
     case history
@@ -242,6 +244,11 @@ enum Screen: Hashable {
     case editArena(Arena)
     case newArena
     case stuck
+    case interval(String, Int)
+    case whatsNew
+    case inventory
+    case profile
+    case schedule
 }
 ```
 
@@ -260,7 +267,7 @@ The app also handles the `arenaprotocol://active` deep link via `.onOpenURL` in 
 | **Select** | `SelectView.swift` | Arena detail + quest note textarea, sub-arena pills → example task list, duration picker (5/10/30/60/90/custom), Google Calendar option, launches session |
 | **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. Manages Live Activity lifecycle (start on session begin, update on pause/resume, end on done/abandon). Tapping the Dynamic Island or lock screen banner deep-links to this screen via `arenaprotocol://active`. |
 | **Complete** | `ActiveSessionView.swift` (CompleteView) | Session complete screen with icon pop animation, saves session, triggers ember drop check |
-| **Protocols** | `ProtocolsView.swift` | List of 4 protocols with block strips, edit durations/name/desc, BEGIN PROTOCOL button |
+| **Protocols** | `ProtocolsView.swift` | List of protocols with block strips, edit, BEGIN → button, ⏰ schedule button per card |
 | **Active Protocol** | `ProtocolsView.swift` (ActiveProtocolView) | Segmented multi-block timer, advances blocks automatically, overall + per-block progress |
 | **History** | `HistoryView.swift` | Stats cards (sessions/minutes/days), CSV/JSON export, 4 tabs: Chart (7-day bar + arena breakdown), Habits (70-day grid), Log (reverse session list), Journal |
 | **Notes** | `NotesView.swift` | TextEditor + add button, timestamped idea list, delete per item |
@@ -270,6 +277,7 @@ The app also handles the `arenaprotocol://active` deep link via `.onOpenURL` in 
 | **Arena List Editor** | `ArenaEditorView.swift` (ArenaListEditorView) | 2-col grid in edit mode, + NEW card |
 | **Arena Editor** | `ArenaEditorView.swift` (ArenaEditorView) | Full form: name, subtitle, icon grid, color circles, description, examples textarea, save/delete |
 | **Stuck** | `StuckView.swift` | 3 phases: config (duration + optional intention) → countdown ring → mandatory arena pick |
+| **Schedule** | `ScheduleView.swift` | Upcoming scheduled blocks (arena/protocol + time + START), active deadlines (progress bar, days left, overdue), completed deadlines. Sheets: AddScheduledBlockSheet, AddDeadlineSheet. |
 
 ---
 
@@ -302,6 +310,38 @@ struct Session: Identifiable, Codable {
     var note: String
     var ts: Double           // epoch ms (Date().timeIntervalSince1970 * 1000)
 }
+```
+
+### ScheduledBlock
+```swift
+struct ScheduledBlock: Identifiable, Codable {
+    var id: String              // UUID
+    var kind: ScheduledKind     // .arena | .arenaProtocol
+    var itemId: String          // arenaId or protocolId
+    var itemLabel: String       // cached display name
+    var itemGlyph: String       // cached icon/glyph
+    var itemColor: String       // cached hex color
+    var scheduledAt: Date
+    var durationMins: Int       // arena: user-specified; protocol: sum of blocks
+    var note: String
+    var notificationId: String? // set after notification is scheduled
+}
+// Persisted: "arena_schedule"
+```
+
+### ArenaDeadline
+```swift
+struct ArenaDeadline: Identifiable, Codable {
+    var id: String
+    var arenaId: String
+    var arenaLabel: String      // cached
+    var arenaColor: String      // cached hex
+    var targetDate: Date
+    var targetSessions: Int     // complete this many sessions by targetDate
+    var note: String
+    var isCompleted: Bool       // auto-set when count reaches target
+}
+// Persisted: "arena_deadlines"
 ```
 
 ### ActiveSessionState (transient — not Codable, not persisted)

@@ -5,6 +5,31 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.26.0 — 2026-03-24
+
+**Schedule & deadline system for arenas and protocols.**
+
+### Features
+- **`ScheduledBlock`** — schedule a future arena session or protocol at a specific date/time. Creates a `UNUserNotificationCenter` reminder at the scheduled time. Stores `itemId`, `itemLabel`, `itemGlyph`, `itemColor`, `scheduledAt`, `durationMins`, `note`. Persisted to `"arena_schedule"`.
+- **`ArenaDeadline`** — set a session-count goal for an arena with a due date (`targetSessions` + `targetDate`). Auto-marks complete when `addSession()` pushes the arena count over the target. Shows progress bar + overdue indicator. Persisted to `"arena_deadlines"`.
+- **`ScheduleView`** — new full screen (`case schedule` in `Screen` enum). Three sections: _Upcoming_ (scheduled blocks with time-until, START button, × delete), _Deadlines_ (progress bar, days left, red OVERDUE / amber ≤2d warning), _Completed_ (last 3, deletable). Two creation sheets:
+  - `AddScheduledBlockSheet` — toggle Arena / Protocol, item picker, `DatePicker`, duration stepper (arena only), note.
+  - `AddDeadlineSheet` — arena picker, session-count stepper, due date, note.
+- **HomeView "UP NEXT" banner** — appears when a scheduled block starts within 4 hours. Same visual style as the Google Calendar `nextBlockBanner`. Tapping navigates to ScheduleView.
+- **HomeView SCHEDULE button** — paired with PROTOCOLS in the bottom action row (teal ⏰ pill).
+- **ProtocolsView ⏰ button** — on every user protocol card, opens `ScheduleProtocolSheet` (protocol pre-filled; pick date/time + optional note).
+
+### Changed
+- `DataStore.swift` — `addSession()` now calls `checkDeadlineCompletion()` after saving. New functions: `addScheduledBlock(_:)`, `removeScheduledBlock(id:)`, `addDeadline(_:)`, `removeDeadline(id:)`, `checkDeadlineCompletion()`.
+- `HomeView.swift` — `bottomButtons` PROTOCOLS row split into HStack with SCHEDULE button. `scheduledBlockBanner` view added. `nextScheduledBlock` computed property filters blocks within 4h.
+- `ProtocolsView.swift` — BEGIN button text shortened to "BEGIN →"; ⏰ button added alongside it. `schedulingProtocol: ArenaProtocolModel?` state drives `.sheet(item:)`.
+
+### New Files
+- `Views/ScheduleView.swift` — `ScheduleView`, `AddScheduledBlockSheet`, `AddDeadlineSheet`.
+- `ProtocolsView.swift` (appended) — `ScheduleProtocolSheet`.
+
+---
+
 ## v2.25.0 — 2026-03-20
 
 **Arena card custom background images.**
