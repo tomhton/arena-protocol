@@ -35,7 +35,7 @@ jobs:
           set -o pipefail
           xcodebuild \
             -scheme ArenaProtocol \
-            -destination "platform=iOS Simulator,name=iPhone 16 Pro" \
+            -destination "generic/platform=iOS Simulator" \
             -derivedDataPath build \
             -configuration Debug \
             clean build \
