@@ -81,6 +81,19 @@ jobs:
           security find-identity -v -p codesigning build.keychain
           rm distribution.p12
 
+      - name: Install Provisioning Profile
+        env:
+          PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE }}
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROVISIONING_PROFILE" | base64 --decode > profile.mobileprovision
+          UUID=$(security cms -D -i profile.mobileprovision | plutil -extract UUID raw -)
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+          echo "Installed profile UUID: $UUID"
+          security cms -D -i profile.mobileprovision | plutil -extract Name xml1 - || true
+          security cms -D -i profile.mobileprovision | grep -A2 "application-identifier" || true
+          rm profile.mobileprovision
+
       - name: Bump build number
         working-directory: ios
         run: |
