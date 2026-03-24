@@ -63,7 +63,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.app
 
       - name: Set up App Store Connect API key
         env:
@@ -74,12 +75,12 @@ jobs:
 
       - name: Bump build number
         working-directory: ios
-        run: agvtool new-version -all ${{ github.run_number }}
+        run: |
+          agvtool new-version -all ${{ github.run_number }}
 
       - name: Archive
         working-directory: ios
         run: |
-          set -o pipefail
           xcodebuild \
             -scheme ArenaProtocol \
             -destination "generic/platform=iOS" \
@@ -89,8 +90,7 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
             -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }} \
-          | xcpretty
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
 
       - name: Export and Upload to TestFlight
         working-directory: ios
