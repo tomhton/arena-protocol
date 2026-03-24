@@ -620,9 +620,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ArenaProtocol/ArenaProtocol.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3JSC7C9U7N;
+				PROVISIONING_PROFILE_SPECIFIER = "ArenaProtocol AppStore";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ArenaProtocol/Resources/Info.plist;
@@ -720,9 +722,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = ArenaProtocolWidgetExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3JSC7C9U7N;
+				PROVISIONING_PROFILE_SPECIFIER = "Mobile widget provisioning";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ArenaProtocolWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ArenaProtocolWidgetExtension;
