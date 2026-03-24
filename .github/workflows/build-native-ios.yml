@@ -41,7 +41,7 @@ jobs:
             clean build \
             CODE_SIGNING_ALLOWED=NO \
             GCC_TREAT_WARNINGS_AS_ERRORS=NO \
-          | xcpretty
+          2>&1
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
