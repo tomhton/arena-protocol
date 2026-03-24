@@ -73,6 +73,7 @@ jobs:
             -configuration Release \
             archive \
             -archivePath ArenaProtocol.xcarchive \
+            ENABLE_ON_DEMAND_RESOURCES=NO \
             -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
             -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
