@@ -31,6 +31,13 @@ struct HomeView: View {
     private var sessions: [Session] { store.sessions }
     private var hasSession: Bool { store.activeSession != nil || !store.stackedSessions.isEmpty }
 
+    private var nextScheduledBlock: ScheduledBlock? {
+        store.scheduledBlocks
+            .filter { $0.scheduledAt > Date() && $0.scheduledAt < Date().addingTimeInterval(4 * 3600) }
+            .sorted { $0.scheduledAt < $1.scheduledAt }
+            .first
+    }
+
     private var currentlyRunningArena: Arena? {
         store.activeSession?.currentSlot(now: sessionNow)?.arena
             ?? store.stackedSessions.first?.currentSlot(now: sessionNow)?.arena
@@ -368,6 +375,7 @@ struct HomeView: View {
             .padding(.bottom, 12)
 
             if let event = nextBlock { nextBlockBanner(event: event) }
+            if let block = nextScheduledBlock { scheduledBlockBanner(block) }
             editToggle
             arenaGrid
             socialSection
@@ -696,6 +704,40 @@ struct HomeView: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 20).padding(.bottom, 10)
         .disabled(matched == nil)
+    }
+
+    @ViewBuilder
+    private func scheduledBlockBanner(_ block: ScheduledBlock) -> some View {
+        let color = Color(hex: block.itemColor)
+        let secsUntil = block.scheduledAt.timeIntervalSinceNow
+        let minsUntil = Int(secsUntil / 60)
+        let when = secsUntil < 86400
+            ? block.scheduledAt.relativeShort()
+            : block.scheduledAt.formatted(date: .abbreviated, time: .shortened)
+
+        Button { navigate(.schedule) } label: {
+            HStack(spacing: 12) {
+                Text(block.itemGlyph).font(.system(size: 14))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(block.itemLabel.uppercased())
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(color).kerning(2).lineLimit(1)
+                    Text("\(when)  ·  \(block.durationMins)m\(block.kind == .arenaProtocol ? "  ·  PROTOCOL" : "")")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.35)).kerning(1)
+                }
+                Spacer()
+                Text("SCHED →")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(color.opacity(0.7)).kerning(3)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .background(color.opacity(0.07))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(color.opacity(0.2), lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20).padding(.bottom, 8)
     }
 
     private func topButton(_ label: String, color: String, action: @escaping () -> Void) -> some View {
@@ -1028,18 +1070,33 @@ struct HomeView: View {
 
     private var bottomButtons: some View {
         VStack(spacing: 8) {
-            Button { navigate(.protocols) } label: {
-                HStack(spacing: 10) {
-                    Text("◈").font(.system(size: 11)).foregroundStyle(Color(hex: "#708090"))
-                    Text("PROTOCOLS").font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(hex: "#708090")).kerning(4)
+            HStack(spacing: 8) {
+                Button { navigate(.protocols) } label: {
+                    HStack(spacing: 10) {
+                        Text("◈").font(.system(size: 11)).foregroundStyle(Color(hex: "#708090"))
+                        Text("PROTOCOLS").font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(hex: "#708090")).kerning(4)
+                    }
+                    .frame(maxWidth: .infinity).padding(.vertical, 12)
+                    .background(Color(hex: "#708090").opacity(0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#708090").opacity(0.2), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-                .frame(maxWidth: .infinity).padding(.vertical, 12)
-                .background(Color(hex: "#708090").opacity(0.06))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#708090").opacity(0.2), lineWidth: 1))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .buttonStyle(.plain)
+
+                Button { navigate(.schedule) } label: {
+                    HStack(spacing: 8) {
+                        Text("⏰").font(.system(size: 11))
+                        Text("SCHEDULE").font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(hex: "#4ECDC4")).kerning(4)
+                    }
+                    .frame(maxWidth: .infinity).padding(.vertical, 12)
+                    .background(Color(hex: "#4ECDC4").opacity(0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#4ECDC4").opacity(0.2), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             HStack(spacing: 8) {
                 Button { navigate(.stuck) } label: {

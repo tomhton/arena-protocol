@@ -12,7 +12,8 @@ struct ProtocolsView: View {
     @Environment(DataStore.self) private var store
     var navigate: (Screen) -> Void
 
-    @State private var editingProtocol: ArenaProtocolModel? = nil
+    @State private var editingProtocol:   ArenaProtocolModel? = nil
+    @State private var schedulingProtocol: ArenaProtocolModel? = nil
     @State private var isCreating = false
     @State private var savedForgeIds: Set<String> = []
 
@@ -55,6 +56,9 @@ struct ProtocolsView: View {
             )
         } else {
             listView
+                .sheet(item: $schedulingProtocol) { p in
+                    scheduleSheet(for: p)
+                }
         }
     }
 
@@ -356,23 +360,51 @@ struct ProtocolsView: View {
                     .kerning(2)
             }
 
-            Button { navigate(.activeProtocol(p)) } label: {
-                Text("BEGIN PROTOCOL →")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(pColor)
-                    .kerning(4)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(pColor.opacity(0.18))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(pColor.opacity(0.5), lineWidth: 1))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            HStack(spacing: 8) {
+                Button { navigate(.activeProtocol(p)) } label: {
+                    Text("BEGIN →")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(pColor)
+                        .kerning(4)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(pColor.opacity(0.18))
+                        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(pColor.opacity(0.5), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                Button { schedulingProtocol = p } label: {
+                    Text("⏰")
+                        .font(.system(size: 14))
+                        .frame(width: 46, height: 46)
+                        .background(pColor.opacity(0.1))
+                        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(pColor.opacity(0.3), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(20)
         .background(pColor.opacity(0.08))
         .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(pColor.opacity(0.25), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    // MARK: - Schedule Sheet (protocol-specific)
+
+    private func scheduleSheet(for p: ArenaProtocolModel) -> some View {
+        let total = p.blocks.reduce(0) { $0 + $1.duration }
+        let pColor = Color(hex: p.color)
+        return ScheduleProtocolSheet(proto: p, totalMins: total, pColor: pColor) { scheduledAt, note in
+            let block = ScheduledBlock(
+                kind: .arenaProtocol,
+                itemId: p.id, itemLabel: p.name,
+                itemGlyph: p.glyph, itemColor: p.color,
+                scheduledAt: scheduledAt, durationMins: total, note: note
+            )
+            store.addScheduledBlock(block)
+        }
     }
 }
 
@@ -899,4 +931,100 @@ struct ActiveProtocolView: View {
         }
     }
     #endif
+}
+
+// MARK: - Schedule Protocol Sheet
+
+struct ScheduleProtocolSheet: View {
+    let proto: ArenaProtocolModel
+    let totalMins: Int
+    let pColor: Color
+    let onSchedule: (Date, String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var scheduledAt: Date = Date().addingTimeInterval(3600)
+    @State private var note: String = ""
+
+    var body: some View {
+        ZStack {
+            Color(hex: "#080810").ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 24) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("SCHEDULE PROTOCOL")
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.25))
+                                .kerning(7)
+                            HStack(spacing: 8) {
+                                Text(proto.glyph).font(.system(size: 16)).foregroundStyle(pColor)
+                                Text(proto.name)
+                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(pColor).kerning(2)
+                            }
+                            Text("\(totalMins)m total")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.3)).kerning(1)
+                        }
+                        Spacer()
+                        Button { dismiss() } label: {
+                            Text("×")
+                                .font(.system(size: 20, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.35))
+                                .frame(width: 32, height: 32)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.top, 24)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("WHEN")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.25))
+                            .kerning(5)
+                        DatePicker("", selection: $scheduledAt, in: Date()...)
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .colorScheme(.dark)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("NOTE (OPTIONAL)")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.25))
+                            .kerning(5)
+                        TextField("", text: $note)
+                            .font(.system(size: 13, design: .monospaced))
+                            .foregroundStyle(.white)
+                            .padding(12)
+                            .background(Color.white.opacity(0.04))
+                            .overlay(RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+
+                    Button {
+                        onSchedule(scheduledAt, note)
+                        dismiss()
+                    } label: {
+                        Text("SCHEDULE →")
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(pColor)
+                            .kerning(4)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 15)
+                            .background(pColor.opacity(0.12))
+                            .overlay(RoundedRectangle(cornerRadius: 14)
+                                .strokeBorder(pColor.opacity(0.5), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 40)
+            }
+        }
+    }
 }

@@ -253,6 +253,37 @@ struct MorningCheckin: Codable {
     var completed: [String]
 }
 
+// MARK: - Scheduling & Deadlines
+
+enum ScheduledKind: String, Codable, Equatable {
+    case arena
+    case arenaProtocol = "protocol"
+}
+
+struct ScheduledBlock: Identifiable, Codable {
+    var id: String = UUID().uuidString
+    var kind: ScheduledKind
+    var itemId: String          // arenaId or protocolId
+    var itemLabel: String       // cached display name
+    var itemGlyph: String       // cached icon/glyph
+    var itemColor: String       // cached hex color
+    var scheduledAt: Date
+    var durationMins: Int       // arena: user-specified; protocol: sum of blocks
+    var note: String = ""
+    var notificationId: String? = nil
+}
+
+struct ArenaDeadline: Identifiable, Codable {
+    var id: String = UUID().uuidString
+    var arenaId: String
+    var arenaLabel: String
+    var arenaColor: String
+    var targetDate: Date
+    var targetSessions: Int     // number of sessions to complete by targetDate
+    var note: String = ""
+    var isCompleted: Bool = false
+}
+
 // MARK: - Static Defaults
 
 let DEFAULT_DOCK_APPS: [DockApp] = [
@@ -673,6 +704,8 @@ final class DataStore {
         let saved: MorningCheckin = loadFromDefaults("arena_checkin", fallback: MorningCheckin(date: "", completed: []))
         return saved.date == todayString() ? saved : MorningCheckin(date: todayString(), completed: [])
     }()
+    var scheduledBlocks: [ScheduledBlock] = loadFromDefaults("arena_schedule",   fallback: [])
+    var deadlines:       [ArenaDeadline]  = loadFromDefaults("arena_deadlines",  fallback: [])
 
     var activeSession: ActiveSessionState? = nil
     var stackedSessions: [ActiveSessionState] = []
@@ -709,8 +742,10 @@ final class DataStore {
     func saveEggs()          { saveToDefaults("arena_eggs",            eggs) }
     func saveInventory()     { saveToDefaults("arena_inventory",       inventory) }
     func saveRebirthStates() { saveToDefaults("arena_rebirth",         rebirthStates) }
-    func savePlayerProfile() { saveToDefaults("arena_profile",         playerProfile) }
-    func saveCheckin()       { saveToDefaults("arena_checkin",         checkin) }
+    func savePlayerProfile()   { saveToDefaults("arena_profile",        playerProfile) }
+    func saveCheckin()         { saveToDefaults("arena_checkin",        checkin) }
+    func saveScheduledBlocks() { saveToDefaults("arena_schedule",       scheduledBlocks) }
+    func saveDeadlines()       { saveToDefaults("arena_deadlines",      deadlines) }
 
     // Idle Live Activity — shown on lock screen when no session is active
     #if canImport(ActivityKit)
@@ -865,6 +900,56 @@ final class DataStore {
     func addSession(_ s: Session) {
         sessions.append(s)
         saveSessions()
+        checkDeadlineCompletion()
+    }
+
+    // MARK: - Scheduling
+
+    func addScheduledBlock(_ block: ScheduledBlock) {
+        var b = block
+        let secsFromNow = b.scheduledAt.timeIntervalSinceNow
+        if secsFromNow > 0 {
+            let notifId = "sched_\(b.id)"
+            let title = b.kind == .arena
+                ? "Time for \(b.itemLabel)"
+                : "\(b.itemLabel) protocol is starting"
+            let body = b.note.isEmpty ? "Your scheduled session is starting now." : b.note
+            scheduleNotification(id: notifId, title: title, body: body, secondsFromNow: secsFromNow)
+            b.notificationId = notifId
+        }
+        scheduledBlocks.append(b)
+        saveScheduledBlocks()
+    }
+
+    func removeScheduledBlock(id: String) {
+        if let b = scheduledBlocks.first(where: { $0.id == id }),
+           let notifId = b.notificationId {
+            cancelNotification(id: notifId)
+        }
+        scheduledBlocks.removeAll { $0.id == id }
+        saveScheduledBlocks()
+    }
+
+    func addDeadline(_ d: ArenaDeadline) {
+        deadlines.append(d)
+        saveDeadlines()
+    }
+
+    func removeDeadline(id: String) {
+        deadlines.removeAll { $0.id == id }
+        saveDeadlines()
+    }
+
+    func checkDeadlineCompletion() {
+        var changed = false
+        for i in deadlines.indices where !deadlines[i].isCompleted {
+            let count = sessions.filter { $0.arenaId == deadlines[i].arenaId }.count
+            if count >= deadlines[i].targetSessions {
+                deadlines[i].isCompleted = true
+                changed = true
+            }
+        }
+        if changed { saveDeadlines() }
     }
 
     // Streak & forge

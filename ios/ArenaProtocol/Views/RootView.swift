@@ -26,6 +26,7 @@ enum Screen: Hashable {
     case whatsNew
     case inventory
     case profile
+    case schedule
 }
 
 // MARK: - Root
@@ -143,6 +144,8 @@ struct RootView: View {
             InventoryView(navigate: navigate)
         case .profile:
             ProfileView(navigate: navigate)
+        case .schedule:
+            ScheduleView(navigate: navigate)
         }
     }
 
