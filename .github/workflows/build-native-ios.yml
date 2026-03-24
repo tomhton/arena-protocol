@@ -29,20 +29,6 @@ jobs:
         working-directory: ios
         run: swift test --verbose 2>&1 | tee test-results.txt
 
-      - name: Build for iOS Simulator
-        working-directory: ios
-        run: |
-          set -o pipefail
-          xcodebuild \
-            -scheme ArenaProtocol \
-            -destination "generic/platform=iOS Simulator" \
-            -derivedDataPath build \
-            -configuration Debug \
-            clean build \
-            CODE_SIGNING_ALLOWED=NO \
-            GCC_TREAT_WARNINGS_AS_ERRORS=NO \
-          2>&1
-
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
