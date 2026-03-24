@@ -64,11 +64,13 @@ jobs:
         run: |
           agvtool new-version -all ${{ github.run_number }}
 
-      - name: Register iOS simulator runtime
+      - name: Install iOS 18 Simulator Runtime
         run: |
-          xcrun simctl runtime add \
-            /Applications/Xcode_16.2.app/Contents/Developer/Platforms/iPhoneOS.platform/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS.simruntime \
-          || true
+          # Download and register iOS 18 simulator runtime so actool can
+          # validate asset catalogs during the archive step.
+          xcrun simctl runtime add "com.apple.CoreSimulator.SimRuntime.iOS-18-2" || \
+          xcrun simctl runtime add "com.apple.CoreSimulator.SimRuntime.iOS-18-0" || \
+          echo "Runtime install failed — archive may still succeed if runtime already present"
 
       - name: Archive
         working-directory: ios
