@@ -361,8 +361,11 @@ struct StuckView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                     ForEach(arenas.indices, id: \.self) { i in
                         ArenaCardView(
-                            arena: arenas[i], sessCount: 0, streak: 0, editMode: false,
-                            onTap: { navigate(.select(arenas[i], false)) },
+                            arena: arenas[i], sessCount: 0, streak: 0, rankTier: .dormant, editMode: false,
+                            onTap: {
+                                store.expandedArenaId = arenas[i].id
+                                navigate(.home)
+                            },
                             sessions: store.sessions
                         )
                     }

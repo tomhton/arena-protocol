@@ -201,6 +201,83 @@ struct RebirthState: Codable {
     var rebirthDates: [String]      // yyyy-MM-dd of each reset
 }
 
+// MARK: - Arena Rank Progression
+
+enum ArenaRankTier: Int, Codable, CaseIterable, Comparable {
+    case dormant       = 0   // 0 streak
+    case sparked       = 1   // 1–2 days
+    case kindling      = 2   // 3–6 days
+    case burning       = 3   // 7–13 days
+    case blazing       = 4   // 14–20 days
+    case inferno       = 5   // 21–33 days
+    case transcendent  = 6   // 34–49 days
+    case eternalFlame  = 7   // 50+ days
+
+    static func < (lhs: ArenaRankTier, rhs: ArenaRankTier) -> Bool { lhs.rawValue < rhs.rawValue }
+
+    static func from(streak: Int) -> ArenaRankTier {
+        switch streak {
+        case 0:      return .dormant
+        case 1...2:  return .sparked
+        case 3...6:  return .kindling
+        case 7...13: return .burning
+        case 14...20: return .blazing
+        case 21...33: return .inferno
+        case 34...49: return .transcendent
+        default:      return .eternalFlame
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .dormant:      return "DORMANT"
+        case .sparked:      return "SPARKED"
+        case .kindling:     return "KINDLING"
+        case .burning:      return "BURNING"
+        case .blazing:      return "BLAZING"
+        case .inferno:      return "INFERNO"
+        case .transcendent: return "TRANSCENDENT"
+        case .eternalFlame: return "ETERNAL FLAME"
+        }
+    }
+
+    /// Border line width progression
+    var borderWidth: CGFloat {
+        switch self {
+        case .dormant:      return 1
+        case .sparked:      return 1
+        case .kindling:     return 1.2
+        case .burning:      return 1.5
+        case .blazing:      return 1.8
+        case .inferno:      return 2.0
+        case .transcendent: return 2.2
+        case .eternalFlame: return 2.5
+        }
+    }
+
+    /// Border base opacity
+    var borderOpacity: Double {
+        switch self {
+        case .dormant:      return 0.18
+        case .sparked:      return 0.30
+        case .kindling:     return 0.40
+        case .burning:      return 0.50
+        case .blazing:      return 0.60
+        case .inferno:      return 0.70
+        case .transcendent: return 0.80
+        case .eternalFlame: return 0.90
+        }
+    }
+}
+
+struct ArenaRankState: Codable, Identifiable {
+    var id: String { arenaId }
+    var arenaId: String
+    var peakStreak: Int              // highest streak ever achieved
+    var achievedRank: ArenaRankTier  // locked-in rank from peak streak
+    var achievedAt: Double           // epoch ms when current rank was reached
+}
+
 struct PlayerProfile: Codable {
     var equippedTitle: String?              // displayed title string
     var equippedGlyphs: [String: String]    // arenaId → glyph character
@@ -707,6 +784,7 @@ final class DataStore {
     var eggs:          [InventoryEgg]       = loadFromDefaults("arena_eggs",           fallback: [])
     var inventory:     [InventoryItem]      = loadFromDefaults("arena_inventory",      fallback: [])
     var rebirthStates: [RebirthState]       = loadFromDefaults("arena_rebirth",        fallback: [])
+    var arenaRanks:    [ArenaRankState]     = loadFromDefaults("arena_ranks",          fallback: [])
     var playerProfile: PlayerProfile        = {
         let saved: PlayerProfile = loadFromDefaults("arena_profile",
             fallback: PlayerProfile(equippedTitle: nil, equippedGlyphs: [:], isPublic: false,
@@ -722,8 +800,12 @@ final class DataStore {
 
     var activeSession: ActiveSessionState? = nil
     var stackedSessions: [ActiveSessionState] = []
-    /// Set when a session expires. Observed by HomeView to trigger .complete navigation.
+    /// Set when a session expires. Observed by HomeView to trigger completion overlay.
     var pendingCompletion: CompletedSession? = nil
+
+    // Transient UI state (not persisted)
+    var expandedArenaId: String? = nil
+    var sessionDisplayCollapsed: Bool = false
 
     // Tracks the last arena whose identity was broadcast to the Live Activity.
     // Updated by syncLiveActivity() so duplicate pushes are skipped.
@@ -755,6 +837,7 @@ final class DataStore {
     func saveEggs()          { saveToDefaults("arena_eggs",            eggs) }
     func saveInventory()     { saveToDefaults("arena_inventory",       inventory) }
     func saveRebirthStates() { saveToDefaults("arena_rebirth",         rebirthStates) }
+    func saveArenaRanks()    { saveToDefaults("arena_ranks",           arenaRanks) }
     func savePlayerProfile()   { saveToDefaults("arena_profile",        playerProfile) }
     func saveCheckin()         { saveToDefaults("arena_checkin",        checkin) }
     func saveScheduledBlocks() { saveToDefaults("arena_schedule",       scheduledBlocks) }
@@ -913,7 +996,60 @@ final class DataStore {
     func addSession(_ s: Session) {
         sessions.append(s)
         saveSessions()
+        updateArenaRank(arenaId: s.arenaId)
         checkDeadlineCompletion()
+    }
+
+    // MARK: - Arena Rank Management
+
+    func rankState(for arenaId: String) -> ArenaRankState {
+        arenaRanks.first(where: { $0.arenaId == arenaId })
+            ?? ArenaRankState(arenaId: arenaId, peakStreak: 0, achievedRank: .dormant, achievedAt: 0)
+    }
+
+    func updateArenaRank(arenaId: String) {
+        let currentStreak = streak(for: arenaId)
+        let currentTier = ArenaRankTier.from(streak: currentStreak)
+        if let idx = arenaRanks.firstIndex(where: { $0.arenaId == arenaId }) {
+            if currentStreak > arenaRanks[idx].peakStreak {
+                arenaRanks[idx].peakStreak = currentStreak
+            }
+            if currentTier > arenaRanks[idx].achievedRank {
+                arenaRanks[idx].achievedRank = currentTier
+                arenaRanks[idx].achievedAt = Date().timeIntervalSince1970 * 1000
+            }
+        } else {
+            arenaRanks.append(ArenaRankState(
+                arenaId: arenaId,
+                peakStreak: currentStreak,
+                achievedRank: currentTier,
+                achievedAt: Date().timeIntervalSince1970 * 1000
+            ))
+        }
+        saveArenaRanks()
+    }
+
+    func resetArenaRank(arenaId: String) {
+        arenaRanks.removeAll { $0.arenaId == arenaId }
+        saveArenaRanks()
+    }
+
+    /// Seeds rank states from existing streak data for arenas that have no rank yet.
+    /// Call once on app launch so existing users get their earned ranks.
+    func seedArenaRanksIfNeeded() {
+        var changed = false
+        for arena in arenas {
+            guard !arenaRanks.contains(where: { $0.arenaId == arena.id }) else { continue }
+            let s = streak(for: arena.id)
+            guard s > 0 else { continue }
+            let tier = ArenaRankTier.from(streak: s)
+            arenaRanks.append(ArenaRankState(
+                arenaId: arena.id, peakStreak: s, achievedRank: tier,
+                achievedAt: Date().timeIntervalSince1970 * 1000
+            ))
+            changed = true
+        }
+        if changed { saveArenaRanks() }
     }
 
     // MARK: - Scheduling

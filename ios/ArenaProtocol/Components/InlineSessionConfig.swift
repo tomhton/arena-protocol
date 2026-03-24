@@ -1,14 +1,16 @@
-// SelectView.swift — Arena Protocol
-// Session configuration: quest note, sub-arena, duration, launch
+// InlineSessionConfig.swift — Arena Protocol
+// Inline session configuration: quest, sub-arenas, duration, calendar feed, launch button
+// Extracted from SelectView for use in expandable arena cards on the hub page.
 
 import SwiftUI
 import EventKit
 
-struct SelectView: View {
+struct InlineSessionConfig: View {
     @Environment(DataStore.self) private var store
     let arena: Arena
     let social: Bool
-    var navigate: (Screen) -> Void
+    var onStart: (Arena, Int, String, Bool) -> Void
+    var onCollapse: () -> Void
 
     @State private var note = ""
     @State private var selectedDuration = 25
@@ -19,17 +21,9 @@ struct SelectView: View {
     @State private var ongoingMatch: EKEvent? = nil
     @FocusState private var customFocused: Bool
 
-    init(arena: Arena, social: Bool = false, navigate: @escaping (Screen) -> Void) {
-        self.arena = arena
-        self.social = social
-        self.navigate = navigate
-    }
-
     private var arenaColor: Color { Color(hex: arena.color) }
     private var effectiveDuration: Int {
-        if isCustomActive, let v = Int(customMinutes), v > 0 {
-            return v
-        }
+        if isCustomActive, let v = Int(customMinutes), v > 0 { return v }
         return selectedDuration
     }
     private var durationValid: Bool {
@@ -43,9 +37,8 @@ struct SelectView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            // swipe-up on the scroll view dismisses keyboard
             VStack(alignment: .leading, spacing: 0) {
-                backButton
+                collapseButton
                 arenaHeader
                 questField
                 if !subArenaKeys.isEmpty { subArenaSection }
@@ -55,7 +48,7 @@ struct SelectView: View {
                 if social { socialBadge }
                 launchSection
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
             .padding(.bottom, 32)
         }
         .scrollDismissesKeyboard(.interactively)
@@ -69,18 +62,18 @@ struct SelectView: View {
         }
     }
 
-    // MARK: - Back
+    // MARK: - Collapse
 
-    private var backButton: some View {
-        Button { navigate(.home) } label: {
+    private var collapseButton: some View {
+        Button(action: onCollapse) {
             Text("← BACK")
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(Color.white.opacity(0.35))
                 .kerning(4)
         }
         .buttonStyle(.plain)
-        .padding(.top, 48)
-        .padding(.bottom, 36)
+        .padding(.top, 16)
+        .padding(.bottom, 20)
     }
 
     // MARK: - Arena Header
@@ -88,7 +81,7 @@ struct SelectView: View {
     private var arenaHeader: some View {
         ZStack(alignment: .topTrailing) {
             ArenaIllustration(arenaId: arena.id, color: arenaColor)
-                .frame(width: 160, height: 180)
+                .frame(width: 120, height: 140)
                 .opacity(0.07)
                 .blendMode(.screen)
                 .offset(x: 24)
@@ -102,20 +95,20 @@ struct SelectView: View {
                     .padding(.bottom, 6)
 
                 Text(arena.label)
-                    .font(.system(size: 36, weight: .bold, design: .monospaced))
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
                     .foregroundStyle(arenaColor)
                     .shadow(color: arenaColor.opacity(0.4), radius: 20)
                     .kerning(3)
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 8)
 
                 Text(arena.description)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundStyle(Color.white.opacity(0.45))
-                    .lineSpacing(6)
+                    .lineSpacing(5)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.bottom, 24)
+        .padding(.bottom, 20)
     }
 
     // MARK: - Quest
@@ -126,7 +119,7 @@ struct SelectView: View {
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(arenaColor.opacity(0.8))
                 .kerning(5)
-                .padding(.bottom, 12)
+                .padding(.bottom, 10)
 
             ZStack(alignment: .topLeading) {
                 if note.isEmpty {
@@ -140,7 +133,7 @@ struct SelectView: View {
                     .foregroundStyle(note.isEmpty ? Color.white.opacity(0.35) : arenaColor)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
-                    .frame(minHeight: 64)
+                    .frame(minHeight: 56)
                     .padding(10)
             }
             .background(note.isEmpty ? Color.white.opacity(0.03) : arenaColor.opacity(0.06))
@@ -159,7 +152,7 @@ struct SelectView: View {
                     .padding(.top, 6)
             }
         }
-        .padding(.bottom, 28)
+        .padding(.bottom, 24)
     }
 
     // MARK: - Sub-Arena
@@ -234,8 +227,7 @@ struct SelectView: View {
     private var calFeedSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Text("📅")
-                    .font(.system(size: 10))
+                Text("📅").font(.system(size: 10))
                 Text("FROM YOUR CALENDAR")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(Color.white.opacity(0.22))
@@ -252,7 +244,6 @@ struct SelectView: View {
                     let accent: Color = matched.map { Color(hex: $0.color) } ?? arenaColor.opacity(0.5)
 
                     Button {
-                        // Pre-fill note with event title; set duration to match event length
                         note = event.title ?? ""
                         let snapped = [5, 10, 15, 25, 30, 45, 60, 90].min(by: { abs($0 - dur) < abs($1 - dur) }) ?? dur
                         if DURATIONS.contains(snapped) {
@@ -264,7 +255,6 @@ struct SelectView: View {
                         }
                     } label: {
                         HStack(spacing: 10) {
-                            // Color strip
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(accent)
                                 .frame(width: 3, height: 36)
@@ -278,14 +268,12 @@ struct SelectView: View {
                                     Text(when)
                                         .font(.system(size: 9, design: .monospaced))
                                         .foregroundStyle(Color.white.opacity(0.3))
-                                    Text("·")
-                                        .foregroundStyle(Color.white.opacity(0.2))
+                                    Text("·").foregroundStyle(Color.white.opacity(0.2))
                                     Text("\(dur)m")
                                         .font(.system(size: 9, design: .monospaced))
                                         .foregroundStyle(Color.white.opacity(0.3))
                                     if let m = matched {
-                                        Text("·")
-                                            .foregroundStyle(Color.white.opacity(0.2))
+                                        Text("·").foregroundStyle(Color.white.opacity(0.2))
                                         Text(m.label)
                                             .font(.system(size: 8, design: .monospaced))
                                             .foregroundStyle(accent.opacity(0.7))
@@ -400,7 +388,11 @@ struct SelectView: View {
 
     private var launchSection: some View {
         VStack(spacing: 8) {
-            Button { if durationValid { startSession() } } label: {
+            Button {
+                if durationValid {
+                    onStart(arena, effectiveDuration, note, social)
+                }
+            } label: {
                 HStack(spacing: 10) {
                     Text(arena.icon).font(.system(size: 16))
                     Text("ENTER THE ARENA")
@@ -434,30 +426,25 @@ struct SelectView: View {
         }
     }
 
-    // MARK: - Social Badge (read-only indicator when social mode is on)
+    // MARK: - Social Badge
 
     private var socialBadge: some View {
-        let socialColor = Color(hex: "#B794F4")
+        let sc = Color(hex: "#B794F4")
         return HStack(spacing: 10) {
-            Text("◇")
-                .font(.system(size: 14))
-                .foregroundStyle(socialColor)
-                .shadow(color: socialColor.opacity(0.5), radius: 6)
+            Text("◇").font(.system(size: 14)).foregroundStyle(sc)
+                .shadow(color: sc.opacity(0.5), radius: 6)
             Text("SOCIAL")
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundStyle(socialColor)
-                .kerning(5)
-            Text("·")
-                .foregroundStyle(Color.white.opacity(0.2))
+                .foregroundStyle(sc).kerning(5)
+            Text("·").foregroundStyle(Color.white.opacity(0.2))
             Text("session will be logged as social")
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(Color.white.opacity(0.35))
             Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(socialColor.opacity(0.08))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(socialColor.opacity(0.3), lineWidth: 1))
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(sc.opacity(0.08))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(sc.opacity(0.3), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.bottom, 20)
     }
@@ -471,30 +458,29 @@ struct SelectView: View {
         let eventNote = rawTitle.hasPrefix(prefix)
             ? String(rawTitle.dropFirst(prefix.count))
             : rawTitle
-        let accent = arenaColor
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Text("▶")
-                    .font(.system(size: 9))
-                    .foregroundStyle(accent)
+                Text("▶").font(.system(size: 9)).foregroundStyle(arenaColor)
                 Text("IN PROGRESS")
                     .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(accent.opacity(0.8))
+                    .foregroundStyle(arenaColor.opacity(0.8))
                     .kerning(5)
             }
             .padding(.bottom, 8)
 
-            Button { resumeSession(event: event, minutes: remaining, note: eventNote) } label: {
+            Button {
+                onStart(arena, remaining, eventNote, social)
+            } label: {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(rawTitle)
                             .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundStyle(accent)
+                            .foregroundStyle(arenaColor)
                             .lineLimit(1)
                         Text("\(remaining)m remaining · ends \(event.endDate.relativeShort())")
                             .font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(accent.opacity(0.55))
+                            .foregroundStyle(arenaColor.opacity(0.55))
                     }
                     Spacer()
                     Text("RESUME")
@@ -503,15 +489,15 @@ struct SelectView: View {
                         .kerning(3)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(accent)
+                        .background(arenaColor)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(accent.opacity(0.12))
+                .background(arenaColor.opacity(0.12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(accent.opacity(0.5), lineWidth: 1.5)
+                        .strokeBorder(arenaColor.opacity(0.5), lineWidth: 1.5)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
@@ -519,31 +505,4 @@ struct SelectView: View {
         }
         .padding(.bottom, 20)
     }
-
-    // MARK: - Actions
-
-    private func resumeSession(event: EKEvent, minutes: Int, note: String) {
-        scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
-                             body: "Your focus block has ended.",
-                             secondsFromNow: TimeInterval(minutes * 60))
-        store.startSession(arena: arena, durationMins: minutes, note: note, social: social)
-        navigate(.home)
-    }
-
-    private func startSession() {
-        let dur = effectiveDuration
-        guard dur > 0 else { return }
-        scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
-                             body: "Your focus block has ended.",
-                             secondsFromNow: TimeInterval(dur * 60))
-        store.startSession(arena: arena, durationMins: dur, note: note, social: social)
-        navigate(.home)
-    }
-}
-
-// FlowLayout moved to Components/FlowLayout.swift
-
-// Swift 5.9+ custom operator for optional binding
-extension Optional where Wrapped == Int {
-    var orZero: Int { self ?? 0 }
 }

@@ -8,21 +8,35 @@ import UIKit
 
 struct ArenaCardView: View {
     let arena: Arena
-    let sessCount: Int
-    let streak: Int
+    let sessCount: Int          // sessions today for this arena
+    let streak: Int             // consecutive day streak
+    let rankTier: ArenaRankTier // locked-in rank from peak streak
     let editMode: Bool
     var onTap: () -> Void
     var sessions: [Session] = []
 
     @State private var isPressed = false
+    @State private var glowPhase: CGFloat = 0
+    @State private var borderRotation: Double = 0
 
     private var forge: ForgeMark? { getForgeMarkForArena(arenaId: arena.id, sessions: sessions) }
     private var arenaColor: Color { Color(hex: arena.color) }
 
+    // Today's session intensity (0.0–1.0) drives under-glow strength
+    private var todayIntensity: Double {
+        switch sessCount {
+        case 0:  return 0
+        case 1:  return 0.35
+        case 2:  return 0.6
+        case 3:  return 0.8
+        default: return 1.0
+        }
+    }
+
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .bottomTrailing) {
-                // Background
+                // Background fill
                 RoundedRectangle(cornerRadius: 16)
                     .fill(cardBackground)
                     .overlay(
@@ -34,17 +48,15 @@ struct ArenaCardView: View {
                             }
                         }
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .strokeBorder(isPressed ? arenaColor.opacity(0.45) : arenaColor.opacity(0.18), lineWidth: 1)
-                    )
-                    .shadow(color: isPressed ? arenaColor.opacity(0.22) : .clear, radius: 12, y: 4)
 
-                // Top accent bar
+                // Rank border overlay
+                rankBorderOverlay
+
+                // Top accent bar — thicker at higher ranks
                 VStack {
                     Rectangle()
-                        .fill(arenaColor.opacity(0.85))
-                        .frame(height: 2)
+                        .fill(arenaColor.opacity(rankTier >= .burning ? 1.0 : 0.85))
+                        .frame(height: rankTier >= .inferno ? 3 : 2)
                         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16))
                     Spacer()
                 }
@@ -67,12 +79,22 @@ struct ArenaCardView: View {
                         .padding(10)
                 }
 
-                // Session count (bottom-right, when no forge and streak ≤ 1)
-                if !editMode, sessCount > 0, streak <= 1, forge == nil {
-                    Text("●\(sessCount)")
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundStyle(arenaColor)
-                        .padding(10)
+                // Bottom-right: rank label or session count
+                if !editMode {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        if rankTier >= .sparked {
+                            Text(rankTier.label)
+                                .font(.system(size: 6, weight: .bold, design: .monospaced))
+                                .foregroundStyle(arenaColor.opacity(0.5))
+                                .kerning(2)
+                        }
+                        if sessCount > 0 {
+                            Text("●\(sessCount)")
+                                .font(.system(size: 8, design: .monospaced))
+                                .foregroundStyle(arenaColor.opacity(0.7))
+                        }
+                    }
+                    .padding(10)
                 }
 
                 // Edit pencil (top-right)
@@ -121,6 +143,21 @@ struct ArenaCardView: View {
             .frame(minHeight: 150)
         }
         .buttonStyle(.plain)
+        // Under-glow: vibrant arena-colored light underneath, driven by today's sessions
+        .background(
+            Group {
+                if todayIntensity > 0 {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(arenaColor)
+                        .blur(radius: 18 + todayIntensity * 8)
+                        .opacity(todayIntensity * 0.35 * (1.0 + Double(glowPhase) * 0.15))
+                        .scaleEffect(x: 0.85, y: 0.7)
+                        .offset(y: 8)
+                }
+            }
+        )
+        // Press shadow
+        .shadow(color: isPressed ? arenaColor.opacity(0.22) : .clear, radius: 12, y: 4)
         .scaleEffect(isPressed ? 1.02 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isPressed)
         .simultaneousGesture(
@@ -128,7 +165,203 @@ struct ArenaCardView: View {
                 .onChanged { _ in isPressed = true }
                 .onEnded   { _ in isPressed = false }
         )
+        .onAppear {
+            // Animate glow pulse for active cards
+            if todayIntensity > 0 || rankTier >= .blazing {
+                withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+                    glowPhase = 1
+                }
+            }
+            if rankTier >= .transcendent {
+                withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
+                    borderRotation = 360
+                }
+            }
+        }
     }
+
+    // MARK: - Rank Border Overlay
+
+    @ViewBuilder
+    private var rankBorderOverlay: some View {
+        let shape = RoundedRectangle(cornerRadius: 16)
+        let pressBoost: Double = isPressed ? 0.15 : 0
+        let baseOpacity = rankTier.borderOpacity + pressBoost
+        let width = rankTier.borderWidth
+
+        switch rankTier {
+        case .dormant:
+            // Minimal static border
+            shape.strokeBorder(arenaColor.opacity(0.18 + pressBoost), lineWidth: 1)
+
+        case .sparked:
+            // Solid brighter border
+            shape.strokeBorder(arenaColor.opacity(baseOpacity), lineWidth: width)
+
+        case .kindling:
+            // Brighter border + corner accent glow
+            ZStack {
+                shape.strokeBorder(arenaColor.opacity(baseOpacity), lineWidth: width)
+                // Subtle corner glow dots
+                cornerGlows(opacity: 0.25)
+            }
+
+        case .burning:
+            // Angular gradient border
+            ZStack {
+                shape.strokeBorder(
+                    AngularGradient(
+                        colors: [arenaColor.opacity(baseOpacity * 0.4),
+                                 arenaColor.opacity(baseOpacity),
+                                 arenaColor.opacity(baseOpacity * 0.4)],
+                        center: .center
+                    ),
+                    lineWidth: width
+                )
+                cornerGlows(opacity: 0.4)
+            }
+
+        case .blazing:
+            // Pulsing angular gradient + outer glow halo
+            ZStack {
+                // Outer glow halo
+                shape.strokeBorder(arenaColor.opacity(0.08 + glowPhase * 0.06), lineWidth: 6)
+                    .blur(radius: 3)
+                // Main gradient border
+                shape.strokeBorder(
+                    AngularGradient(
+                        colors: [arenaColor.opacity(baseOpacity * 0.3),
+                                 arenaColor.opacity(baseOpacity),
+                                 arenaColor.opacity(baseOpacity * 0.5),
+                                 arenaColor.opacity(baseOpacity),
+                                 arenaColor.opacity(baseOpacity * 0.3)],
+                        center: .center
+                    ),
+                    lineWidth: width
+                )
+                cornerGlows(opacity: 0.55)
+            }
+
+        case .inferno:
+            // Double border + strong glow
+            ZStack {
+                // Outer diffuse glow
+                shape.strokeBorder(arenaColor.opacity(0.12 + glowPhase * 0.08), lineWidth: 8)
+                    .blur(radius: 4)
+                // Outer border
+                shape.strokeBorder(arenaColor.opacity(baseOpacity * 0.4), lineWidth: 1)
+                    .padding(-2)
+                // Inner gradient border
+                shape.strokeBorder(
+                    AngularGradient(
+                        colors: [arenaColor.opacity(baseOpacity * 0.4),
+                                 arenaColor.opacity(baseOpacity),
+                                 Color.white.opacity(baseOpacity * 0.6),
+                                 arenaColor.opacity(baseOpacity),
+                                 arenaColor.opacity(baseOpacity * 0.4)],
+                        center: .center
+                    ),
+                    lineWidth: width
+                )
+                cornerGlows(opacity: 0.7)
+            }
+
+        case .transcendent:
+            // Rotating gradient border + layered glow
+            ZStack {
+                // Outermost glow
+                shape.strokeBorder(arenaColor.opacity(0.15 + glowPhase * 0.1), lineWidth: 10)
+                    .blur(radius: 5)
+                // Rotating gradient
+                shape.strokeBorder(
+                    AngularGradient(
+                        colors: [arenaColor.opacity(0.2),
+                                 arenaColor.opacity(baseOpacity),
+                                 Color.white.opacity(0.5),
+                                 arenaColor.opacity(baseOpacity),
+                                 arenaColor.opacity(0.2)],
+                        center: .center,
+                        angle: .degrees(borderRotation)
+                    ),
+                    lineWidth: width
+                )
+                // Inner accent
+                shape.strokeBorder(arenaColor.opacity(0.15), lineWidth: 0.5)
+                    .padding(3)
+                cornerGlows(opacity: 0.85)
+            }
+
+        case .eternalFlame:
+            // Full ornate — triple layer + rotating + intense glow
+            ZStack {
+                // Deep outer glow
+                shape.strokeBorder(arenaColor.opacity(0.2 + glowPhase * 0.12), lineWidth: 14)
+                    .blur(radius: 7)
+                // Outer thin border
+                shape.strokeBorder(arenaColor.opacity(0.3), lineWidth: 0.8)
+                    .padding(-3)
+                // Main rotating gradient
+                shape.strokeBorder(
+                    AngularGradient(
+                        colors: [arenaColor.opacity(0.3),
+                                 arenaColor,
+                                 Color.white.opacity(0.7),
+                                 arenaColor,
+                                 Color.white.opacity(0.4),
+                                 arenaColor,
+                                 arenaColor.opacity(0.3)],
+                        center: .center,
+                        angle: .degrees(borderRotation)
+                    ),
+                    lineWidth: width
+                )
+                // Inner accent ring
+                shape.strokeBorder(
+                    AngularGradient(
+                        colors: [arenaColor.opacity(0.1),
+                                 arenaColor.opacity(0.3),
+                                 arenaColor.opacity(0.1)],
+                        center: .center,
+                        angle: .degrees(-borderRotation * 0.5)
+                    ),
+                    lineWidth: 0.6
+                )
+                .padding(3)
+                cornerGlows(opacity: 1.0)
+            }
+        }
+    }
+
+    // MARK: - Corner Glows
+
+    private func cornerGlows(opacity: Double) -> some View {
+        GeometryReader { geo in
+            let r: CGFloat = 4
+            let inset: CGFloat = 14
+            ZStack {
+                // Top-left
+                Circle().fill(arenaColor).frame(width: r, height: r)
+                    .blur(radius: 3)
+                    .position(x: inset, y: inset)
+                // Top-right
+                Circle().fill(arenaColor).frame(width: r, height: r)
+                    .blur(radius: 3)
+                    .position(x: geo.size.width - inset, y: inset)
+                // Bottom-left
+                Circle().fill(arenaColor).frame(width: r, height: r)
+                    .blur(radius: 3)
+                    .position(x: inset, y: geo.size.height - inset)
+                // Bottom-right
+                Circle().fill(arenaColor).frame(width: r, height: r)
+                    .blur(radius: 3)
+                    .position(x: geo.size.width - inset, y: geo.size.height - inset)
+            }
+            .opacity(opacity)
+        }
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Card Background
 
     private var cardBackground: some ShapeStyle {
         switch arena.id {

@@ -206,7 +206,8 @@ struct ScheduleView: View {
            let arena = store.arenas.first(where: { $0.id == block.itemId }) {
             Button {
                 store.removeScheduledBlock(id: block.id)
-                navigate(.select(arena, false))
+                store.expandedArenaId = arena.id
+                navigate(.home)
             } label: {
                 Text("START")
                     .font(.system(size: 8, weight: .bold, design: .monospaced))

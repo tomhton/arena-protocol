@@ -5,6 +5,36 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.27.0 — 2026-03-24
+
+**Arena rank progression system + one-page HomeView overhaul.**
+
+### Features
+- **Arena Rank Tiers** — 8 rank tiers per arena based on peak consecutive-day streak: Dormant (0), Sparked (1–2d), Kindling (3–6d), Burning (7–13d), Blazing (14–20d), Inferno (21–33d), Transcendent (34–49d), Eternal Flame (50+d). Ranks are permanent high-water marks — once earned, they persist even after the streak breaks.
+- **`ArenaRankState`** — new persistent model (`arenaId`, `peakStreak`, `achievedRank`, `achievedAt`). Saved to `"arena_ranks"` in UserDefaults. Updated automatically in `addSession()`.
+- **Rank-based border progression** on arena cards:
+  - Dormant: thin, faint border (unchanged baseline)
+  - Sparked/Kindling: brighter solid borders + glowing corner accent dots
+  - Burning: angular gradient stroke border
+  - Blazing: pulsing angular gradient + outer glow halo
+  - Inferno: double border + strong diffuse glow + white accent highlights
+  - Transcendent: rotating animated gradient border + inner accent ring
+  - Eternal Flame: triple-layer ornate border with counter-rotating inner ring + intense glow
+- **Today's session under-glow** — vibrant arena-colored glow radiates from beneath each card, intensity scaling with number of sessions completed today (0 = none, 1 = subtle, 2 = moderate, 3 = strong, 4+ = full). Gently pulses when active.
+- **Rank label** shown bottom-right of arena cards (e.g. "BLAZING").
+- **Reset Rank** button in Arena Editor — shows current rank + peak streak, resets to Dormant. Ready for prestige/rebirth integration.
+- **App dock restored** below intervals (mindless periods) section on HomeView.
+
+### Changed
+- `DataStore.swift` — `ArenaRankTier` enum (8 cases with border width/opacity properties), `ArenaRankState` struct, `arenaRanks` persistence, `updateArenaRank()`, `resetArenaRank()`, `seedArenaRanksIfNeeded()`. `addSession()` now calls `updateArenaRank()`.
+- `ArenaCardView.swift` — new `rankTier` parameter, `rankBorderOverlay` computed property (8-way switch with layered effects), `cornerGlows()` helper, today-intensity under-glow with pulse animation, animated border rotation for transcendent+ tiers.
+- `HomeView.swift` — one-page overhaul: inline session display with swipe collapse/expand, expandable arena cards, completion overlay, removed TabView paging. Arena cards now pass `rankTier` from DataStore. App shortcuts dock placed below intervals.
+- `ArenaEditorView.swift` — "RESET RANK" button added above delete, shown when rank ≥ Sparked.
+- `ArenaProtocolApp.swift` — calls `seedArenaRanksIfNeeded()` on foreground to initialize ranks for existing users.
+- `StuckView.swift` — ArenaCardView call updated with `rankTier: .dormant`.
+
+---
+
 ## v2.26.0 — 2026-03-24
 
 **Schedule & deadline system for arenas and protocols.**

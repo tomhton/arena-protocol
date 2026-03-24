@@ -52,7 +52,7 @@ struct ArenaListEditorView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 9) {
                     ForEach(store.letteredArenas) { arena in
                         ArenaCardView(
-                            arena: arena, sessCount: 0, streak: 0, editMode: true,
+                            arena: arena, sessCount: 0, streak: 0, rankTier: .dormant, editMode: true,
                             onTap: { navigate(.editArena(arena)) },
                             sessions: store.sessions
                         )
@@ -457,6 +457,32 @@ struct ArenaEditorView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.bottom, 12)
+
+                // Reset rank (edit only, when arena has a rank)
+                if !isNew, let arenaId = arena?.id,
+                   store.rankState(for: arenaId).achievedRank >= .sparked {
+                    let rank = store.rankState(for: arenaId)
+                    Button {
+                        store.resetArenaRank(arenaId: arenaId)
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text("RESET RANK")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(Color(hex: "#E8C547").opacity(0.6))
+                                .kerning(4)
+                            Text("Current: \(rank.achievedRank.label) · Peak \(rank.peakStreak)d streak")
+                                .font(.system(size: 8, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.3))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .overlay(RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(Color(hex: "#E8C547").opacity(0.2), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 12)
+                }
 
                 // Delete button (edit only, not for social arena)
                 if !isNew && arena?.id != "social" {

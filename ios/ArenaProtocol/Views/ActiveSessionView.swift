@@ -597,7 +597,9 @@ struct ActiveSessionView: View {
                                      social: social))
         }
         store.endSession()
-        navigate(.complete(arena, duration, note, social))
+        // Session completed — pendingCompletion triggers CompletionOverlay on HomeView
+        store.pendingCompletion = CompletedSession(arena: arena, durationMins: duration, note: note, social: social)
+        navigate(.home)
     }
 
     private func abandonSession() {
@@ -698,7 +700,7 @@ struct CompleteView: View {
 
 // MARK: - Joint Arena Picker
 
-private struct JointArenaPicker: View {
+struct JointArenaPicker: View {
     let allArenas: [Arena]
     let onAdd: (Arena, Int, String) -> Void
 

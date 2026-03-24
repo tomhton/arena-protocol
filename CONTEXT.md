@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-24 (v2.26.0).
+> Paste this at the start of every Claude session. Last updated: 2026-03-24 (v2.27.0).
 
 ---
 
@@ -84,6 +84,7 @@
 | 2.21.0 | 2026-03-20 | Home UX rework: unified inline nav buttons, CURRENTLY IN tab with full timeline + clock end times, iOS-style jiggle edit mode for arena grid (no list switch). |
 | 2.22.0 | 2026-03-20 | Session intelligence backbone + Forge narrative framework. `SessionIntelligence.swift`: `SessionProfile` (25+ fields), `UserArchetype` (10 cases), `buildSessionProfile()`. `ForgeEngine.swift`: 17 narrative branches, 25 testable queries, `ForgeNarrative → EmberDrop` pipeline. `checkAndClaimEmberDrop()` now runs ForgeEngine first, falls back to legacy drops. `AI_BRAIN_MAP.md` developer reference added. |
 | 2.26.0 | 2026-03-24 | Schedule & deadline system. `ScheduledBlock` (future session/protocol + notification) and `ArenaDeadline` (session-count goal with due date + auto-completion) added to DataStore. `ScheduleView` new screen with creation sheets for both types. HomeView "UP NEXT" banner for imminent scheduled blocks. SCHEDULE button in HomeView bottom row. ⏰ button on protocol cards opens `ScheduleProtocolSheet`. |
+| 2.27.0 | 2026-03-24 | Arena rank progression system. 8 rank tiers (Dormant → Eternal Flame) based on peak consecutive-day streak per arena. Persistent `ArenaRankState` saved to UserDefaults. Arena cards: vibrant under-glow driven by today's session count, rank-based border progression (gradient borders, animated rotation, corner glows, multi-layer effects at higher tiers). Rank label on cards. Reset option in arena editor. App dock restored below intervals. One-page HomeView overhaul: inline session display, completion overlay, swipe collapse/expand. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -166,10 +167,16 @@ arena-protocol/
 │   │   │   ├── ScheduleView.swift         ← Schedule blocks + deadlines management
 │   │   │   └── ArenaEditorView.swift      ← Arena CRUD (list + individual editor)
 │   │   ├── Components/
-│   │   │   ├── ArenaCardView.swift        ← Card UI + Canvas illustrations + AddArenaCardView
+│   │   │   ├── ArenaCardView.swift        ← Card UI + rank borders + under-glow + Canvas illustrations + AddArenaCardView
 │   │   │   ├── CircularTimerView.swift    ← Reusable circular progress timer
 │   │   │   ├── AppShortcutsBar.swift      ← Scrollable dock (CURATED_DOCK_APPS 20 apps, edit mode, picker sheet, DockApp struct)
-│   │   │   └── EmberDropModal.swift       ← Achievement popup overlay
+│   │   │   ├── EmberDropModal.swift       ← Achievement popup overlay
+│   │   │   ├── CalendarDayView.swift      ← Calendar day strip on HomeView
+│   │   │   ├── CompletionOverlay.swift    ← Session completion overlay
+│   │   │   ├── FlowLayout.swift           ← Flow layout helper
+│   │   │   ├── InlineSessionConfig.swift  ← Expanded arena card session config
+│   │   │   ├── SessionDisplayView.swift   ← Inline session display for HomeView
+│   │   │   └── ForgeDropModal.swift       ← Forge narrative drop modal
 │   │   └── Resources/
 │   │       └── Info.plist                 ← Bundle config, URL schemes, dark mode
 │   ├── ArenaProtocolWidget/               ← Widget + Live Activity extension target
@@ -262,7 +269,7 @@ The app also handles the `arenaprotocol://active` deep link via `.onOpenURL` in 
 
 | Screen | File | What it does |
 |---|---|---|
-| **Home** | `HomeView.swift` | 2-column arena grid, session banner (replaces idle header when any session is active/stacked), edit toggle, social toggle, app shortcuts dock (horizontal scroll, long-press edit mode, persistent via `store.dockApps`), Intervals row, Protocols + I AM STUCK buttons, morning/wind-down footer nav. Session banner: "CURRENTLY IN" label, big current-arena row (timeline-driven — always the live slot), single "UP NEXT" row with live countdown, optional "+N MORE QUEUED", STACKED sub-rows, PAUSE/RESUME. All banner colors track `currentSlot` via 1 s `sessionNow` clock. |
+| **Home** | `HomeView.swift` | Single-page hub: inline session display (swipe up to collapse, down to expand), expandable arena cards with rank-based borders and today's-session under-glow, calendar day view, protocols section, 2-column arena grid with edit toggle, social toggle, intervals row, app shortcuts dock, egg strip, quick tools, completion overlay. Arena cards show rank tier label + glowing corner accents + animated gradient borders at higher ranks. |
 | **Morning Check-in** | `MorningCheckinView.swift` | 3-step ritual (Reading 5m, Goals 5m, Movement 5m), animated progress bar, skip option. Shows once per day. |
 | **Select** | `SelectView.swift` | Arena detail + quest note textarea, sub-arena pills → example task list, duration picker (5/10/30/60/90/custom), Google Calendar option, launches session |
 | **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. Manages Live Activity lifecycle (start on session begin, update on pause/resume, end on done/abandon). Tapping the Dynamic Island or lock screen banner deep-links to this screen via `arenaprotocol://active`. |
@@ -416,6 +423,31 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
 **IMPORTANT:** `arenaLabel`, `arenaColor`, `arenaIcon` are in `ContentState` (not static attributes) so `Activity.update()` can change the displayed arena when a joint takes over. All widget/lock-screen rendering reads `context.state.arenaLabel/Color/Icon`.
 Defined in `ArenaProtocol/ArenaLiveActivityAttributes.swift` — compiled into **both** the main app target and the widget extension target.
 
+### ArenaRankState (per-arena rank progression)
+```swift
+enum ArenaRankTier: Int, Codable, CaseIterable, Comparable {
+    case dormant = 0       // 0 streak
+    case sparked = 1       // 1–2 days
+    case kindling = 2      // 3–6 days
+    case burning = 3       // 7–13 days
+    case blazing = 4       // 14–20 days
+    case inferno = 5       // 21–33 days
+    case transcendent = 6  // 34–49 days
+    case eternalFlame = 7  // 50+ days
+}
+
+struct ArenaRankState: Codable, Identifiable {
+    var id: String { arenaId }
+    var arenaId: String
+    var peakStreak: Int              // highest streak ever achieved
+    var achievedRank: ArenaRankTier  // locked-in rank from peak streak (high-water mark)
+    var achievedAt: Double           // epoch ms when current rank was reached
+}
+```
+Ranks are permanent — once earned via peak streak, they persist even after the streak breaks. `resetArenaRank(arenaId:)` resets to dormant (prestige integration point). Persisted to `"arena_ranks"`.
+
+Visual effects per rank: border width/opacity scales up, corner glow accents from kindling+, angular gradient borders from burning+, animated rotation from transcendent+, triple-layer ornate borders at eternalFlame. Today's session count drives a separate under-glow intensity (0 sessions = none, 4+ = full vibrant glow with pulse).
+
 ### DockApp
 ```swift
 struct DockApp: Identifiable, Codable {
@@ -468,6 +500,7 @@ struct HabitLog: Codable {
     var protocols:     [ArenaProtocolModel]
     var seenDrops:     [String]           // ember drop ids already shown
     var checkin:       MorningCheckin     // { date, completed: [habitId] }
+    var arenaRanks:    [ArenaRankState]     // persisted to arena_ranks; peak-streak rank progression
     var activeSession: ActiveSessionState? = nil    // transient — nil when no session running
     var stackedSessions: [ActiveSessionState] = [] // minimized sessions
     var liveArenaId: String = ""  // last arena id pushed to Live Activity; guards syncLiveActivity
@@ -507,6 +540,7 @@ struct HabitLog: Codable {
 | `arena_protocols` | `[ArenaProtocolModel]` |
 | `arena_seen_drops` | `[String]` |
 | `arena_checkin` | `MorningCheckin` |
+| `arena_ranks` | `[ArenaRankState]` |
 | `arena_checkin_dismissed` | `String` — date string, skip checkin if == today |
 | `timerEndTime` | `Double` — timer end epoch for background resume |
 

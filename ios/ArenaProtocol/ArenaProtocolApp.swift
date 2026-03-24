@@ -32,6 +32,8 @@ struct ArenaProtocolApp: App {
                     #endif
                     // Smart notifications — check on every foreground
                     store.checkStreakProtectionNotification()
+                    // Seed arena ranks from existing streak data on first launch
+                    store.seedArenaRanksIfNeeded()
                 }
         }
     }

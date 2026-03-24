@@ -8,13 +8,9 @@ import SwiftUI
 enum Screen: Hashable {
     case home       // not a destination — navigate(.home) always pops to root
     case checkin
-    case select(Arena, Bool)    // arena, social modifier
-    case active(Arena, Int, String, Bool)    // arena, durationMins, note, social
-    case complete(Arena, Int, String, Bool)  // arena, durationMins, note, social
     case protocols
     case activeProtocol(ArenaProtocolModel)
     case history
-    case notes
     case winddown
     case habits
     case settings
@@ -64,9 +60,10 @@ struct RootView: View {
         .onOpenURL { url in
             guard url.scheme == "arenaprotocol",
                   url.host == "active",
-                  let session = store.activeSession else { return }
+                  store.activeSession != nil else { return }
+            // Pop to home and ensure session display is expanded
             path = NavigationPath()
-            path.append(Screen.active(session.arena, session.durationMins, session.note, session.social))
+            store.sessionDisplayCollapsed = false
         }
     }
 
@@ -88,24 +85,6 @@ struct RootView: View {
                     navigate(.home)
                 }
             )
-        case .select(let arena, let social):
-            SelectView(arena: arena, social: social, navigate: navigate)
-        case .active(let arena, let duration, let note, let social):
-            ActiveSessionView(arena: arena, duration: duration, note: note, social: social, navigate: navigate)
-                .navigationBarBackButtonHidden(true)
-        case .complete(let arena, let duration, let note, let social):
-            CompleteView(arena: arena, duration: duration, note: note) {
-                let s = Session(arenaId: arena.id, duration: duration,
-                                date: todayString(), note: note,
-                                ts: Date().timeIntervalSince1970 * 1000,
-                                social: social)
-                store.addSession(s)
-                let result = store.checkAndClaimForgeResult()
-                pendingDrop = result.narrative
-                if result.hasContent { pendingForgeResult = result }
-                navigate(.home)
-            }
-            .navigationBarBackButtonHidden(true)
         case .protocols:
             ProtocolsView(navigate: navigate)
         case .activeProtocol(let proto):
@@ -124,8 +103,6 @@ struct RootView: View {
             .navigationBarBackButtonHidden(true)
         case .history:
             HistoryView(navigate: navigate)
-        case .notes:
-            NotesView(navigate: navigate)
         case .winddown:
             WindDownView(navigate: navigate)
         case .habits:
