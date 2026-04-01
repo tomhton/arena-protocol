@@ -5,6 +5,37 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.28.0 — 2026-04-01
+
+**Arena button skins + calendar auto-start + HomeView redesign.**
+
+### Features
+- **Arena button skins** — 10 collectible material skins (Slate, Leather, Obsidian, Bronze, Marble, Ironwood, Volcanic, Frosted Glass, Celestial, Void) equippable per arena from inventory. Pure SwiftUI material renderer: Canvas-drawn textures with bevel edges, directional light, and engraved text effect. Dropped from eggs at 40% chance per hatch (rarity-matched, no duplicates). New SKINS tab in inventory with per-arena equip picker.
+- **Calendar auto-start system** — bracket-prefixed Google Calendar events (e.g. `[WORK] Deep focus`) trigger session prompts via local notifications and foreground polling. `CalendarSyncManager` handles detection, scheduling, and deduplication. Auto-start toggle in Settings.
+- **Smart CalendarDayView** — rewritten with visibility tiers: past events minimal (last 2 only), current event highlighted with "NOW" badge, first 4 upcoming prominent, rest condensed. 3 layout styles (timeline, compact, agenda) with layout switcher. Tappable arena-matched events launch sessions directly. "OPEN ↗" button redirects to Google Calendar or Apple Calendar.
+- **HomeView layout redesign** — calendar at top, quick actions (morning/winddown/stuck) above arenas, protocols below arenas. "ENTER THE ARENA" header redesigned: "ENTER THE" small muted + "ARENA" 48pt black-gold gradient with glow.
+
+### Added
+- `SkinMaterialView.swift` — pure SwiftUI material renderer (10 textures + bevel + light + engrave modifier)
+- `CalendarSyncManager.swift` — bracket event detection, notification scheduling, deduplication
+- `ButtonSkin` struct, `SKIN_CATALOG` (10 skins), `.skin` case in `InventoryItemType`
+- `PlayerProfile.equippedSkins` — per-arena skin assignment (`[arenaId: skinName]`)
+- `equipSkin(_:to:)`, `unequipSkin(from:)`, `equippedSkin(for:)` in DataStore
+- `CalendarViewStyle` enum (timeline/compact/agenda) in AppSettings
+- `todayEvents()`, `matchBracketArena()`, `stripBracketPrefix()`, `event(withIdentifier:)` in CalendarManager
+- Notification category `CALENDAR_SESSION` with START_SESSION and DISMISS actions
+
+### Changed
+- `ArenaCardView.swift` — reads equipped skin, replaces `cardBackground` with `SkinMaterialView` when skinned, applies `.engraved()` modifier to label and icon
+- `InventoryView.swift` — new SKINS filter tab, skin cards with per-arena equip grid
+- `HomeView.swift` — layout reorder, header redesign, `CalendarDayView(onTapArenaEvent:)` callback wired, calendar auto-start polling
+- `DataStore.swift` — skin models, egg hatch 40% skin drop, equip/unequip logic, calendar settings
+- `ArenaProtocolApp.swift` — notification delegate, category registration, scenePhase handlers
+- `SettingsView.swift` — calendar auto-start toggle
+- `InlineSessionConfig.swift` — bracket matching uses shared `CalendarManager.matchBracketArena()`
+
+---
+
 ## v2.27.1 — 2026-04-01
 
 **Bug fixes: DONE crash, session start flash, social arena, Live Activity background transitions.**

@@ -191,8 +191,48 @@ enum EggRarity: String, Codable, CaseIterable, Sendable {
 }
 
 enum InventoryItemType: String, Codable, Sendable {
-    case title, glyph, badge, aura, fragment, echo
+    case title, glyph, badge, aura, fragment, echo, skin
 }
+
+// MARK: - Button Skins
+
+struct ButtonSkin: Identifiable, Codable {
+    let id: String
+    let name: String
+    let material: String       // rendering key for Phase 2
+    let rarity: EggRarity
+    let description: String
+    let glyph: String
+}
+
+/// Master catalog of all skins. Keyed by id.
+let SKIN_CATALOG: [ButtonSkin] = [
+    // Common
+    ButtonSkin(id: "slate",         name: "SLATE",          material: "slate",
+               rarity: .common,     description: "Cold-pressed stone. Quiet and unyielding.",          glyph: "▬"),
+    ButtonSkin(id: "leather",       name: "LEATHER",        material: "leather",
+               rarity: .common,     description: "Worn hide, cracked with use. It remembers.",         glyph: "≋"),
+    // Uncommon
+    ButtonSkin(id: "obsidian",      name: "OBSIDIAN",       material: "obsidian",
+               rarity: .uncommon,   description: "Volcanic glass — sharp edges, deep black mirror.",   glyph: "◆"),
+    ButtonSkin(id: "bronze",        name: "BRONZE",         material: "bronze",
+               rarity: .uncommon,   description: "Hammered alloy. Warm to the touch.",                 glyph: "⬡"),
+    // Rare
+    ButtonSkin(id: "marble",        name: "MARBLE",         material: "marble",
+               rarity: .rare,       description: "Veined stone from a forgotten quarry.",              glyph: "◇"),
+    ButtonSkin(id: "ironwood",      name: "IRONWOOD",       material: "ironwood",
+               rarity: .rare,       description: "Petrified grain. Harder than the axe that felled it.", glyph: "⊞"),
+    // Epic
+    ButtonSkin(id: "volcanic",      name: "VOLCANIC",       material: "volcanic",
+               rarity: .epic,       description: "Still hot. Cracks glow like cooling magma.",         glyph: "⬢"),
+    ButtonSkin(id: "frosted_glass", name: "FROSTED GLASS",  material: "frosted_glass",
+               rarity: .epic,       description: "Translucent ice. Light bends through it.",           glyph: "◈"),
+    // Legendary
+    ButtonSkin(id: "celestial",     name: "CELESTIAL",      material: "celestial",
+               rarity: .legendary,  description: "Night sky compressed into a surface. Stars drift.",  glyph: "✦"),
+    ButtonSkin(id: "void",          name: "VOID",           material: "void",
+               rarity: .legendary,  description: "Nothing. And somehow, it pulls you in.",             glyph: "◉"),
+]
 
 struct InventoryEgg: Identifiable, Codable {
     var id: String
@@ -305,6 +345,7 @@ struct ArenaRankState: Codable, Identifiable {
 struct PlayerProfile: Codable {
     var equippedTitle: String?              // displayed title string
     var equippedGlyphs: [String: String]    // arenaId → glyph character
+    var equippedSkins: [String: String] = [:]  // arenaId → skinId
     var isPublic: Bool
     var joinedAt: Double                    // epoch ms
 }
@@ -1373,6 +1414,17 @@ final class DataStore {
     private func _generateHatchReward(rarity: EggRarity) -> InventoryItem {
         let id = UUID().uuidString
         let ts = Date().timeIntervalSince1970 * 1000
+
+        // 40% chance to drop a skin (if one exists for this rarity and isn't already owned)
+        let ownedSkinIds = Set(inventory.filter { $0.type == .skin }.map { $0.name })
+        let availableSkins = SKIN_CATALOG.filter { $0.rarity == rarity && !ownedSkinIds.contains($0.name) }
+        if !availableSkins.isEmpty && Int.random(in: 0..<5) < 2,
+           let skin = availableSkins.randomElement() {
+            return InventoryItem(id: id, type: .skin, rarity: rarity,
+                name: skin.name, description: skin.description,
+                glyph: skin.glyph, isEquipped: false, unlockedAt: ts, arenaId: nil)
+        }
+
         switch rarity {
         case .common:
             return InventoryItem(id: id, type: .fragment, rarity: .common,
@@ -1435,6 +1487,39 @@ final class DataStore {
 
     func equippedGlyph(for arenaId: String) -> String? {
         playerProfile.equippedGlyphs[arenaId]
+    }
+
+    // MARK: - Skin equip
+
+    func equipSkin(_ skinName: String, to arenaId: String) {
+        // Unequip this skin from any other arena
+        for (aid, name) in playerProfile.equippedSkins where name == skinName && aid != arenaId {
+            playerProfile.equippedSkins.removeValue(forKey: aid)
+        }
+        playerProfile.equippedSkins[arenaId] = skinName
+        // Mark item as equipped
+        if let idx = inventory.firstIndex(where: { $0.type == .skin && $0.name == skinName }) {
+            inventory[idx].isEquipped = true
+        }
+        savePlayerProfile()
+        saveInventory()
+    }
+
+    func unequipSkin(from arenaId: String) {
+        if let skinName = playerProfile.equippedSkins[arenaId],
+           let idx = inventory.firstIndex(where: { $0.type == .skin && $0.name == skinName }) {
+            // Only mark unequipped if not assigned to another arena
+            let stillUsed = playerProfile.equippedSkins.contains { $0.key != arenaId && $0.value == skinName }
+            if !stillUsed { inventory[idx].isEquipped = false }
+        }
+        playerProfile.equippedSkins.removeValue(forKey: arenaId)
+        savePlayerProfile()
+        saveInventory()
+    }
+
+    func equippedSkin(for arenaId: String) -> ButtonSkin? {
+        guard let name = playerProfile.equippedSkins[arenaId] else { return nil }
+        return SKIN_CATALOG.first { $0.name == name }
     }
 
     func rebirthState(for arenaId: String) -> RebirthState? {

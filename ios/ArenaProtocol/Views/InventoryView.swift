@@ -7,6 +7,7 @@ import SwiftUI
 
 private enum InventoryFilter: String, CaseIterable {
     case all      = "ALL"
+    case skins    = "SKINS"
     case titles   = "TITLES"
     case glyphs   = "GLYPHS"
     case auras    = "AURAS"
@@ -15,6 +16,7 @@ private enum InventoryFilter: String, CaseIterable {
     func matches(_ item: InventoryItem) -> Bool {
         switch self {
         case .all:    return true
+        case .skins:  return item.type == .skin
         case .titles: return item.type == .title || item.type == .fragment
         case .glyphs: return item.type == .glyph || item.type == .badge
         case .auras:  return item.type == .aura
@@ -265,7 +267,9 @@ struct InventoryView: View {
                     .kerning(2)
             }
 
-            if item.type == .title || item.type == .aura {
+            if item.type == .skin {
+                skinEquipSection(item: item, color: color)
+            } else if item.type == .title || item.type == .aura {
                 Button {
                     if equipped { store.unequipItem(item) } else { store.equipItem(item) }
                 } label: {
@@ -288,6 +292,50 @@ struct InventoryView: View {
         .overlay(RoundedRectangle(cornerRadius: 14)
             .strokeBorder(equipped ? color.opacity(0.7) : color.opacity(0.18), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Per-arena equip picker for skin items
+    private func skinEquipSection(item: InventoryItem, color: Color) -> some View {
+        let allArenas = store.letteredArenas + [store.socialArena]
+        let assignedTo = store.playerProfile.equippedSkins.filter { $0.value == item.name }.map(\.key)
+
+        return VStack(spacing: 6) {
+            if assignedTo.isEmpty {
+                Text("TAP ARENA TO EQUIP")
+                    .font(.system(size: 7, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.2))
+                    .kerning(2)
+            } else {
+                Text("EQUIPPED")
+                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .foregroundStyle(color.opacity(0.7))
+                    .kerning(2)
+            }
+
+            // Arena icon row
+            HStack(spacing: 4) {
+                ForEach(allArenas, id: \.id) { arena in
+                    let isAssigned = assignedTo.contains(arena.id)
+                    let arenaColor = Color(hex: arena.color)
+                    Button {
+                        if isAssigned {
+                            store.unequipSkin(from: arena.id)
+                        } else {
+                            store.equipSkin(item.name, to: arena.id)
+                        }
+                    } label: {
+                        Text(arena.icon)
+                            .font(.system(size: 12))
+                            .frame(width: 26, height: 26)
+                            .background(isAssigned ? arenaColor.opacity(0.25) : Color.white.opacity(0.04))
+                            .overlay(RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(isAssigned ? arenaColor.opacity(0.6) : Color.white.opacity(0.06), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     // MARK: - What Is Possible

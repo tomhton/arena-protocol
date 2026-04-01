@@ -7,6 +7,7 @@ import UIKit
 #endif
 
 struct ArenaCardView: View {
+    @Environment(DataStore.self) private var store
     let arena: Arena
     let sessCount: Int          // sessions today for this arena
     let streak: Int             // consecutive day streak
@@ -21,6 +22,7 @@ struct ArenaCardView: View {
 
     private var forge: ForgeMark? { getForgeMarkForArena(arenaId: arena.id, sessions: sessions) }
     private var arenaColor: Color { Color(hex: arena.color) }
+    private var equippedSkin: ButtonSkin? { store.equippedSkin(for: arena.id) }
 
     // Today's session intensity (0.0–1.0) drives under-glow strength
     private var todayIntensity: Double {
@@ -36,18 +38,24 @@ struct ArenaCardView: View {
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .bottomTrailing) {
-                // Background fill
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(cardBackground)
-                    .overlay(
-                        Group {
-                            if let bgName = arena.backgroundImageName {
-                                ArenaBackgroundImage(name: bgName)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                                    .allowsHitTesting(false)
+                // Background fill — skin material or default
+                if let skin = equippedSkin {
+                    SkinMaterialView(skin: skin, arenaColor: arenaColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .allowsHitTesting(false)
+                } else {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(cardBackground)
+                        .overlay(
+                            Group {
+                                if let bgName = arena.backgroundImageName {
+                                    ArenaBackgroundImage(name: bgName)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                                        .allowsHitTesting(false)
+                                }
                             }
-                        }
-                    )
+                        )
+                }
 
                 // Rank border overlay
                 rankBorderOverlay
@@ -109,19 +117,32 @@ struct ArenaCardView: View {
                 // Content
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 6) {
-                        Text(arena.icon)
-                            .font(.system(size: 18))
-                            .foregroundStyle(arenaColor)
+                        if equippedSkin != nil {
+                            Text(arena.icon)
+                                .font(.system(size: 18))
+                                .engraved(color: arenaColor, depth: 1.5)
+                        } else {
+                            Text(arena.icon)
+                                .font(.system(size: 18))
+                                .foregroundStyle(arenaColor)
+                        }
                         Text(arena.letter)
                             .font(.system(size: 8, design: .monospaced))
                             .foregroundStyle(Color.white.opacity(0.18))
                             .kerning(3)
                     }
 
-                    Text(arena.label)
-                        .font(.system(size: 15, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(hex: "#ECECEC"))
-                        .kerning(3)
+                    if equippedSkin != nil {
+                        Text(arena.label)
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .kerning(3)
+                            .engraved(color: Color(hex: "#ECECEC"), depth: 1.2)
+                    } else {
+                        Text(arena.label)
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(hex: "#ECECEC"))
+                            .kerning(3)
+                    }
 
                     if !arena.subtitle.isEmpty {
                         Text(arena.subtitle)

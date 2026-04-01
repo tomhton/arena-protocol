@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-04-01 (v2.27.1).
+> Paste this at the start of every Claude session. Last updated: 2026-04-01 (v2.28.0).
 
 ---
 
@@ -86,6 +86,7 @@
 | 2.26.0 | 2026-03-24 | Schedule & deadline system. `ScheduledBlock` (future session/protocol + notification) and `ArenaDeadline` (session-count goal with due date + auto-completion) added to DataStore. `ScheduleView` new screen with creation sheets for both types. HomeView "UP NEXT" banner for imminent scheduled blocks. SCHEDULE button in HomeView bottom row. ⏰ button on protocol cards opens `ScheduleProtocolSheet`. |
 | 2.27.0 | 2026-03-24 | Arena rank progression system. 8 rank tiers (Dormant → Eternal Flame) based on peak consecutive-day streak per arena. Persistent `ArenaRankState` saved to UserDefaults. Arena cards: vibrant under-glow driven by today's session count, rank-based border progression (gradient borders, animated rotation, corner glows, multi-layer effects at higher tiers). Rank label on cards. Reset option in arena editor. App dock restored below intervals. One-page HomeView overhaul: inline session display, completion overlay, swipe collapse/expand. |
 | 2.27.1 | 2026-04-01 | Bug fixes: DONE button crash (force-unwrap on nil `active!` during view removal transition), session start flash (stale `sessionNow` caused 1s uncolored background), social-only arena not opening (lookup missed `socialArena` stored outside main array). Live Activity background transitions: `scheduleLiveActivityTransitions()` uses `performExpiringActivity` to push arena changes while locked; foreground sync on `scenePhase` change; `staleDate` set to current arena end. |
+| 2.28.0 | 2026-04-01 | Arena button skins: 10 material skins (Slate→Void, common→legendary) droppable from eggs (40% chance), equippable per arena from inventory. Pure SwiftUI material renderer (Canvas textures + bevel + engrave). Calendar auto-start: bracket-prefixed events trigger session prompts via notifications. Smart CalendarDayView: visibility tiers, 3 layouts, tappable events. HomeView redesign: calendar at top, gold gradient header. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -150,8 +151,9 @@ arena-protocol/
 │   ├── ArenaProtocol/
 │   │   ├── ArenaProtocolApp.swift          ← @main entry point, WindowGroup
 │   │   ├── Models/
-│   │   │   └── DataStore.swift            ← ⭐ MOST IMPORTANT — all models, defaults,
-│   │   │                                     persistence, gamification helpers
+│   │   │   ├── DataStore.swift            ← ⭐ MOST IMPORTANT — all models, defaults,
+│   │   │   │                                  persistence, gamification helpers
+│   │   │   └── CalendarSyncManager.swift ← Bracket-prefixed calendar event detection + notification scheduling
 │   │   ├── Views/
 │   │   │   ├── RootView.swift             ← ⭐ Screen router + GrainOverlay + Color extensions + onOpenURL deeplink handler
 │   │   │   ├── HomeView.swift             ← Dashboard: arena grid, shortcuts, ember particles, timer pill
@@ -168,7 +170,8 @@ arena-protocol/
 │   │   │   ├── ScheduleView.swift         ← Schedule blocks + deadlines management
 │   │   │   └── ArenaEditorView.swift      ← Arena CRUD (list + individual editor)
 │   │   ├── Components/
-│   │   │   ├── ArenaCardView.swift        ← Card UI + rank borders + under-glow + Canvas illustrations + AddArenaCardView
+│   │   │   ├── ArenaCardView.swift        ← Card UI + rank borders + under-glow + skin material + Canvas illustrations + AddArenaCardView
+│   │   │   ├── SkinMaterialView.swift    ← Pure SwiftUI material renderer (10 textures + bevel + engrave modifier)
 │   │   │   ├── CircularTimerView.swift    ← Reusable circular progress timer
 │   │   │   ├── AppShortcutsBar.swift      ← Scrollable dock (CURATED_DOCK_APPS 20 apps, edit mode, picker sheet, DockApp struct)
 │   │   │   ├── EmberDropModal.swift       ← Achievement popup overlay
@@ -447,6 +450,23 @@ struct ArenaRankState: Codable, Identifiable {
 ```
 Ranks are permanent — once earned via peak streak, they persist even after the streak breaks. `resetArenaRank(arenaId:)` resets to dormant (prestige integration point). Persisted to `"arena_ranks"`.
 
+### ButtonSkin (arena card material skins)
+```swift
+struct ButtonSkin: Identifiable, Codable {
+    let id: String          // "slate", "obsidian", etc.
+    let name: String        // "SLATE"
+    let material: String    // rendering key for SkinMaterialView
+    let rarity: EggRarity
+    let description: String
+    let glyph: String       // "▬", "◆", etc.
+}
+```
+`SKIN_CATALOG` (10 skins in `DataStore.swift`): Slate & Leather (common), Obsidian & Bronze (uncommon), Marble & Ironwood (rare), Volcanic & Frosted Glass (epic), Celestial & Void (legendary).
+
+Skins are `InventoryItem` with `type: .skin`. `PlayerProfile.equippedSkins: [String: String]` maps arenaId → skinName. One skin can be equipped to one arena at a time. `equipSkin(_:to:)` / `unequipSkin(from:)` / `equippedSkin(for:)` in DataStore.
+
+Egg hatching has 40% chance to drop a skin (if available for that rarity and not already owned). Rendering: `SkinMaterialView` replaces `ArenaCardView.cardBackground` when a skin is equipped; text gets `.engraved()` modifier.
+
 Visual effects per rank: border width/opacity scales up, corner glow accents from kindling+, angular gradient borders from burning+, animated rotation from transcendent+, triple-layer ornate borders at eternalFlame. Today's session count drives a separate under-glow intensity (0 sessions = none, 4+ = full vibrant glow with pulse).
 
 ### DockApp
@@ -543,6 +563,7 @@ struct HabitLog: Codable {
 | `arena_checkin` | `MorningCheckin` |
 | `arena_ranks` | `[ArenaRankState]` |
 | `arena_checkin_dismissed` | `String` — date string, skip checkin if == today |
+| `arena_cal_processed` | `[String: Double]` — processed calendar event IDs for dedup |
 | `timerEndTime` | `Double` — timer end epoch for background resume |
 
 ---
@@ -591,14 +612,12 @@ Marks: `▪ ▸ ◆ ★ ⬟ ✦ ❋ ⟡` → Names: First Blood → Eternal
 ## Up Next (Feature Queue)
 
 1. **App redirects** — URL scheme deep links for every screen (`arenaprotocol://select?arena=body`, `arenaprotocol://history`, etc.). Expose as Shortcuts actions.
-2. **Google Calendar feed** — Read user's calendar blocks via EventKit / Google Calendar API; surface current/next block as suggested arena + duration in SelectView. North star feature.
-3. **Forge System — DataStore models** — Add `InventoryEgg`, `InventoryItem`, `RebirthState`, `PlayerProfile` to DataStore. Full spec in `FORGE_SYSTEM_ROADMAP.md`.
-4. **Forge System — Drop engine** — Expand `checkAndClaimEmberDrop` into a `ForgeEngine` evaluating streak tiers, milestones, stacked-arena bonuses.
-5. **Forge System — InventoryView** — Incubating eggs, hatched items, "WHAT IS POSSIBLE" locked preview.
-6. **Xcode Cloud → TestFlight pipeline** — Auto-sign, auto-deploy on push to main.
-7. **iCloud sync** — Migrate from `UserDefaults` to CloudKit.
+2. **Xcode Cloud → TestFlight pipeline** — Auto-sign, auto-deploy on push to main.
+3. **iCloud sync** — Migrate from `UserDefaults` to CloudKit.
 
 ✅ **Completed:** Live Activity / Dynamic Island (v2.0.3–2.0.5) — compact circle clock, lock screen banner, expanded layout, tap deeplink, pause/resume, stash & stack sessions, WidgetKit home screen widgets, keyboard fix.
+✅ **Completed:** Google Calendar integration (v2.28.0) — bracket-prefixed auto-start, smart CalendarDayView, tappable events.
+✅ **Completed:** Forge System (v2.22.0–v2.28.0) — SessionIntelligence, ForgeEngine (17 narratives), InventoryView, egg incubation, arena button skins (10 materials, equippable per arena).
 
 ---
 
