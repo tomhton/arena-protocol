@@ -100,7 +100,8 @@ struct HomeView: View {
 
             // Expanded arena card overlay
             if let expandedId = store.expandedArenaId,
-               let arena = arenas.first(where: { $0.id == expandedId }) {
+               let arena = arenas.first(where: { $0.id == expandedId })
+                            ?? (expandedId == store.socialArena.id ? store.socialArena : nil) {
                 expandedArenaOverlay(arena: arena)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     .zIndex(100)
@@ -575,6 +576,7 @@ struct HomeView: View {
         store.endIdleActivity()
         #endif
         store.startSession(arena: arena, durationMins: duration, note: note, social: social)
+        sessionNow = Date()  // Sync immediately so background color resolves without waiting for next tick
 
         // Write to shared store for widget
         let endTime = Date().addingTimeInterval(TimeInterval(duration * 60))

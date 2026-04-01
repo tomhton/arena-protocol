@@ -17,23 +17,38 @@ struct ArenaProtocolApp: App {
                 .environment(store)
                 .preferredColorScheme(.dark)
                 .onChange(of: scenePhase) { _, newPhase in
-                    guard newPhase == .active else { return }
-                    #if canImport(ActivityKit)
-                    // Clean up orphaned session activities from crashes / force-quits.
-                    // Idle activities are intentional — leave them alone.
-                    if store.activeSession == nil && store.stackedSessions.isEmpty {
-                        Task {
-                            for a in Activity<ArenaLiveActivityAttributes>.activities {
-                                guard a.attributes.arenaId != "idle" else { continue }
-                                await a.end(nil, dismissalPolicy: .immediate)
+                    switch newPhase {
+                    case .active:
+                        #if canImport(ActivityKit)
+                        if store.activeSession == nil && store.stackedSessions.isEmpty {
+                            // Clean up orphaned session activities from crashes / force-quits.
+                            Task {
+                                for a in Activity<ArenaLiveActivityAttributes>.activities {
+                                    guard a.attributes.arenaId != "idle" else { continue }
+                                    await a.end(nil, dismissalPolicy: .immediate)
+                                }
                             }
+                        } else {
+                            // Immediately sync Live Activity on foreground return —
+                            // picks up any joint transitions that happened while backgrounded.
+                            store.syncLiveActivity()
                         }
+                        #endif
+                        store.checkStreakProtectionNotification()
+                        store.seedArenaRanksIfNeeded()
+
+                    case .background:
+                        #if canImport(ActivityKit)
+                        // Schedule Live Activity updates for upcoming joint transitions
+                        // while the app still has background execution time.
+                        if store.activeSession != nil || !store.stackedSessions.isEmpty {
+                            store.scheduleLiveActivityTransitions()
+                        }
+                        #endif
+
+                    default:
+                        break
                     }
-                    #endif
-                    // Smart notifications — check on every foreground
-                    store.checkStreakProtectionNotification()
-                    // Seed arena ranks from existing streak data on first launch
-                    store.seedArenaRanksIfNeeded()
                 }
         }
     }

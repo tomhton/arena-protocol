@@ -882,11 +882,11 @@ final class DataStore {
     /// Detects arena transitions and pushes an updated ContentState to the Live Activity
     /// so the lock screen / Dynamic Island switches arenas even when ActiveSessionView
     /// is not in the view hierarchy (e.g. user is on HomeView or phone is locked).
-    func syncLiveActivity(now: Date = Date()) {
+    func syncLiveActivity(now: Date = Date(), force: Bool = false) {
         let session = activeSession ?? stackedSessions.first
         guard let session else { return }
         guard let cur = session.currentSlot(now: now) else { return }
-        guard cur.arena.id != liveArenaId else { return }
+        guard force || cur.arena.id != liveArenaId else { return }
         liveArenaId = cur.arena.id
         let next = session.nextSlot(now: now)
         let normColor: String = {
@@ -908,7 +908,72 @@ final class DataStore {
         )
         Task {
             for activity in Activity<ArenaLiveActivityAttributes>.activities {
-                await activity.update(.init(state: newState, staleDate: session.endTime))
+                await activity.update(.init(state: newState, staleDate: cur.end))
+            }
+        }
+    }
+
+    /// Schedule background Live Activity updates at each future joint transition time.
+    /// Uses `ProcessInfo.performExpiringActivity` to keep the app alive briefly after backgrounding.
+    func scheduleLiveActivityTransitions() {
+        guard let session = activeSession ?? stackedSessions.first else { return }
+        let now = Date()
+        let futureTransitions = session.timeline.filter { $0.start > now }
+        guard !futureTransitions.isEmpty else { return }
+
+        // Build all future states upfront so we don't reference `self` later
+        struct ScheduledUpdate: Sendable {
+            let fireAt: Date
+            let state: ArenaLiveActivityAttributes.ContentState
+            let staleDate: Date
+            let arenaId: String
+        }
+
+        var scheduledUpdates: [ScheduledUpdate] = []
+        let tl = session.timeline
+        for (i, slot) in tl.enumerated() where slot.start > now {
+            let normColor: String = {
+                let c = slot.arena.color.trimmingCharacters(in: .whitespacesAndNewlines)
+                return c.hasPrefix("#") ? c : "#\(c)"
+            }()
+            let next = (i + 1 < tl.count) ? tl[i + 1] : nil
+            let st = ArenaLiveActivityAttributes.ContentState(
+                endTime: slot.end,
+                isPaused: session.isPaused,
+                pausedRemaining: session.isPaused ? session.pausedRemaining : 0,
+                jointCount: max(0, tl.count - i - 1),
+                arenaLabel: slot.arena.label,
+                arenaColor: normColor,
+                arenaIcon: slot.arena.icon.isEmpty ? "◉" : slot.arena.icon,
+                currentArenaStart: slot.start,
+                sessionEndTime: session.endTime,
+                nextArenaLabel: next?.arena.label ?? "",
+                nextArenaIcon: next?.arena.icon ?? ""
+            )
+            scheduledUpdates.append(ScheduledUpdate(
+                fireAt: slot.start,
+                state: st,
+                staleDate: slot.end,
+                arenaId: slot.arena.id
+            ))
+        }
+        let updates = scheduledUpdates
+
+        // Fire transitions in a background-safe expiring activity
+        ProcessInfo.processInfo.performExpiringActivity(
+            withReason: "Update Live Activity for arena transition"
+        ) { expired in
+            guard !expired else { return }
+            Task { @MainActor in
+                for update in updates {
+                    let delay = update.fireAt.timeIntervalSinceNow
+                    if delay > 0 {
+                        try? await Task.sleep(for: .seconds(delay))
+                    }
+                    for activity in Activity<ArenaLiveActivityAttributes>.activities {
+                        await activity.update(.init(state: update.state, staleDate: update.staleDate))
+                    }
+                }
             }
         }
     }

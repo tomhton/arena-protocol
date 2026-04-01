@@ -1,7 +1,7 @@
 // ActiveSessionView.swift — Arena Protocol
 // Live focus timer with pause/resume, circular progress, completion
 
-import ActivityKit
+@preconcurrency import ActivityKit
 import WidgetKit
 import SwiftUI
 
@@ -474,7 +474,6 @@ struct ActiveSessionView: View {
     /// Call whenever endTime changes (add/remove joint) or the running arena transitions.
     private func updateLiveActivity(newEnd: Date? = nil) {
         #if canImport(ActivityKit)
-        let activity    = liveActivity
         let paused      = isPaused
         let remaining   = TimeInterval(timeLeft)
         let now         = Date()
@@ -488,7 +487,8 @@ struct ActiveSessionView: View {
             let c = cur.color.trimmingCharacters(in: .whitespacesAndNewlines)
             return c.hasPrefix("#") ? c : "#\(c)"
         }()
-        Task {
+        Task { @MainActor in
+            let activity = liveActivity
             let newState = ArenaLiveActivityAttributes.ContentState(
                 endTime: curEnd,
                 isPaused: paused,
@@ -554,9 +554,9 @@ struct ActiveSessionView: View {
 
     private func endLiveActivity() {
         #if canImport(ActivityKit)
-        let activity = liveActivity
         let currentEndTime = endTime
-        Task {
+        Task { @MainActor in
+            let activity = liveActivity
             let finalState = ArenaLiveActivityAttributes.ContentState(
                 endTime: currentEndTime,
                 isPaused: false,

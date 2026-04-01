@@ -102,9 +102,9 @@ struct SessionDisplayView: View {
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(liveColor.opacity(0.55))
                     .kerning(2)
-                if !active!.note.isEmpty {
+                if let note = active?.note, !note.isEmpty {
                     Text("·").foregroundStyle(Color.white.opacity(0.15))
-                    Text(active!.note)
+                    Text(note)
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.35))
                         .lineLimit(1)
@@ -386,7 +386,12 @@ struct SessionDisplayView: View {
         let social = session.social
 
         store.endSession()
-        onDone(arena, duration, note, social)
+        // Defer completion overlay to next render pass so SwiftUI doesn't
+        // simultaneously remove SessionDisplayView and insert CompletionOverlay
+        // with competing transition animations (causes crash).
+        Task { @MainActor in
+            onDone(arena, duration, note, social)
+        }
     }
 
     private func abandonSession() {
@@ -421,6 +426,12 @@ struct SessionDisplayView: View {
         session.endTime = jointEnd
         store.activeSession = session
         showJointPicker = false
+
+        // Update Live Activity with new timeline and schedule background transitions
+        #if canImport(ActivityKit)
+        store.syncLiveActivity(force: true)
+        store.scheduleLiveActivityTransitions()
+        #endif
 
         let entryId = entry.id
         let arenaLabel = arena.label

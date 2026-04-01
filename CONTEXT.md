@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-03-24 (v2.27.0).
+> Paste this at the start of every Claude session. Last updated: 2026-04-01 (v2.27.1).
 
 ---
 
@@ -85,6 +85,7 @@
 | 2.22.0 | 2026-03-20 | Session intelligence backbone + Forge narrative framework. `SessionIntelligence.swift`: `SessionProfile` (25+ fields), `UserArchetype` (10 cases), `buildSessionProfile()`. `ForgeEngine.swift`: 17 narrative branches, 25 testable queries, `ForgeNarrative → EmberDrop` pipeline. `checkAndClaimEmberDrop()` now runs ForgeEngine first, falls back to legacy drops. `AI_BRAIN_MAP.md` developer reference added. |
 | 2.26.0 | 2026-03-24 | Schedule & deadline system. `ScheduledBlock` (future session/protocol + notification) and `ArenaDeadline` (session-count goal with due date + auto-completion) added to DataStore. `ScheduleView` new screen with creation sheets for both types. HomeView "UP NEXT" banner for imminent scheduled blocks. SCHEDULE button in HomeView bottom row. ⏰ button on protocol cards opens `ScheduleProtocolSheet`. |
 | 2.27.0 | 2026-03-24 | Arena rank progression system. 8 rank tiers (Dormant → Eternal Flame) based on peak consecutive-day streak per arena. Persistent `ArenaRankState` saved to UserDefaults. Arena cards: vibrant under-glow driven by today's session count, rank-based border progression (gradient borders, animated rotation, corner glows, multi-layer effects at higher tiers). Rank label on cards. Reset option in arena editor. App dock restored below intervals. One-page HomeView overhaul: inline session display, completion overlay, swipe collapse/expand. |
+| 2.27.1 | 2026-04-01 | Bug fixes: DONE button crash (force-unwrap on nil `active!` during view removal transition), session start flash (stale `sessionNow` caused 1s uncolored background), social-only arena not opening (lookup missed `socialArena` stored outside main array). Live Activity background transitions: `scheduleLiveActivityTransitions()` uses `performExpiringActivity` to push arena changes while locked; foreground sync on `scenePhase` change; `staleDate` set to current arena end. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order

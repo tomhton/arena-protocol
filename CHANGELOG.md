@@ -5,6 +5,30 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.27.1 — 2026-04-01
+
+**Bug fixes: DONE crash, session start flash, social arena, Live Activity background transitions.**
+
+### Fixed
+- **DONE button crash** — `SessionDisplayView` line 105 force-unwrapped `active!` while SwiftUI was removing the view after `endSession()` set `activeSession = nil`. Replaced with safe `active?.note` optional chain.
+- **Competing animation crash** — `finishEarly()` called `store.endSession()` and `onDone()` in the same render pass, simultaneously removing `SessionDisplayView` and inserting `CompletionOverlay` with competing transitions. `onDone` now deferred to next render cycle via `Task { @MainActor in }`.
+- **Session start flash** — `currentlyRunningArena` used stale `sessionNow` (only updated by 1 s timer), causing the arena background color to be nil for up to 1 second on launch. `sessionNow = Date()` now set immediately in `launchSession()`.
+- **Social-only arena not opening** — "SOCIAL ONLY SESSION" button set `expandedArenaId` to `"social"`, but the expanded overlay looked up arenas only in `store.letteredArenas` (regular arenas). Social arena is stored separately as `store.socialArena`. Added fallback lookup.
+
+### Improved
+- **Live Activity background transitions** — new `scheduleLiveActivityTransitions()` in DataStore uses `ProcessInfo.performExpiringActivity` to push arena-change updates to the Dynamic Island / lock screen while the app is backgrounded. Scheduled automatically when the app enters background and when joints are added.
+- **Foreground sync** — `syncLiveActivity()` now called immediately on `scenePhase == .active`, so returning to the app instantly reflects any missed joint transitions.
+- **Stale date accuracy** — Live Activity `staleDate` changed from session end to current arena end, so iOS marks the content stale exactly at transition time.
+- **`syncLiveActivity(force:)`** — new `force` parameter bypasses the `liveArenaId` dedup guard, used when joint timeline changes without an arena transition.
+
+### Changed
+- `SessionDisplayView.swift` — safe optional chain for `active?.note`, deferred `onDone`, `syncLiveActivity(force:)` + `scheduleLiveActivityTransitions()` on joint add.
+- `HomeView.swift` — `sessionNow = Date()` in `launchSession()`; social arena fallback in expanded overlay lookup.
+- `DataStore.swift` — `syncLiveActivity(force:)` parameter, `scheduleLiveActivityTransitions()` method, `staleDate` uses `cur.end`.
+- `ArenaProtocolApp.swift` — `scenePhase` handler split into `.active` / `.background` cases; foreground sync and background transition scheduling.
+
+---
+
 ## v2.27.0 — 2026-03-24
 
 **Arena rank progression system + one-page HomeView overhaul.**
