@@ -56,8 +56,8 @@ struct InlineSessionConfig: View {
             calEvents = CalendarManager.shared.upcomingEvents(hours: 8)
             ongoingMatch = CalendarManager.shared.activeEvents().first(where: { event in
                 let matched = CalendarManager.shared.matchArena(for: event, arenas: store.arenas)
-                return matched?.id == arena.id
-                    || (event.title ?? "").hasPrefix("[\(arena.label)]")
+                let bracketMatch = CalendarManager.shared.matchBracketArena(for: event, arenas: store.arenas)
+                return matched?.id == arena.id || bracketMatch?.id == arena.id
             })
         }
     }

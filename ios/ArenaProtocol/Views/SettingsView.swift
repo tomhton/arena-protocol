@@ -182,6 +182,45 @@ struct SettingsView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#60A5FA").opacity(0.2), lineWidth: 1))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
+                    // Calendar Auto-Start
+                    if calStatus == .fullAccess {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("AUTO-START FROM CALENDAR")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.22))
+                                        .kerning(5)
+                                    Text("Events titled [ARENA] auto-prompt a session")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(Color.white.opacity(0.3))
+                                }
+                                Spacer()
+                                ZStack {
+                                    Capsule()
+                                        .fill(store.settings.calendarAutoStart
+                                              ? Color(hex: "#60A5FA") : Color.white.opacity(0.08))
+                                        .frame(width: 44, height: 24)
+                                    Circle().fill(.white).frame(width: 18, height: 18)
+                                        .offset(x: store.settings.calendarAutoStart ? 10 : -10)
+                                        .animation(.spring(response: 0.3), value: store.settings.calendarAutoStart)
+                                }
+                                .onTapGesture {
+                                    store.settings.calendarAutoStart.toggle()
+                                    store.saveSettings()
+                                }
+                            }
+                            Text("Name events like [WORK], [ALIGNMENT], etc. to match your arenas. The app will prompt you when the block starts.")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.white.opacity(0.2))
+                                .lineSpacing(2)
+                        }
+                        .padding(16)
+                        .background(Color.white.opacity(0.02))
+                        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "#60A5FA").opacity(0.15), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
                     // What's New
                     Button { navigate(.whatsNew) } label: {
                         HStack {

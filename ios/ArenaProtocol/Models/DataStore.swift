@@ -113,10 +113,34 @@ struct DockApp: Identifiable, Codable {
     var brandColor: String
 }
 
+enum CalendarViewStyle: String, Codable, CaseIterable {
+    case timeline   // vertical timeline with time column
+    case compact    // minimal horizontal cards
+    case agenda     // list with grouping (now / up next / later)
+
+    var label: String {
+        switch self {
+        case .timeline: return "TIMELINE"
+        case .compact:  return "COMPACT"
+        case .agenda:   return "AGENDA"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .timeline: return "◫"
+        case .compact:  return "▬"
+        case .agenda:   return "☰"
+        }
+    }
+}
+
 struct AppSettings: Codable {
     var windDownTime: String = "21:30"
     var clockTimezone: String = "America/Los_Angeles"
     var calendarEnabled: Bool = false
+    var calendarAutoStart: Bool = false
+    var calendarViewStyle: CalendarViewStyle = .timeline
 }
 
 // MARK: - Forge Progression Models
@@ -806,6 +830,7 @@ final class DataStore {
     // Transient UI state (not persisted)
     var expandedArenaId: String? = nil
     var sessionDisplayCollapsed: Bool = false
+    var pendingCalSession: PendingCalSession? = nil
 
     // Tracks the last arena whose identity was broadcast to the Live Activity.
     // Updated by syncLiveActivity() so duplicate pushes are skipped.

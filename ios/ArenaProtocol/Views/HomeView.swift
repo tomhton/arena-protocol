@@ -37,6 +37,10 @@ struct HomeView: View {
     @State private var pendingConcurrentSocial: Bool = false
     @State private var showConcurrentConfirm = false
 
+    // Calendar auto-start
+    @State private var lastCalCheck: Date = .distantPast
+    @State private var showCalPrompt = false
+
     // Long-press gate
     @State private var longPressedArenaId: String? = nil
 
@@ -148,17 +152,28 @@ struct HomeView: View {
         .animation(.spring(response: 0.5, dampingFraction: 0.85), value: showCompletion)
         .animation(.spring(response: 0.35, dampingFraction: 0.75), value: sessionCollapsed)
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { t in
-            guard store.activeSession != nil || !store.stackedSessions.isEmpty else { return }
-            sessionNow = t
-            store.tickSession(now: t)
-            #if canImport(ActivityKit)
-            store.syncLiveActivity(now: t)
-            #endif
+            // Session tick
+            if store.activeSession != nil || !store.stackedSessions.isEmpty {
+                sessionNow = t
+                store.tickSession(now: t)
+                #if canImport(ActivityKit)
+                store.syncLiveActivity(now: t)
+                #endif
+            }
+            // Calendar auto-start check (every 30 seconds)
+            if store.settings.calendarAutoStart,
+               t.timeIntervalSince(lastCalCheck) >= 30 {
+                lastCalCheck = t
+                checkCalendarAutoStart()
+            }
         }
         .onChange(of: store.pendingCompletion) { _, completion in
             guard let c = completion else { return }
             store.pendingCompletion = nil
             showSessionCompletion(arena: c.arena, duration: c.durationMins, note: c.note, social: c.social)
+        }
+        .onChange(of: store.pendingCalSession) { _, session in
+            if session != nil { showCalPrompt = true }
         }
         .onAppear {
             if store.activeSession == nil && store.stackedSessions.isEmpty {
@@ -177,6 +192,95 @@ struct HomeView: View {
         } message: {
             Text("Start a concurrent session? Your current session will be stacked.")
         }
+        .sheet(isPresented: $showCalPrompt) {
+            if let session = store.pendingCalSession {
+                calSessionPrompt(session: session)
+                    .presentationDetents([.height(280)])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+
+    // MARK: - Calendar Auto-Start
+
+    private func checkCalendarAutoStart() {
+        guard store.activeSession == nil else { return }
+        let pending = CalendarSyncManager.shared.syncBracketEvents(
+            arenas: store.letteredArenas,
+            socialArena: store.socialArena
+        )
+        if let ready = CalendarSyncManager.shared.readySession(from: pending) {
+            store.pendingCalSession = ready
+        }
+    }
+
+    private func calSessionPrompt(session: PendingCalSession) -> some View {
+        let arenaColor = Color(hex: session.arena.color)
+        return VStack(spacing: 20) {
+            Text(session.arena.icon)
+                .font(.system(size: 40))
+                .shadow(color: arenaColor, radius: 12)
+
+            VStack(spacing: 6) {
+                Text("CALENDAR BLOCK")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.25))
+                    .kerning(5)
+                Text(session.arena.label)
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .foregroundStyle(arenaColor)
+                    .kerning(3)
+                if !session.note.isEmpty {
+                    Text(session.note)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.white.opacity(0.4))
+                        .lineLimit(1)
+                }
+                Text("\(session.durationMins) MINUTES")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.3))
+                    .kerning(2)
+            }
+
+            HStack(spacing: 14) {
+                Button {
+                    CalendarSyncManager.shared.markProcessed(session.id)
+                    store.pendingCalSession = nil
+                    showCalPrompt = false
+                } label: {
+                    Text("DISMISS")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.4))
+                        .kerning(3)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    CalendarSyncManager.shared.markProcessed(session.id)
+                    store.pendingCalSession = nil
+                    showCalPrompt = false
+                    launchSession(arena: session.arena, duration: session.durationMins,
+                                  note: session.note, social: false)
+                } label: {
+                    Text("ENTER THE ARENA")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(hex: "#080810"))
+                        .kerning(3)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(arenaColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 4)
+        }
+        .padding(24)
+        .background(Color(hex: "#080810"))
     }
 
     // MARK: - Session Completion Helper
@@ -310,18 +414,28 @@ struct HomeView: View {
             headerSection
                 .padding(.top, hasSession ? 8 : 44)
 
-            // 1. Calendar day view
-            CalendarDayView()
+            // Calendar day view — quick glance at today's schedule
+            CalendarDayView(onTapArenaEvent: { arena, duration, note in
+                if store.activeSession != nil {
+                    pendingConcurrentArena = arena
+                    pendingConcurrentDuration = duration
+                    pendingConcurrentNote = note
+                    pendingConcurrentSocial = false
+                    showConcurrentConfirm = true
+                } else {
+                    launchSession(arena: arena, duration: duration, note: note, social: false)
+                }
+            })
 
-            // 2. Protocols inline section
-            protocolsInlineSection
+            // Quick actions — morning, wind down, stuck
+            quickActionRow
 
-            // 3. Arena grid
+            // Arena grid
             editToggle
             arenaGrid
 
-            // 4. Quick actions
-            quickActionRow
+            // Protocols — below arenas for easy access
+            protocolsInlineSection
 
             // Social toggle
             socialSection
@@ -335,7 +449,7 @@ struct HomeView: View {
             // Egg strip
             eggStrip
 
-            // 5. Quick tools
+            // Quick tools
             quickToolsRow
 
             // Footer
@@ -346,24 +460,35 @@ struct HomeView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
+            if !hasSession {
+                // Hero title — progressive reveal with staggered weight
+                Text("ENTER THE")
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.45))
+                    .kerning(8)
+                    .padding(.bottom, 4)
+                Text("ARENA")
+                    .font(.system(size: 48, weight: .black, design: .monospaced))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color(hex: "#E8C547"), Color(hex: "#F0D96B")],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .kerning(6)
+                    .shadow(color: Color(hex: "#E8C547").opacity(0.3), radius: 20, y: 4)
+                    .padding(.bottom, 10)
+            } else {
                 Text("ARENA PROTOCOL")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(Color.white.opacity(0.22))
                     .kerning(6)
-                if !hasSession {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("ENTER THE")
-                            .font(.system(size: 28, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(0.9))
-                            .kerning(2)
-                        Text("ARENA")
-                            .font(.system(size: 28, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color(hex: "#E8C547"))
-                            .kerning(2)
-                    }
-                }
+                    .padding(.bottom, 6)
+            }
+
+            // Subtitle row — title + session count
+            HStack(spacing: 12) {
                 if let title = getActiveTitle(sessions: sessions) {
                     let titleColor = title.arenaId != nil
                         ? Color(hex: arenas.first { $0.id == title.arenaId }?.color ?? "#E8C547")
@@ -379,11 +504,11 @@ struct HomeView: View {
                         .foregroundStyle(Color.white.opacity(0.25))
                         .kerning(3)
                 }
+                Spacer()
             }
-            Spacer()
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 12)
+        .padding(.bottom, 16)
     }
 
     // MARK: - Protocols Inline Section

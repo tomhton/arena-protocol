@@ -120,6 +120,21 @@ final class CalendarManager {
             .sorted { $0.startDate < $1.startDate }
     }
 
+    /// Returns all calendar events for today (past, current, and upcoming).
+    func todayEvents() -> [EKEvent] {
+        guard isReadAuthorized else { return [] }
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: Date())
+        let end = cal.date(byAdding: .day, value: 1, to: start) ?? Date()
+        let pred = store.predicateForEvents(withStart: start, end: end, calendars: nil)
+        return store.events(matching: pred)
+            .filter { event in
+                guard let cal = event.calendar else { return false }
+                return cal.title != "Arena Protocol" && !event.isAllDay
+            }
+            .sorted { $0.startDate < $1.startDate }
+    }
+
     /// Match an event title to one of the user's arenas via keyword heuristics.
     func matchArena(for event: EKEvent, arenas: [Arena]) -> Arena? {
         let title = (event.title ?? "").lowercased()
@@ -147,6 +162,26 @@ final class CalendarManager {
             }
         }
         return nil
+    }
+
+    /// Explicit bracket-prefix matching: "[WORK] Deep focus" → WORK arena.
+    /// Case-insensitive. Returns nil if the title doesn't start with a bracketed arena label.
+    func matchBracketArena(for event: EKEvent, arenas: [Arena]) -> Arena? {
+        let title = (event.title ?? "").uppercased()
+        return arenas.first { title.hasPrefix("[\($0.label.uppercased())]") }
+    }
+
+    /// Strip the "[ARENA] " prefix from a title, returning the remainder as a session note.
+    func stripBracketPrefix(_ title: String, arena: Arena) -> String {
+        let prefix = "[\(arena.label)]"
+        guard title.uppercased().hasPrefix(prefix.uppercased()) else { return title }
+        return String(title.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Look up an event by its identifier. Returns nil if deleted or unavailable.
+    func event(withIdentifier id: String) -> EKEvent? {
+        guard isReadAuthorized else { return nil }
+        return store.event(withIdentifier: id)
     }
 }
 
