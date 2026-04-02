@@ -177,10 +177,21 @@ private struct LockScreenBannerView: View {
                     }
                 }
 
-                // ── Info row — next arena + session finish time ──────────────
+                // ── Info row — upcoming arenas + session finish time ─────────
                 if hasMore {
                     HStack(spacing: 8) {
-                        if !context.state.nextArenaIcon.isEmpty {
+                        if !context.state.upcomingArenas.isEmpty {
+                            let first = context.state.upcomingArenas[0]
+                            Link(destination: URL(string: "arenaprotocol://arena/\(first.id)")!) {
+                                (Text(first.icon + " ") + Text(first.label))
+                                    .lineLimit(1)
+                                    .foregroundColor(Color(hex: first.color).opacity(0.55))
+                            }
+                            if context.state.upcomingArenas.count > 1 {
+                                Text("+\(context.state.upcomingArenas.count - 1)")
+                                    .foregroundColor(arenaColor.opacity(0.35))
+                            }
+                        } else if !context.state.nextArenaIcon.isEmpty {
                             (Text(context.state.nextArenaIcon + " ")
                              + Text(context.state.nextArenaLabel))
                                 .lineLimit(1)
@@ -362,24 +373,40 @@ private struct ExpandedBottomView: View {
 
     var body: some View {
         let arenaColor = Color(hex: context.state.arenaColor)
-        HStack(spacing: 10) {
+        let upcoming = context.state.upcomingArenas
+
+        VStack(alignment: .leading, spacing: 4) {
             if !context.attributes.questNote.isEmpty {
                 Text(context.attributes.questNote)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            Spacer()
-            if !context.state.nextArenaLabel.isEmpty {
+
+            if !upcoming.isEmpty {
+                ForEach(Array(upcoming.prefix(3).enumerated()), id: \.offset) { _, arena in
+                    Link(destination: URL(string: "arenaprotocol://arena/\(arena.id)")!) {
+                        HStack(spacing: 6) {
+                            Text(arena.icon)
+                                .font(.system(size: 10))
+                            Text(arena.label)
+                                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                                .tracking(0.8)
+                        }
+                        .foregroundColor(Color(hex: arena.color).opacity(0.65))
+                    }
+                }
+                if upcoming.count > 3 {
+                    Text("+\(upcoming.count - 3) MORE")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundColor(arenaColor.opacity(0.4))
+                        .tracking(1)
+                }
+            } else if !context.state.nextArenaLabel.isEmpty {
                 (Text("NEXT  ") + Text(context.state.nextArenaIcon + " " + context.state.nextArenaLabel))
                     .font(.system(size: 9, weight: .semibold, design: .monospaced))
                     .foregroundColor(arenaColor.opacity(0.65))
                     .tracking(0.8)
-            } else if context.state.jointCount > 0 {
-                Text("+\(context.state.jointCount) MORE")
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                    .foregroundColor(arenaColor.opacity(0.55))
-                    .tracking(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

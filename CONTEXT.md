@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-04-01 (v2.28.0).
+> Paste this at the start of every Claude session. Last updated: 2026-04-02 (v2.29.0).
 
 ---
 
@@ -87,6 +87,7 @@
 | 2.27.0 | 2026-03-24 | Arena rank progression system. 8 rank tiers (Dormant → Eternal Flame) based on peak consecutive-day streak per arena. Persistent `ArenaRankState` saved to UserDefaults. Arena cards: vibrant under-glow driven by today's session count, rank-based border progression (gradient borders, animated rotation, corner glows, multi-layer effects at higher tiers). Rank label on cards. Reset option in arena editor. App dock restored below intervals. One-page HomeView overhaul: inline session display, completion overlay, swipe collapse/expand. |
 | 2.27.1 | 2026-04-01 | Bug fixes: DONE button crash (force-unwrap on nil `active!` during view removal transition), session start flash (stale `sessionNow` caused 1s uncolored background), social-only arena not opening (lookup missed `socialArena` stored outside main array). Live Activity background transitions: `scheduleLiveActivityTransitions()` uses `performExpiringActivity` to push arena changes while locked; foreground sync on `scenePhase` change; `staleDate` set to current arena end. |
 | 2.28.0 | 2026-04-01 | Arena button skins: 10 material skins (Slate→Void, common→legendary) droppable from eggs (40% chance), equippable per arena from inventory. Pure SwiftUI material renderer (Canvas textures + bevel + engrave). Calendar auto-start: bracket-prefixed events trigger session prompts via notifications. Smart CalendarDayView: visibility tiers, 3 layouts, tappable events. HomeView redesign: calendar at top, gold gradient header. |
+| 2.29.0 | 2026-04-02 | Live Activity tappable arenas: each upcoming joint arena shown as individual tappable Link in Dynamic Island + lock screen. Retractable checklist system: scoped to session/day/week/month/year, progressive disclosure UX, lock-in commitment mechanic. HomeView: intervals collapse, protocol long-press drag-to-reorder. Removed duplicate CalendarSyncManager.swift. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -151,9 +152,8 @@ arena-protocol/
 │   ├── ArenaProtocol/
 │   │   ├── ArenaProtocolApp.swift          ← @main entry point, WindowGroup
 │   │   ├── Models/
-│   │   │   ├── DataStore.swift            ← ⭐ MOST IMPORTANT — all models, defaults,
-│   │   │   │                                  persistence, gamification helpers
-│   │   │   └── CalendarSyncManager.swift ← Bracket-prefixed calendar event detection + notification scheduling
+│   │   │   └── DataStore.swift            ← ⭐ MOST IMPORTANT — all models, defaults,
+│   │   │                                      persistence, gamification helpers
 │   │   ├── Views/
 │   │   │   ├── RootView.swift             ← ⭐ Screen router + GrainOverlay + Color extensions + onOpenURL deeplink handler
 │   │   │   ├── HomeView.swift             ← Dashboard: arena grid, shortcuts, ember particles, timer pill
@@ -180,7 +180,8 @@ arena-protocol/
 │   │   │   ├── FlowLayout.swift           ← Flow layout helper
 │   │   │   ├── InlineSessionConfig.swift  ← Expanded arena card session config
 │   │   │   ├── SessionDisplayView.swift   ← Inline session display for HomeView
-│   │   │   └── ForgeDropModal.swift       ← Forge narrative drop modal
+│   │   │   ├── ForgeDropModal.swift       ← Forge narrative drop modal
+│   │   │   └── ChecklistPanelView.swift   ← Retractable checklist panel (scoped: session/day/week/month/year)
 │   │   └── Resources/
 │   │       └── Info.plist                 ← Bundle config, URL schemes, dark mode
 │   ├── ArenaProtocolWidget/               ← Widget + Live Activity extension target
@@ -265,7 +266,9 @@ enum Screen: Hashable {
 
 To add a new screen: add a case here, add a route in `RootView.body`, create the view file, add it to `project.pbxproj`.
 
-The app also handles the `arenaprotocol://active` deep link via `.onOpenURL` in `RootView.swift`, which routes to the active session screen when tapped from the Dynamic Island or lock screen Live Activity.
+The app handles deep links via `.onOpenURL` in `RootView.swift`:
+- `arenaprotocol://active` — pops to home and expands session display (from Dynamic Island/lock screen tap)
+- `arenaprotocol://arena/{id}` — pops to home and expands that arena's card (from Live Activity tappable arena entries)
 
 ---
 
@@ -421,7 +424,16 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
         var arenaLabel: String = ""
         var arenaColor: String = "#E8C547"
         var arenaIcon: String = "◉"
+        var currentArenaStart: Date = Date()
+        var sessionEndTime: Date = Date()
+        var nextArenaLabel: String = ""
+        var nextArenaIcon: String = ""
+        var upcomingArenas: [UpcomingArena] = []  // tappable arena entries for DI/lock screen
     }
+}
+
+struct UpcomingArena: Codable, Hashable, Sendable {
+    var id: String; var label: String; var icon: String; var color: String
 }
 ```
 **IMPORTANT:** `arenaLabel`, `arenaColor`, `arenaIcon` are in `ContentState` (not static attributes) so `Activity.update()` can change the displayed arena when a joint takes over. All widget/lock-screen rendering reads `context.state.arenaLabel/Color/Icon`.
@@ -522,6 +534,7 @@ struct HabitLog: Codable {
     var seenDrops:     [String]           // ember drop ids already shown
     var checkin:       MorningCheckin     // { date, completed: [habitId] }
     var arenaRanks:    [ArenaRankState]     // persisted to arena_ranks; peak-streak rank progression
+    var checklists:    [Checklist]        // persisted to arena_checklists; scoped task lists
     var activeSession: ActiveSessionState? = nil    // transient — nil when no session running
     var stackedSessions: [ActiveSessionState] = [] // minimized sessions
     var liveArenaId: String = ""  // last arena id pushed to Live Activity; guards syncLiveActivity
@@ -562,6 +575,7 @@ struct HabitLog: Codable {
 | `arena_seen_drops` | `[String]` |
 | `arena_checkin` | `MorningCheckin` |
 | `arena_ranks` | `[ArenaRankState]` |
+| `arena_checklists` | `[Checklist]` |
 | `arena_checkin_dismissed` | `String` — date string, skip checkin if == today |
 | `arena_cal_processed` | `[String: Double]` — processed calendar event IDs for dedup |
 | `timerEndTime` | `Double` — timer end epoch for background resume |

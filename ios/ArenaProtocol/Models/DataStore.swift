@@ -348,6 +348,24 @@ struct PlayerProfile: Codable {
     var equippedSkins: [String: String] = [:]  // arenaId → skinId
     var isPublic: Bool
     var joinedAt: Double                    // epoch ms
+
+    init(equippedTitle: String? = nil, equippedGlyphs: [String: String] = [:],
+         equippedSkins: [String: String] = [:], isPublic: Bool = false, joinedAt: Double = 0) {
+        self.equippedTitle = equippedTitle
+        self.equippedGlyphs = equippedGlyphs
+        self.equippedSkins = equippedSkins
+        self.isPublic = isPublic
+        self.joinedAt = joinedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        equippedTitle = try c.decodeIfPresent(String.self, forKey: .equippedTitle)
+        equippedGlyphs = try c.decode([String: String].self, forKey: .equippedGlyphs)
+        equippedSkins = (try? c.decode([String: String].self, forKey: .equippedSkins)) ?? [:]
+        isPublic = try c.decode(Bool.self, forKey: .isPublic)
+        joinedAt = try c.decode(Double.self, forKey: .joinedAt)
+    }
 }
 
 struct JointArenaEntry: Identifiable {
@@ -406,6 +424,58 @@ extension ActiveSessionState {
 struct MorningCheckin: Codable {
     var date: String
     var completed: [String]
+}
+
+// MARK: - Checklists
+
+enum ChecklistScope: String, Codable, CaseIterable {
+    case session, day, week, month, year
+
+    var displayName: String {
+        switch self {
+        case .session: return "SESSION"
+        case .day:     return "TODAY"
+        case .week:    return "WEEK"
+        case .month:   return "MONTH"
+        case .year:    return "YEAR"
+        }
+    }
+}
+
+struct ChecklistItem: Identifiable, Codable, Hashable {
+    var id: String = UUID().uuidString
+    var text: String
+    var isCompleted: Bool = false
+}
+
+struct Checklist: Identifiable, Codable, Hashable {
+    var id: String = UUID().uuidString
+    var scope: ChecklistScope
+    var periodKey: String
+    var items: [ChecklistItem]
+    var isLocked: Bool = false
+    var createdAt: Double
+
+    static func periodKey(for scope: ChecklistScope, sessionId: String? = nil) -> String {
+        let now = Date()
+        let cal = Calendar.current
+        let fmt = DateFormatter()
+        switch scope {
+        case .session:
+            return sessionId ?? UUID().uuidString
+        case .day:
+            fmt.dateFormat = "yyyy-MM-dd"
+            return fmt.string(from: now)
+        case .week:
+            let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)
+            return "\(comps.yearForWeekOfYear ?? 2026)-W\(comps.weekOfYear ?? 1)"
+        case .month:
+            fmt.dateFormat = "yyyy-MM"
+            return fmt.string(from: now)
+        case .year:
+            return "\(cal.component(.year, from: now))"
+        }
+    }
 }
 
 // MARK: - Scheduling & Deadlines
@@ -862,6 +932,7 @@ final class DataStore {
     }()
     var scheduledBlocks: [ScheduledBlock] = loadFromDefaults("arena_schedule",   fallback: [])
     var deadlines:       [ArenaDeadline]  = loadFromDefaults("arena_deadlines",  fallback: [])
+    var checklists:      [Checklist]      = loadFromDefaults("arena_checklists", fallback: [])
 
     var activeSession: ActiveSessionState? = nil
     var stackedSessions: [ActiveSessionState] = []
@@ -877,11 +948,33 @@ final class DataStore {
     // Updated by syncLiveActivity() so duplicate pushes are skipped.
     var liveArenaId: String = ""
 
+    init() {
+        migrateSkins()
+        pruneSessionChecklists()
+    }
+
     var letteredArenas: [Arena] { Arena.reletter(arenas) }
     var todaySessions:  Int    { sessions.filter { $0.date == todayString() }.count }
     /// Computed snapshot of the user's session patterns. Rebuilt on every access.
     /// Don't observe this in tight render loops — call once per session-end event.
     var sessionProfile: SessionProfile { buildSessionProfile(from: sessions, arenas: arenas) }
+
+    // MARK: - Migrations
+
+    /// One-time grant: add all catalog skins to inventory so users can see + equip them immediately.
+    private func migrateSkins() {
+        let owned = Set(inventory.filter { $0.type == .skin }.map { $0.name })
+        var added = false
+        for skin in SKIN_CATALOG where !owned.contains(skin.name) {
+            inventory.append(InventoryItem(
+                id: UUID().uuidString, type: .skin, rarity: skin.rarity,
+                name: skin.name, description: skin.description,
+                glyph: skin.glyph, isEquipped: false,
+                unlockedAt: Date().timeIntervalSince1970 * 1000, arenaId: nil))
+            added = true
+        }
+        if added { saveInventory() }
+    }
 
     // Save helpers
     func saveArenas()      { saveToDefaults("arena_custom_arenas",  arenas) }
@@ -908,6 +1001,36 @@ final class DataStore {
     func saveCheckin()         { saveToDefaults("arena_checkin",        checkin) }
     func saveScheduledBlocks() { saveToDefaults("arena_schedule",       scheduledBlocks) }
     func saveDeadlines()       { saveToDefaults("arena_deadlines",      deadlines) }
+    func saveChecklists()      { saveToDefaults("arena_checklists",    checklists) }
+
+    // MARK: - Checklist CRUD
+
+    func checklist(for scope: ChecklistScope, sessionId: String? = nil) -> Checklist? {
+        let key = Checklist.periodKey(for: scope, sessionId: sessionId)
+        return checklists.first { $0.scope == scope && $0.periodKey == key }
+    }
+
+    func upsertChecklist(_ checklist: Checklist) {
+        if let idx = checklists.firstIndex(where: { $0.id == checklist.id }) {
+            checklists[idx] = checklist
+        } else {
+            checklists.append(checklist)
+        }
+        saveChecklists()
+    }
+
+    func toggleChecklistItem(checklistId: String, itemId: String) {
+        guard let ci = checklists.firstIndex(where: { $0.id == checklistId }),
+              let ii = checklists[ci].items.firstIndex(where: { $0.id == itemId }) else { return }
+        checklists[ci].items[ii].isCompleted.toggle()
+        saveChecklists()
+    }
+
+    func pruneSessionChecklists() {
+        let cutoff = Date().timeIntervalSince1970 * 1000 - 86_400_000
+        checklists.removeAll { $0.scope == .session && $0.createdAt < cutoff }
+        saveChecklists()
+    }
 
     // Idle Live Activity — shown on lock screen when no session is active
     #if canImport(ActivityKit)
@@ -970,7 +1093,18 @@ final class DataStore {
             currentArenaStart: cur.start,
             sessionEndTime: session.endTime,
             nextArenaLabel: next?.arena.label ?? "",
-            nextArenaIcon: next?.arena.icon ?? ""
+            nextArenaIcon: next?.arena.icon ?? "",
+            upcomingArenas: session.timeline.filter { $0.start > now }.prefix(8).map { slot in
+                UpcomingArena(
+                    id: slot.arena.id,
+                    label: slot.arena.label,
+                    icon: slot.arena.icon.isEmpty ? "◉" : slot.arena.icon,
+                    color: {
+                        let c = slot.arena.color.trimmingCharacters(in: .whitespacesAndNewlines)
+                        return c.hasPrefix("#") ? c : "#\(c)"
+                    }()
+                )
+            }
         )
         Task {
             for activity in Activity<ArenaLiveActivityAttributes>.activities {
@@ -1003,6 +1137,16 @@ final class DataStore {
                 return c.hasPrefix("#") ? c : "#\(c)"
             }()
             let next = (i + 1 < tl.count) ? tl[i + 1] : nil
+            let futureFromHere = tl.dropFirst(i + 1).prefix(8).map { s in
+                UpcomingArena(
+                    id: s.arena.id, label: s.arena.label,
+                    icon: s.arena.icon.isEmpty ? "◉" : s.arena.icon,
+                    color: {
+                        let c = s.arena.color.trimmingCharacters(in: .whitespacesAndNewlines)
+                        return c.hasPrefix("#") ? c : "#\(c)"
+                    }()
+                )
+            }
             let st = ArenaLiveActivityAttributes.ContentState(
                 endTime: slot.end,
                 isPaused: session.isPaused,
@@ -1014,7 +1158,8 @@ final class DataStore {
                 currentArenaStart: slot.start,
                 sessionEndTime: session.endTime,
                 nextArenaLabel: next?.arena.label ?? "",
-                nextArenaIcon: next?.arena.icon ?? ""
+                nextArenaIcon: next?.arena.icon ?? "",
+                upcomingArenas: Array(futureFromHere)
             )
             scheduledUpdates.append(ScheduledUpdate(
                 fireAt: slot.start,
@@ -1086,6 +1231,10 @@ final class DataStore {
             social: session.social
         )
         endSession()
+        // Promote first stacked session to active so it has controls (done/pause)
+        if !stackedSessions.isEmpty {
+            activeSession = stackedSessions.removeFirst()
+        }
         pendingCompletion = completed
     }
 

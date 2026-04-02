@@ -121,7 +121,7 @@ struct SkinMaterialView: View {
             ctx.fill(Path(CGRect(origin: .zero, size: sz)),
                      with: .linearGradient(
                         Gradient(colors: [Color(hex: "#1f1a10"), Color(hex: "#2a1f12"), Color(hex: "#1a1508")]),
-                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                        startPoint: .zero, endPoint: CGPoint(x: sz.width, y: sz.height)))
             // Hammered dimples
             for _ in 0..<30 {
                 let x = Double.random(in: 0...sz.width)
@@ -142,7 +142,7 @@ struct SkinMaterialView: View {
             ctx.fill(Path(CGRect(origin: .zero, size: sz)),
                      with: .linearGradient(
                         Gradient(colors: [Color(hex: "#181a1e"), Color(hex: "#1c1e22"), Color(hex: "#16181c")]),
-                        startPoint: .top, endPoint: .bottom))
+                        startPoint: .zero, endPoint: CGPoint(x: 0, y: sz.height)))
             // Veins
             for _ in 0..<8 {
                 var vein = Path()
@@ -167,7 +167,7 @@ struct SkinMaterialView: View {
             ctx.fill(Path(CGRect(origin: .zero, size: sz)),
                      with: .linearGradient(
                         Gradient(colors: [Color(hex: "#12100e"), Color(hex: "#181412"), Color(hex: "#100e0c")]),
-                        startPoint: .top, endPoint: .bottom))
+                        startPoint: .zero, endPoint: CGPoint(x: 0, y: sz.height)))
             // Wood grain — vertical wavy lines
             for i in stride(from: 0, to: sz.width, by: 3.2) {
                 var grain = Path()
@@ -192,7 +192,7 @@ struct SkinMaterialView: View {
             ctx.fill(Path(CGRect(origin: .zero, size: sz)),
                      with: .linearGradient(
                         Gradient(colors: [Color(hex: "#120808"), Color(hex: "#0e0505"), Color(hex: "#140a0a")]),
-                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                        startPoint: .zero, endPoint: CGPoint(x: sz.width, y: sz.height)))
             // Glowing cracks
             for _ in 0..<12 {
                 var crack = Path()

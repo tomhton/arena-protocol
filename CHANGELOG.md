@@ -5,6 +5,36 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.29.0 — 2026-04-02 22:00
+
+**Live Activity tappable arenas + retractable checklist system + HomeView UX polish.**
+
+### Features
+- **Live Activity tappable arena entries** — Dynamic Island expanded view and lock screen banner now show each upcoming joint arena as an individually tappable element (via `Link` deep links). Up to 3 arenas displayed with icon + label + color; overflow shows "+N MORE". Tapping an arena opens the app and expands that arena's card. New `UpcomingArena` struct in `ContentState`, populated by `syncLiveActivity()` and `scheduleLiveActivityTransitions()`.
+- **Retractable checklist system** — Universal task checklist accessible via floating "CHECKLIST" button on HomeView and "TASKS" button during active sessions. Scoped to SESSION/TODAY/WEEK/MONTH/YEAR with independent state per scope. Progressive disclosure UX: starts with one empty field, "+" grayed until text entered, "LOCK IN" commits the list with haptic feedback. Locked mode: tappable checkboxes with gold accent bars, strikethrough on completion, progress bar. "UNLOCK" to re-edit. All checklists persisted to UserDefaults. Session checklists auto-pruned after 24h.
+- **Intervals collapse** — Intervals section collapsed into a single expandable button with chevron; tapping reveals a 3-column grid of all 6 presets.
+- **Protocol drag-to-reorder** — Long-press any protocol card to enter reorder mode with drag handles and SwiftUI `.draggable()/.dropDestination()`. "DONE" button exits reorder mode. Order persists via `saveProtocols()`.
+
+### Added
+- `ChecklistPanelView.swift` — retractable bottom panel: scope tabs, draft mode (progressive item entry), locked mode (tappable checklist), progress bar
+- `ChecklistScope` enum, `ChecklistItem` struct, `Checklist` struct in DataStore
+- `checklists` persisted property + `saveChecklists()`, `checklist(for:sessionId:)`, `upsertChecklist(_:)`, `toggleChecklistItem(checklistId:itemId:)`, `pruneSessionChecklists()`
+- `UpcomingArena` struct in `ArenaLiveActivityAttributes.swift`
+- `upcomingArenas: [UpcomingArena]` field in `ContentState`
+- `arenaprotocol://arena/{id}` deep link handler in `RootView.swift`
+
+### Changed
+- `ArenaProtocolWidgetLiveActivity.swift` — `ExpandedBottomView` rewritten with tappable `Link` rows per arena; lock screen banner info row uses tappable links
+- `DataStore.swift` — `syncLiveActivity()` and `scheduleLiveActivityTransitions()` populate `upcomingArenas` from session timeline
+- `HomeView.swift` — floating checklist button, intervals section collapsed into expandable button, protocol long-press reorder mode
+- `SessionDisplayView.swift` — "TASKS" button in action row, checklist sheet integration
+- `RootView.swift` — `onOpenURL` extended for `arena` host deep links
+
+### Removed
+- `CalendarSyncManager.swift` (standalone file) — consolidated into `CalendarManager.swift` to resolve duplicate type declarations
+
+---
+
 ## v2.28.0 — 2026-04-01
 
 **Arena button skins + calendar auto-start + HomeView redesign.**

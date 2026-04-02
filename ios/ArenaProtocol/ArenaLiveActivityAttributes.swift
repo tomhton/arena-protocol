@@ -2,6 +2,13 @@
 import ActivityKit
 import SwiftUI
 
+struct UpcomingArena: Codable, Hashable, Sendable {
+    var id: String
+    var label: String
+    var icon: String
+    var color: String
+}
+
 struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
     // Static — set once at Activity.request, never changes
     let arenaId: String         // identifies activity type: "idle" | "stuck" | arena id
@@ -27,6 +34,7 @@ struct ArenaLiveActivityAttributes: ActivityAttributes, Sendable {
         var sessionEndTime: Date = Date()      // total session end including all joints
         var nextArenaLabel: String = ""        // "" if no next arena
         var nextArenaIcon: String = ""
+        var upcomingArenas: [UpcomingArena] = []
     }
 }
 #endif

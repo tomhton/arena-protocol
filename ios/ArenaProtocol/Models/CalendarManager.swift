@@ -3,6 +3,7 @@
 
 import EventKit
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class CalendarManager {
@@ -165,17 +166,24 @@ final class CalendarManager {
     }
 
     /// Explicit bracket-prefix matching: "[WORK] Deep focus" → WORK arena.
-    /// Case-insensitive. Returns nil if the title doesn't start with a bracketed arena label.
+    /// Case-insensitive. Matches against arena label and id.
+    /// Also handles partial matches: "[RECOVERY]" matches "RECOVERY & RESTORATION".
     func matchBracketArena(for event: EKEvent, arenas: [Arena]) -> Arena? {
         let title = (event.title ?? "").uppercased()
-        return arenas.first { title.hasPrefix("[\($0.label.uppercased())]") }
+        // Extract the bracketed tag: "[SOMETHING] ..." → "SOMETHING"
+        guard title.hasPrefix("["),
+              let close = title.firstIndex(of: "]") else { return nil }
+        let tag = String(title[title.index(after: title.startIndex)..<close])
+        // Match tag against arena label or id (exact or prefix)
+        return arenas.first { tag == $0.label.uppercased() || tag == $0.id.uppercased() }
+            ?? arenas.first { $0.label.uppercased().hasPrefix(tag) || tag.hasPrefix($0.label.uppercased()) }
     }
 
-    /// Strip the "[ARENA] " prefix from a title, returning the remainder as a session note.
+    /// Strip the "[...] " prefix from a title, returning the remainder as a session note.
     func stripBracketPrefix(_ title: String, arena: Arena) -> String {
-        let prefix = "[\(arena.label)]"
-        guard title.uppercased().hasPrefix(prefix.uppercased()) else { return title }
-        return String(title.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
+        guard title.hasPrefix("["), let close = title.firstIndex(of: "]") else { return title }
+        let afterBracket = title.index(after: close)
+        return String(title[afterBracket...]).trimmingCharacters(in: .whitespaces)
     }
 
     /// Look up an event by its identifier. Returns nil if deleted or unavailable.
@@ -224,5 +232,138 @@ extension Date {
     /// Duration in whole minutes between two dates
     func minutesUntil(_ end: Date) -> Int {
         max(1, Int(end.timeIntervalSince(self) / 60))
+    }
+}
+
+// MARK: - Pending Calendar Session
+
+struct PendingCalSession: Identifiable, Equatable {
+    let id: String          // EKEvent.eventIdentifier
+    let arena: Arena
+    let startTime: Date
+    let durationMins: Int
+    let note: String        // event title with bracket prefix stripped
+
+    static func == (lhs: PendingCalSession, rhs: PendingCalSession) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - Calendar Sync Manager
+
+@MainActor
+final class CalendarSyncManager {
+    static let shared = CalendarSyncManager()
+
+    /// Event identifiers already processed (started or dismissed). Persisted to UserDefaults.
+    private var processedIds: Set<String> {
+        didSet { saveProcessedIds() }
+    }
+
+    private let processedKey = "arena_cal_synced_events"
+
+    private init() {
+        let saved = UserDefaults.standard.stringArray(forKey: processedKey) ?? []
+        processedIds = Set(saved)
+    }
+
+    private func saveProcessedIds() {
+        UserDefaults.standard.set(Array(processedIds), forKey: processedKey)
+    }
+
+    /// Scan upcoming calendar events for bracket-prefixed arena matches.
+    /// Schedules notifications for future events and returns all pending sessions.
+    func syncBracketEvents(arenas: [Arena], socialArena: Arena? = nil) -> [PendingCalSession] {
+        let cal = CalendarManager.shared
+        guard cal.isReadAuthorized else { return [] }
+
+        let allArenas = socialArena.map { arenas + [$0] } ?? arenas
+        let upcoming = cal.upcomingEvents(hours: 8)
+        let recentStart = Date().addingTimeInterval(-5 * 60)
+        let active = cal.activeEvents().filter { $0.startDate >= recentStart }
+        let events = (active + upcoming).uniqued(by: \.eventIdentifier)
+
+        var pending: [PendingCalSession] = []
+
+        for event in events {
+            guard let arena = cal.matchBracketArena(for: event, arenas: allArenas) else { continue }
+            let eventId = event.eventIdentifier ?? ""
+            guard !eventId.isEmpty, !processedIds.contains(eventId) else { continue }
+
+            let duration = max(1, Int(event.endDate.timeIntervalSince(event.startDate) / 60))
+            let note = cal.stripBracketPrefix(event.title ?? "", arena: arena)
+
+            let session = PendingCalSession(
+                id: eventId,
+                arena: arena,
+                startTime: event.startDate,
+                durationMins: duration,
+                note: note
+            )
+            pending.append(session)
+
+            let secondsFromNow = event.startDate.timeIntervalSinceNow
+            if secondsFromNow > 5 {
+                scheduleCalSessionNotification(session: session, secondsFromNow: secondsFromNow)
+            }
+        }
+
+        return pending.sorted { $0.startTime < $1.startTime }
+    }
+
+    /// Find a pending session that's ready to start right now (within the last 90 seconds).
+    func readySession(from pending: [PendingCalSession]) -> PendingCalSession? {
+        let now = Date()
+        return pending.first { session in
+            let diff = now.timeIntervalSince(session.startTime)
+            return diff >= -5 && diff <= 90
+        }
+    }
+
+    func markProcessed(_ eventId: String) {
+        processedIds.insert(eventId)
+    }
+
+    func isProcessed(_ eventId: String) -> Bool {
+        processedIds.contains(eventId)
+    }
+
+    /// Remove entries older than 24 hours to prevent unbounded growth.
+    func cleanupOldEntries() {
+        if processedIds.count > 200 {
+            let ids = Array(processedIds)
+            processedIds = Set(ids.suffix(100))
+        }
+    }
+
+    private func scheduleCalSessionNotification(session: PendingCalSession, secondsFromNow: TimeInterval) {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.title = "\(session.arena.icon) \(session.arena.label) starting now"
+        content.body = session.note.isEmpty
+            ? "Calendar block - \(session.durationMins)m"
+            : "\(session.note) - \(session.durationMins)m"
+        content.sound = .default
+        content.categoryIdentifier = "CALENDAR_SESSION"
+        content.userInfo = [
+            "arenaId": session.arena.id,
+            "durationMins": session.durationMins,
+            "note": session.note,
+            "eventId": session.id
+        ]
+
+        let notificationID = "cal_session_\(session.id)"
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: secondsFromNow, repeats: false)
+        let request = UNNotificationRequest(identifier: notificationID, content: content, trigger: trigger)
+
+        center.removePendingNotificationRequests(withIdentifiers: [notificationID])
+        center.add(request)
+    }
+}
+
+private extension Array {
+    func uniqued<T: Hashable>(by keyPath: KeyPath<Element, T>) -> [Element] {
+        var seen = Set<T>()
+        return filter { seen.insert($0[keyPath: keyPath]).inserted }
     }
 }

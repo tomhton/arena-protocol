@@ -58,12 +58,22 @@ struct RootView: View {
             GrainOverlay()
         }
         .onOpenURL { url in
-            guard url.scheme == "arenaprotocol",
-                  url.host == "active",
-                  store.activeSession != nil else { return }
-            // Pop to home and ensure session display is expanded
-            path = NavigationPath()
-            store.sessionDisplayCollapsed = false
+            guard url.scheme == "arenaprotocol" else { return }
+            switch url.host {
+            case "active":
+                guard store.activeSession != nil else { return }
+                path = NavigationPath()
+                store.sessionDisplayCollapsed = false
+            case "arena":
+                let arenaId = url.pathComponents.dropFirst().first ?? ""
+                if let arena = store.letteredArenas.first(where: { $0.id == arenaId })
+                    ?? (store.socialArena.id == arenaId ? store.socialArena : nil) {
+                    path = NavigationPath()
+                    store.expandedArenaId = arena.id
+                }
+            default:
+                break
+            }
         }
     }
 

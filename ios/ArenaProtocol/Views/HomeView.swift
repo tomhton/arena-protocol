@@ -44,6 +44,16 @@ struct HomeView: View {
     // Long-press gate
     @State private var longPressedArenaId: String? = nil
 
+    // Intervals expand/collapse
+    @State private var intervalsExpanded = false
+
+    // Protocol reorder
+    @State private var protocolReorderMode = false
+    @State private var draggingProtocolId: String? = nil
+
+    // Checklist
+    @State private var showChecklist = false
+
     // Drag-to-reorder state
     @State private var draggingId: String? = nil
     @State private var dragTargetIdx: Int = -1
@@ -101,6 +111,32 @@ struct HomeView: View {
                 .opacity(hasSession && !sessionCollapsed ? 0.6 : 1.0)
             }
             .gesture(sessionSwipeGesture)
+
+            // Floating checklist button
+            if store.expandedArenaId == nil && !showCompletion {
+                VStack {
+                    Spacer()
+                    Button { showChecklist = true } label: {
+                        HStack(spacing: 6) {
+                            Text("☐")
+                                .font(.system(size: 11))
+                            Text("CHECKLIST")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .kerning(2)
+                        }
+                        .foregroundStyle(Color(hex: "#E8C547").opacity(0.5))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color(hex: "#E8C547").opacity(0.06))
+                        .overlay(Capsule()
+                            .strokeBorder(Color(hex: "#E8C547").opacity(0.12), lineWidth: 1))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 6)
+                }
+                .zIndex(50)
+            }
 
             // Expanded arena card overlay
             if let expandedId = store.expandedArenaId,
@@ -184,8 +220,9 @@ struct HomeView: View {
         }
         .confirmationDialog("You already have a session running", isPresented: $showConcurrentConfirm) {
             Button("Start Concurrent") {
+                guard let arena = pendingConcurrentArena else { return }
                 store.stashSession()
-                launchSession(arena: pendingConcurrentArena!, duration: pendingConcurrentDuration,
+                launchSession(arena: arena, duration: pendingConcurrentDuration,
                               note: pendingConcurrentNote, social: pendingConcurrentSocial)
             }
             Button("Cancel", role: .cancel) {}
@@ -198,6 +235,12 @@ struct HomeView: View {
                     .presentationDetents([.height(280)])
                     .presentationDragIndicator(.visible)
             }
+        }
+        .sheet(isPresented: $showChecklist) {
+            ChecklistPanelView(sessionId: store.activeSession?.arena.id)
+                .presentationDetents([.fraction(0.4), .fraction(0.75)])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color(hex: "#080810"))
         }
     }
 
@@ -414,7 +457,7 @@ struct HomeView: View {
             headerSection
                 .padding(.top, hasSession ? 8 : 44)
 
-            // Calendar day view — quick glance at today's schedule
+            // Calendar
             CalendarDayView(onTapArenaEvent: { arena, duration, note in
                 if store.activeSession != nil {
                     pendingConcurrentArena = arena
@@ -427,32 +470,35 @@ struct HomeView: View {
                 }
             })
 
-            // Quick actions — morning, wind down, stuck
+            // Quick actions
             quickActionRow
+                .padding(.bottom, 16)
 
-            // Arena grid
+            // Social toggle — above arenas
+            socialSection
+                .padding(.bottom, 16)
+
+            // Arenas
             editToggle
             arenaGrid
+                .padding(.bottom, 20)
 
-            // Protocols — below arenas for easy access
+            // Protocols (inset panel)
             protocolsInlineSection
-
-            // Social toggle
-            socialSection
+                .padding(.bottom, 20)
 
             // Intervals
             intervalsSection
+                .padding(.bottom, 16)
 
-            // App dock
-            AppShortcutsBar()
-
-            // Egg strip
-            eggStrip
-
-            // Quick tools
+            // Tools & inventory
             quickToolsRow
+                .padding(.bottom, 8)
+            eggStrip
+                .padding(.bottom, 8)
+            AppShortcutsBar()
+                .padding(.bottom, 16)
 
-            // Footer
             footer
         }
     }
@@ -517,56 +563,149 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("PROTOCOLS")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.22))
-                    .kerning(6)
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.18))
+                    .kerning(5)
                 Spacer()
-                Button { navigate(.protocols) } label: {
-                    Text("VIEW ALL →")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(hex: "#708090").opacity(0.6))
-                        .kerning(2)
+                if protocolReorderMode {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { protocolReorderMode = false }
+                    } label: {
+                        Text("DONE")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(hex: "#4ECDC4").opacity(0.7))
+                            .kerning(2)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "#4ECDC4").opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Button { navigate(.protocols) } label: {
+                        Text("ALL →")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.25))
+                            .kerning(2)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 14)
-            .padding(.bottom, 8)
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(store.protocols) { proto in
-                        Button { navigate(.activeProtocol(proto)) } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(spacing: 6) {
-                                    Text(proto.glyph)
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(Color(hex: proto.color))
-                                    Text(proto.name)
-                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color(hex: proto.color))
-                                        .kerning(2)
-                                        .lineLimit(1)
-                                }
-                                Text("\(proto.blocks.count) blocks · \(proto.blocks.reduce(0) { $0 + $1.duration })m")
-                                    .font(.system(size: 8, design: .monospaced))
-                                    .foregroundStyle(Color.white.opacity(0.3))
-                                    .kerning(1)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .frame(minWidth: 140, alignment: .leading)
-                            .background(Color(hex: proto.color).opacity(0.06))
-                            .overlay(RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(Color(hex: proto.color).opacity(0.2), lineWidth: 1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+            if protocolReorderMode {
+                // Vertical drag-to-reorder list
+                VStack(spacing: 4) {
+                    ForEach(Array(store.protocols.enumerated()), id: \.element.id) { idx, proto in
+                        let c = Color(hex: proto.color)
+                        let isDragging = draggingProtocolId == proto.id
+
+                        HStack(spacing: 10) {
+                            Text("≡")
+                                .font(.system(size: 16, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.2))
+                            Text(proto.glyph)
+                                .font(.system(size: 13))
+                                .foregroundStyle(c.opacity(0.7))
+                            Text(proto.name)
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundStyle(c.opacity(0.8))
+                                .kerning(1)
+                                .lineLimit(1)
+                            Spacer()
+                            Text("\(proto.blocks.count) blocks")
+                                .font(.system(size: 7, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.2))
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(isDragging ? c.opacity(0.08) : c.opacity(0.03))
+                        .overlay(RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(isDragging ? c.opacity(0.25) : c.opacity(0.08), lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .opacity(isDragging ? 0.7 : 1)
+                        .scaleEffect(isDragging ? 1.03 : 1)
+                        .animation(.easeInOut(duration: 0.15), value: isDragging)
+                        .draggable(proto.id) {
+                            HStack(spacing: 6) {
+                                Text(proto.glyph).font(.system(size: 12))
+                                Text(proto.name)
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(c)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.black.opacity(0.8))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .onAppear { draggingProtocolId = proto.id }
+                        }
+                        .dropDestination(for: String.self) { items, _ in
+                            guard let draggedId = items.first,
+                                  let fromIdx = store.protocols.firstIndex(where: { $0.id == draggedId }),
+                                  let toIdx = store.protocols.firstIndex(where: { $0.id == proto.id }),
+                                  fromIdx != toIdx else { return false }
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                store.protocols.move(fromOffsets: IndexSet(integer: fromIdx),
+                                                     toOffset: toIdx > fromIdx ? toIdx + 1 : toIdx)
+                                store.saveProtocols()
+                            }
+                            draggingProtocolId = nil
+                            return true
+                        }
                     }
                 }
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 14)
+            } else {
+                // Normal horizontal scroll — long press activates reorder
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(store.protocols) { proto in
+                            let c = Color(hex: proto.color)
+                            Button { navigate(.activeProtocol(proto)) } label: {
+                                HStack(spacing: 8) {
+                                    Text(proto.glyph)
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(c.opacity(0.7))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(proto.name)
+                                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(c.opacity(0.8))
+                                            .kerning(1)
+                                            .lineLimit(1)
+                                        Text("\(proto.blocks.count) blocks · \(proto.blocks.reduce(0) { $0 + $1.duration })m")
+                                            .font(.system(size: 7, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.2))
+                                            .kerning(1)
+                                    }
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(c.opacity(0.04))
+                                .overlay(RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(c.opacity(0.1), lineWidth: 1))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                            .buttonStyle(.plain)
+                            .onLongPressGesture(minimumDuration: 0.5) {
+                                let gen = UIImpactFeedbackGenerator(style: .medium)
+                                gen.impactOccurred()
+                                withAnimation(.easeInOut(duration: 0.25)) { protocolReorderMode = true }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .padding(.bottom, 14)
             }
         }
-        .padding(.bottom, 12)
+        .background(Color.black.opacity(0.3))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14)
+            .strokeBorder(Color.white.opacity(0.03), lineWidth: 1))
+        .padding(.horizontal, 12)
     }
 
     // MARK: - Quick Action Row
@@ -983,47 +1122,32 @@ struct HomeView: View {
     // MARK: - Social Section
 
     private var socialSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { socialActive.toggle() }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
-                HStack(spacing: 12) {
-                    Text("🤝")
-                        .font(.system(size: 18))
-                        .shadow(color: socialActive ? socialColor.opacity(0.6) : .clear, radius: 8)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("SOCIAL")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(socialActive ? socialColor : Color.white.opacity(0.45))
-                            .kerning(4)
-                        Text(socialActive ? "active — pick an arena or start solo" : "tap to add social to any session")
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(socialActive ? 0.4 : 0.2))
-                            .kerning(1)
-                    }
+                HStack(spacing: 10) {
+                    Text("🤝").font(.system(size: 14))
+                    Text("SOCIAL")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(socialActive ? socialColor : Color.white.opacity(0.35))
+                        .kerning(4)
                     Spacer()
                     ZStack {
                         Capsule()
-                            .fill(socialActive ? socialColor : Color.white.opacity(0.08))
-                            .frame(width: 44, height: 24)
-                        Circle().fill(.white).frame(width: 18, height: 18)
-                            .offset(x: socialActive ? 10 : -10)
+                            .fill(socialActive ? socialColor.opacity(0.6) : Color.white.opacity(0.06))
+                            .frame(width: 36, height: 20)
+                        Circle().fill(socialActive ? .white : Color.white.opacity(0.3))
+                            .frame(width: 14, height: 14)
+                            .offset(x: socialActive ? 8 : -8)
                     }
-                    Button { navigate(.editArena(store.socialArena)) } label: {
-                        Text("✎")
-                            .font(.system(size: 12))
-                            .foregroundStyle(socialColor.opacity(0.45))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 14).padding(.vertical, 12)
-                .background(socialActive ? socialColor.opacity(0.1) : Color.white.opacity(0.03))
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(socialActive ? socialColor.opacity(0.5) : Color.white.opacity(0.07),
-                                  lineWidth: socialActive ? 1.5 : 1))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(socialActive ? socialColor.opacity(0.06) : Color.white.opacity(0.02))
+                .overlay(RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(socialActive ? socialColor.opacity(0.3) : Color.white.opacity(0.05), lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.plain)
 
@@ -1033,63 +1157,94 @@ struct HomeView: View {
                         store.expandedArenaId = store.socialArena.id
                     }
                 } label: {
-                    HStack(spacing: 10) {
-                        Text("🤝").font(.system(size: 14))
+                    HStack(spacing: 8) {
                         Text("SOCIAL ONLY SESSION →")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(socialColor).kerning(3)
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(socialColor).kerning(2)
                         Spacer()
                     }
-                    .padding(.horizontal, 14).padding(.vertical, 12)
-                    .background(socialColor.opacity(0.07))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(socialColor.opacity(0.35), lineWidth: 1))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                    .background(socialColor.opacity(0.04))
+                    .overlay(RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(socialColor.opacity(0.2), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
-                .transition(.opacity.combined(with: .offset(y: -6)))
+                .transition(.opacity.combined(with: .offset(y: -4)))
             }
         }
-        .padding(.horizontal, 12).padding(.bottom, 8)
+        .padding(.horizontal, 12)
     }
 
     // MARK: - Intervals Section
 
+    private let intervalColor = Color(hex: "#4ECDC4")
+
     private var intervalsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("INTERVALS")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.22)).kerning(6)
-                Text("— mindless periods")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.12))
-            }
-            .padding(.horizontal, 14)
-            ScrollView(.horizontal, showsIndicators: false) {
+        VStack(spacing: 0) {
+            // Single trigger button
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    intervalsExpanded.toggle()
+                }
+            } label: {
                 HStack(spacing: 8) {
+                    Text("〜").font(.system(size: 14))
+                    Text("INTERVALS")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(intervalColor.opacity(0.7))
+                        .kerning(3)
+                    Text("— mindless periods")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.12))
+                    Spacer()
+                    Text(intervalsExpanded ? "▾" : "▸")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(intervalColor.opacity(0.3))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(intervalColor.opacity(0.04))
+                .overlay(RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(intervalColor.opacity(intervalsExpanded ? 0.15 : 0.08), lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            // Expanded preset grid
+            if intervalsExpanded {
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8)
+                ], spacing: 8) {
                     ForEach(INTERVAL_PRESETS, id: \.label) { preset in
                         Button { navigate(.interval(preset.label, preset.minutes)) } label: {
                             VStack(spacing: 4) {
                                 Text(preset.icon).font(.system(size: 18))
                                 Text(preset.label)
                                     .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color(hex: "#4ECDC4")).kerning(2)
+                                    .foregroundStyle(intervalColor).kerning(2)
                                 Text("\(preset.minutes)m")
                                     .font(.system(size: 9, design: .monospaced))
                                     .foregroundStyle(Color.white.opacity(0.3))
                             }
-                            .frame(width: 68, height: 72)
-                            .background(Color(hex: "#4ECDC4").opacity(0.05))
-                            .overlay(RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(Color(hex: "#4ECDC4").opacity(0.18), lineWidth: 1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(intervalColor.opacity(0.05))
+                            .overlay(RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(intervalColor.opacity(0.15), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 4)
+                .padding(.top, 10)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+        .padding(.horizontal, 12)
         .padding(.bottom, 10)
     }
 

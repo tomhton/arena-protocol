@@ -237,7 +237,7 @@ struct InlineSessionConfig: View {
 
             VStack(spacing: 6) {
                 ForEach(calEvents.prefix(4), id: \.eventIdentifier) { event in
-                    let dur  = event.startDate.minutesUntil(event.endDate)
+                    let dur  = event.startDate <= Date() ? max(1, Date().minutesUntil(event.endDate)) : event.startDate.minutesUntil(event.endDate)
                     let when = event.startDate.relativeShort()
                     let matched = CalendarManager.shared.matchArena(for: event, arenas: store.arenas)
                     let isThisArena = matched?.id == arena.id

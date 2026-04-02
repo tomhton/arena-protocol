@@ -68,6 +68,20 @@ struct CalendarDayView: View {
             // Layout switcher
             layoutSwitcher
 
+            // Refresh
+            Button {
+                events = CalendarManager.shared.todayEvents()
+            } label: {
+                Text("↻")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(hex: "#60A5FA").opacity(0.4))
+                    .frame(width: 22, height: 18)
+                    .background(Color(hex: "#60A5FA").opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 2)
+
             // Open Google Calendar
             Button {
                 if let url = URL(string: "googlecalendar://"),
@@ -221,14 +235,15 @@ struct CalendarDayView: View {
     }
 
     private func resolveArena(_ event: EKEvent) -> Arena? {
-        CalendarManager.shared.matchBracketArena(for: event, arenas: store.letteredArenas)
-            ?? CalendarManager.shared.matchArena(for: event, arenas: store.arenas)
+        let allArenas = store.letteredArenas + [store.socialArena]
+        return CalendarManager.shared.matchBracketArena(for: event, arenas: allArenas)
+            ?? CalendarManager.shared.matchArena(for: event, arenas: allArenas)
     }
 
     private func timelineRow(_ event: EKEvent, tier: EventTier) -> some View {
         let matched = resolveArena(event)
         let accent = matched.map { Color(hex: $0.color) } ?? Color(hex: "#60A5FA").opacity(0.5)
-        let dur = event.startDate.minutesUntil(event.endDate)
+        let dur = event.startDate <= now ? max(1, now.minutesUntil(event.endDate)) : event.startDate.minutesUntil(event.endDate)
         let isTappable = matched != nil && tier != .past
 
         return Button {
@@ -312,7 +327,7 @@ struct CalendarDayView: View {
     private func compactCard(_ event: EKEvent, tier: EventTier) -> some View {
         let matched = resolveArena(event)
         let accent = matched.map { Color(hex: $0.color) } ?? Color(hex: "#60A5FA").opacity(0.5)
-        let dur = event.startDate.minutesUntil(event.endDate)
+        let dur = event.startDate <= now ? max(1, now.minutesUntil(event.endDate)) : event.startDate.minutesUntil(event.endDate)
         let isTappable = matched != nil && tier != .past
 
         return Button {

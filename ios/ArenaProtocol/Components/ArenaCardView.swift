@@ -181,11 +181,9 @@ struct ArenaCardView: View {
         .shadow(color: isPressed ? arenaColor.opacity(0.22) : .clear, radius: 12, y: 4)
         .scaleEffect(isPressed ? 1.02 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded   { _ in isPressed = false }
-        )
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
         .onAppear {
             // Animate glow pulse for active cards
             if todayIntensity > 0 || rankTier >= .blazing {

@@ -16,6 +16,7 @@ struct SessionDisplayView: View {
     @State private var showJointPicker = false
     @State private var showConcurrentConfirm = false
     @State private var showAbandonConfirm = false
+    @State private var showChecklist = false
 
     private var active: ActiveSessionState? { store.activeSession }
     private var stacked: [ActiveSessionState] { store.stackedSessions }
@@ -78,6 +79,12 @@ struct SessionDisplayView: View {
             }
             .presentationDetents([.fraction(0.6)])
             .presentationBackground(Color(hex: "#080810"))
+        }
+        .sheet(isPresented: $showChecklist) {
+            ChecklistPanelView(sessionId: active?.arena.id)
+                .presentationDetents([.fraction(0.4), .fraction(0.75)])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color(hex: "#080810"))
         }
     }
 
@@ -317,6 +324,24 @@ struct SessionDisplayView: View {
                 .background(liveColor.opacity(0.08))
                 .overlay(RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(liveColor.opacity(0.2), lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+
+            Button { showChecklist = true } label: {
+                HStack(spacing: 6) {
+                    Text("☐")
+                        .font(.system(size: 10))
+                    Text("TASKS")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .kerning(3)
+                }
+                .foregroundStyle(Color(hex: "#E8C547").opacity(0.6))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color(hex: "#E8C547").opacity(0.08))
+                .overlay(RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color(hex: "#E8C547").opacity(0.2), lineWidth: 1))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.plain)
