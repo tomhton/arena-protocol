@@ -141,6 +141,8 @@ struct AppSettings: Codable {
     var calendarEnabled: Bool = false
     var calendarAutoStart: Bool = false
     var calendarViewStyle: CalendarViewStyle = .timeline
+    var checklistTabEdge: String = "leading"   // "leading" or "trailing"
+    var checklistTabY: CGFloat = 0             // vertical offset from default position
 }
 
 // MARK: - Forge Progression Models
@@ -478,6 +480,46 @@ struct Checklist: Identifiable, Codable, Hashable {
     }
 }
 
+// MARK: - Motivational Quotes
+
+struct MotivationalQuote {
+    let text: String
+}
+
+let MOTIVATIONAL_QUOTES: [MotivationalQuote] = [
+    .init(text: "Every civilization begins with a single focused hour."),
+    .init(text: "The future belongs to those who design their days."),
+    .init(text: "You are the architect of tomorrow's world."),
+    .init(text: "Small rituals compound into extraordinary lives."),
+    .init(text: "Discipline is the bridge between intention and reality."),
+    .init(text: "The arena awaits those bold enough to enter."),
+    .init(text: "Progress measured daily becomes revolution over years."),
+    .init(text: "What you focus on today echoes through time."),
+    .init(text: "A society of focused individuals changes everything."),
+    .init(text: "The path forward is paved one session at a time."),
+    .init(text: "Your greatest work begins in the next focused block."),
+    .init(text: "In the architecture of days, you build cathedrals."),
+    .init(text: "The world rewards those who master their attention."),
+    .init(text: "Each session is a vote for the person you're becoming."),
+    .init(text: "Momentum is the most underrated force in the universe."),
+    .init(text: "Today's focus is tomorrow's foundation."),
+    .init(text: "The arena doesn't judge — it simply reveals."),
+    .init(text: "Clarity of purpose is the ultimate competitive advantage."),
+    .init(text: "A wonderful world is built by wonderful routines."),
+    .init(text: "Presence is the most radical act of our time."),
+    .init(text: "You are not preparing for the future — you are creating it."),
+    .init(text: "The best time to start was yesterday. The second best is now."),
+    .init(text: "Alignment, labor, recovery, movement — the pillars of a full life."),
+    .init(text: "Every session logged is proof that you chose growth."),
+    .init(text: "The protocol is simple: show up, lock in, evolve."),
+]
+
+func todayQuote(sessionCount: Int) -> MotivationalQuote {
+    let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+    let idx = (dayOfYear + sessionCount) % MOTIVATIONAL_QUOTES.count
+    return MOTIVATIONAL_QUOTES[idx]
+}
+
 // MARK: - Scheduling & Deadlines
 
 enum ScheduledKind: String, Codable, Equatable {
@@ -496,6 +538,7 @@ struct ScheduledBlock: Identifiable, Codable {
     var durationMins: Int       // arena: user-specified; protocol: sum of blocks
     var note: String = ""
     var notificationId: String? = nil
+    var calEventId: String? = nil   // Google Calendar event identifier
 }
 
 struct ArenaDeadline: Identifiable, Codable {
@@ -679,21 +722,6 @@ let ARENA_COLORS = ["#E8C547", "#4ECDC4", "#A8E6A3", "#FF8FA3", "#B794F4", "#F4A
                     "#60A5FA", "#F87171", "#34D399", "#A78BFA", "#FB923C", "#38BDF8",
                     "#E879F9", "#4ADE80"]
 let DURATIONS = [5, 10, 30, 60, 90]
-
-struct IntervalPreset {
-    let label: String
-    let icon: String
-    let minutes: Int
-}
-
-let INTERVAL_PRESETS: [IntervalPreset] = [
-    IntervalPreset(label: "FLOW",     icon: "〜", minutes: 5),
-    IntervalPreset(label: "DRIFT",    icon: "◌",  minutes: 10),
-    IntervalPreset(label: "WALK",     icon: "◎",  minutes: 20),
-    IntervalPreset(label: "BREATHE",  icon: "◉",  minutes: 4),
-    IntervalPreset(label: "REST",     icon: "△",  minutes: 15),
-    IntervalPreset(label: "RESET",    icon: "⬡",  minutes: 30),
-]
 
 // MARK: - Forge / Reward
 
@@ -900,6 +928,7 @@ func saveToDefaults<T: Encodable>(_ key: String, _ value: T) {
 
 // MARK: - DataStore (@Observable)
 
+@MainActor
 @Observable
 final class DataStore {
 
@@ -1272,6 +1301,73 @@ final class DataStore {
         stackedSessions.removeAll { $0.arena.id == arenaId }
     }
 
+    // MARK: - Joint Arena Queue Management
+
+    /// Remove a joint entry by ID. Recalculates all subsequent timing.
+    func removeJoint(entryId: UUID) {
+        guard var session = activeSession else { return }
+        session.jointEntries.removeAll { $0.id == entryId }
+        recalculateJointTiming(&session)
+        activeSession = session
+    }
+
+    /// Edit a joint entry's arena, duration, or note. Recalculates timing chain.
+    func editJoint(entryId: UUID, newArena: Arena? = nil, newDuration: Int? = nil, newNote: String? = nil) {
+        guard var session = activeSession,
+              let idx = session.jointEntries.firstIndex(where: { $0.id == entryId }) else { return }
+        if let a = newArena {
+            session.jointEntries[idx] = JointArenaEntry(
+                arena: a,
+                minutes: newDuration ?? session.jointEntries[idx].minutes,
+                note: newNote ?? session.jointEntries[idx].note,
+                calEventId: session.jointEntries[idx].calEventId,
+                scheduledStart: session.jointEntries[idx].scheduledStart,
+                scheduledEnd: session.jointEntries[idx].scheduledEnd
+            )
+        } else {
+            if let d = newDuration { session.jointEntries[idx] = JointArenaEntry(arena: session.jointEntries[idx].arena, minutes: d, note: session.jointEntries[idx].note, calEventId: session.jointEntries[idx].calEventId, scheduledStart: session.jointEntries[idx].scheduledStart, scheduledEnd: session.jointEntries[idx].scheduledEnd) }
+            if let n = newNote { session.jointEntries[idx].note = n }
+        }
+        recalculateJointTiming(&session)
+        activeSession = session
+    }
+
+    /// Insert a joint entry at a specific position. Index 0 = right after primary arena.
+    func insertJoint(arena: Arena, minutes: Int, note: String = "", atIndex: Int) {
+        guard var session = activeSession else { return }
+        let entry = JointArenaEntry(arena: arena, minutes: minutes, note: note)
+        let clamped = max(0, min(session.jointEntries.count, atIndex))
+        session.jointEntries.insert(entry, at: clamped)
+        recalculateJointTiming(&session)
+        activeSession = session
+    }
+
+    /// Reorder joint entries by moving from one index to another.
+    func reorderJoint(from: Int, to: Int) {
+        guard var session = activeSession else { return }
+        guard from >= 0, from < session.jointEntries.count,
+              to >= 0, to < session.jointEntries.count, from != to else { return }
+        let entry = session.jointEntries.remove(at: from)
+        session.jointEntries.insert(entry, at: to)
+        recalculateJointTiming(&session)
+        activeSession = session
+    }
+
+    /// Recalculate scheduledStart/scheduledEnd for all joints after a mutation.
+    private func recalculateJointTiming(_ session: inout ActiveSessionState) {
+        let primaryDuration = TimeInterval(session.durationMins * 60)
+        var cursor = session.startTime.addingTimeInterval(primaryDuration)
+        for i in session.jointEntries.indices {
+            session.jointEntries[i].scheduledStart = cursor
+            let dur = TimeInterval(session.jointEntries[i].minutes * 60)
+            session.jointEntries[i].scheduledEnd = cursor.addingTimeInterval(dur)
+            cursor = session.jointEntries[i].scheduledEnd
+        }
+        session.endTime = session.jointEntries.isEmpty
+            ? session.startTime.addingTimeInterval(primaryDuration)
+            : session.jointEntries.last!.scheduledEnd
+    }
+
     // Session management
     func addSession(_ s: Session) {
         sessions.append(s)
@@ -1346,14 +1442,42 @@ final class DataStore {
             scheduleNotification(id: notifId, title: title, body: body, secondsFromNow: secsFromNow)
             b.notificationId = notifId
         }
+        // Sync to Google Calendar with [ARENA_LABEL] format
+        let trimmedNote = b.note.trimmingCharacters(in: .whitespaces)
+        let calTitle = trimmedNote.isEmpty
+            ? "[\(b.itemLabel)]"
+            : "[\(b.itemLabel)] \(trimmedNote)"
+        let calEnd = b.scheduledAt.addingTimeInterval(TimeInterval(b.durationMins * 60))
+        let blockId = b.id
+        let blockStart = b.scheduledAt
+        Task { @MainActor in
+            if !CalendarManager.shared.isReadAuthorized {
+                _ = await CalendarManager.shared.requestFullAccess()
+            }
+            let eventId = CalendarManager.shared.addEvent(
+                title: calTitle, start: blockStart, end: calEnd
+            )
+            if let eventId {
+                if let idx = self.scheduledBlocks.firstIndex(where: { $0.id == blockId }) {
+                    self.scheduledBlocks[idx].calEventId = eventId
+                    self.saveScheduledBlocks()
+                }
+            }
+        }
         scheduledBlocks.append(b)
         saveScheduledBlocks()
     }
 
     func removeScheduledBlock(id: String) {
-        if let b = scheduledBlocks.first(where: { $0.id == id }),
-           let notifId = b.notificationId {
-            cancelNotification(id: notifId)
+        if let b = scheduledBlocks.first(where: { $0.id == id }) {
+            if let notifId = b.notificationId {
+                cancelNotification(id: notifId)
+            }
+            if let calId = b.calEventId {
+                Task { @MainActor in
+                    CalendarManager.shared.deleteEvent(id: calId)
+                }
+            }
         }
         scheduledBlocks.removeAll { $0.id == id }
         saveScheduledBlocks()

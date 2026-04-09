@@ -3,6 +3,7 @@
 
 import SwiftUI
 import UserNotifications
+import TipKit
 #if canImport(ActivityKit)
 import ActivityKit
 #endif
@@ -19,6 +20,7 @@ struct ArenaProtocolApp: App {
         self.notificationDelegate = delegate
         UNUserNotificationCenter.current().delegate = delegate
         Self.registerNotificationCategories()
+        try? Tips.configure([.displayFrequency(.weekly)])
     }
 
     var body: some Scene {
@@ -45,6 +47,13 @@ struct ArenaProtocolApp: App {
                         store.checkStreakProtectionNotification()
                         store.seedArenaRanksIfNeeded()
 
+                        // Sync arena list to App Group for Shortcuts + Control Center
+                        syncArenasToSharedStore()
+
+                        // Consume pending Shortcut intents
+                        consumePendingIntent()
+                        consumePendingChecklistTask()
+
                         // Sync bracket-prefixed calendar events for auto-start
                         if store.settings.calendarAutoStart {
                             CalendarSyncManager.shared.cleanupOldEntries()
@@ -65,6 +74,44 @@ struct ArenaProtocolApp: App {
                         break
                     }
                 }
+        }
+    }
+
+    private func syncArenasToSharedStore() {
+        let shared = store.letteredArenas.map {
+            SharedArena(id: $0.id, label: $0.label, icon: $0.icon, color: $0.color)
+        }
+        SharedStore.writeArenas(shared)
+    }
+
+    private func consumePendingIntent() {
+        guard let pending = SharedStore.readPendingIntent() else { return }
+        SharedStore.clearPendingIntent()
+        guard store.activeSession == nil else { return }
+        guard let arena = store.letteredArenas.first(where: { $0.id == pending.arenaId }) else { return }
+        store.startSession(arena: arena, durationMins: pending.duration, note: pending.note)
+        let endTime = Date().addingTimeInterval(TimeInterval(pending.duration * 60))
+        SharedStore.writeActiveSession(arenaName: arena.label, arenaColor: arena.color, endsAt: endTime)
+        WidgetCenter.shared.reloadAllTimelines()
+        scheduleNotification(id: "session_1", title: "\(arena.label) session complete",
+                             body: "Your focus block has ended.",
+                             secondsFromNow: TimeInterval(pending.duration * 60))
+    }
+
+    private func consumePendingChecklistTask() {
+        guard let text = SharedStore.readPendingChecklistTask() else { return }
+        SharedStore.clearPendingChecklistTask()
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let key = Checklist.periodKey(for: .day)
+        if var existing = store.checklist(for: .day, sessionId: nil) {
+            existing.items.append(ChecklistItem(text: trimmed))
+            store.upsertChecklist(existing)
+        } else {
+            let cl = Checklist(scope: .day, periodKey: key,
+                               items: [ChecklistItem(text: trimmed)],
+                               createdAt: Date().timeIntervalSince1970 * 1000)
+            store.upsertChecklist(cl)
         }
     }
 

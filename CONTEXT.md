@@ -1,5 +1,5 @@
 # CONTEXT.md — Arena Protocol
-> Paste this at the start of every Claude session. Last updated: 2026-04-02 (v2.29.0).
+> Paste this at the start of every Claude session. Last updated: 2026-04-09 (v2.33.0).
 
 ---
 
@@ -88,6 +88,7 @@
 | 2.27.1 | 2026-04-01 | Bug fixes: DONE button crash (force-unwrap on nil `active!` during view removal transition), session start flash (stale `sessionNow` caused 1s uncolored background), social-only arena not opening (lookup missed `socialArena` stored outside main array). Live Activity background transitions: `scheduleLiveActivityTransitions()` uses `performExpiringActivity` to push arena changes while locked; foreground sync on `scenePhase` change; `staleDate` set to current arena end. |
 | 2.28.0 | 2026-04-01 | Arena button skins: 10 material skins (Slate→Void, common→legendary) droppable from eggs (40% chance), equippable per arena from inventory. Pure SwiftUI material renderer (Canvas textures + bevel + engrave). Calendar auto-start: bracket-prefixed events trigger session prompts via notifications. Smart CalendarDayView: visibility tiers, 3 layouts, tappable events. HomeView redesign: calendar at top, gold gradient header. |
 | 2.29.0 | 2026-04-02 | Live Activity tappable arenas: each upcoming joint arena shown as individual tappable Link in Dynamic Island + lock screen. Retractable checklist system: scoped to session/day/week/month/year, progressive disclosure UX, lock-in commitment mechanic. HomeView: intervals collapse, protocol long-press drag-to-reorder. Removed duplicate CalendarSyncManager.swift. |
+| 2.33.0 | 2026-04-09 | SCHEDULE button promoted to full-width colored quick action on HomeView. Scheduled blocks sync to Google Calendar with `[ARENA_LABEL]` format so they appear in CalendarDayView widget. `ScheduledBlock.calEventId` tracks calendar events; removal cleans up calendar. |
 
 ### v2.0.5 Changes
 - `FORGE_SYSTEM_ROADMAP.md` — full progression spec: streak tiers, egg incubation (5 rarities), Rebirth Island 1–10, inventory screen layout, 4-phase multiplayer plan, Swift data model definitions, build order
@@ -150,13 +151,15 @@ arena-protocol/
 │   ├── Package.swift                       ← SPM manifest — do not remove, used by swift test
 │   ├── README_XCODE_SETUP.md              ← step-by-step Xcode setup guide
 │   ├── ArenaProtocol/
-│   │   ├── ArenaProtocolApp.swift          ← @main entry point, WindowGroup
+│   │   ├── ArenaProtocolApp.swift          ← @main entry point, WindowGroup, TipKit config
+│   │   ├── ArenaAppIntents.swift           ← App Intents for Siri/Shortcuts (StartArena, AddChecklistTask)
+│   │   ├── ArenaTips.swift                 ← TipKit tips (ProtocolReorder, ChecklistTab, SiriShortcuts)
 │   │   ├── Models/
 │   │   │   └── DataStore.swift            ← ⭐ MOST IMPORTANT — all models, defaults,
 │   │   │                                      persistence, gamification helpers
 │   │   ├── Views/
 │   │   │   ├── RootView.swift             ← ⭐ Screen router + GrainOverlay + Color extensions + onOpenURL deeplink handler
-│   │   │   ├── HomeView.swift             ← Dashboard: arena grid, shortcuts, ember particles, timer pill
+│   │   │   ├── HomeView.swift             ← Dashboard hub (decomposed): session display, overlays, quick actions, tools, footer
 │   │   │   ├── SelectView.swift           ← Session config: quest, sub-arena, duration
 │   │   │   ├── ActiveSessionView.swift    ← Live timer + minimize + CompleteView + Live Activity management
 │   │   │   ├── ProtocolsView.swift        ← Protocol list/editor + ActiveProtocolView
@@ -173,15 +176,19 @@ arena-protocol/
 │   │   │   ├── ArenaCardView.swift        ← Card UI + rank borders + under-glow + skin material + Canvas illustrations + AddArenaCardView
 │   │   │   ├── SkinMaterialView.swift    ← Pure SwiftUI material renderer (10 textures + bevel + engrave modifier)
 │   │   │   ├── CircularTimerView.swift    ← Reusable circular progress timer
-│   │   │   ├── AppShortcutsBar.swift      ← Scrollable dock (CURATED_DOCK_APPS 20 apps, edit mode, picker sheet, DockApp struct)
+│   │   │   ├── AppShortcutsBar.swift      ← Infinite wrap-around carousel dock (3× tripled items, ScrollViewReader reset, CURATED_DOCK_APPS 20 apps, edit mode, picker sheet, DockApp struct)
 │   │   │   ├── EmberDropModal.swift       ← Achievement popup overlay
 │   │   │   ├── CalendarDayView.swift      ← Calendar day strip on HomeView
 │   │   │   ├── CompletionOverlay.swift    ← Session completion overlay
 │   │   │   ├── FlowLayout.swift           ← Flow layout helper
 │   │   │   ├── InlineSessionConfig.swift  ← Expanded arena card session config
-│   │   │   ├── SessionDisplayView.swift   ← Inline session display for HomeView
+│   │   │   ├── SessionDisplayView.swift   ← Inline session display for HomeView (progress bar, interactive timeline bubbles, JointEntryEditSheet)
 │   │   │   ├── ForgeDropModal.swift       ← Forge narrative drop modal
-│   │   │   └── ChecklistPanelView.swift   ← Retractable checklist panel (scoped: session/day/week/month/year)
+│   │   │   ├── ChecklistPanelView.swift   ← Retractable checklist panel (scoped: session/day/week/month/year)
+│   │   │   ├── HomeHeaderView.swift       ← Header section (date + rotating quote + subtitle row)
+│   │   │   ├── ProtocolsInlineView.swift  ← Horizontal protocol cards + drag-to-reorder (simultaneousGesture fix)
+│   │   │   ├── ArenaGridView.swift        ← Edit toggle + 2-column arena grid (incl. social arena as last card) + reorder list
+│   │   │   └── ChecklistTabView.swift     ← Persistent bottom-left checklist sliding panel + tab
 │   │   └── Resources/
 │   │       └── Info.plist                 ← Bundle config, URL schemes, dark mode
 │   ├── ArenaProtocolWidget/               ← Widget + Live Activity extension target
@@ -256,7 +263,6 @@ enum Screen: Hashable {
     case editArena(Arena)
     case newArena
     case stuck
-    case interval(String, Int)
     case whatsNew
     case inventory
     case profile
@@ -276,7 +282,7 @@ The app handles deep links via `.onOpenURL` in `RootView.swift`:
 
 | Screen | File | What it does |
 |---|---|---|
-| **Home** | `HomeView.swift` | Single-page hub: inline session display (swipe up to collapse, down to expand), expandable arena cards with rank-based borders and today's-session under-glow, calendar day view, protocols section, 2-column arena grid with edit toggle, social toggle, intervals row, app shortcuts dock, egg strip, quick tools, completion overlay. Arena cards show rank tier label + glowing corner accents + animated gradient borders at higher ranks. |
+| **Home** | `HomeView.swift` | Single-page hub (decomposed): inline session display (swipe collapse/expand), expanded arena overlay, completion overlay, forge/ember modals. Sections extracted to components: `HomeHeaderView`, `ArenaGridView`, `ProtocolsInlineView`, `IntervalsSectionView`, `ChecklistTabView`. Also contains: calendar day view, quick actions, quick tools, egg strip, app shortcuts dock, footer. Social arena now appears as last card in the arena grid. |
 | **Morning Check-in** | `MorningCheckinView.swift` | 3-step ritual (Reading 5m, Goals 5m, Movement 5m), animated progress bar, skip option. Shows once per day. |
 | **Select** | `SelectView.swift` | Arena detail + quest note textarea, sub-arena pills → example task list, duration picker (5/10/30/60/90/custom), Google Calendar option, launches session |
 | **Active Session** | `ActiveSessionView.swift` | Live countdown ring, arena name, quest note, focus hint, pause/resume, done/abandon. Minimize button (chevron.down, top-trailing) returns to Home while keeping session alive in `store.activeSession`. Resumes from stored state on re-entry. Manages Live Activity lifecycle (start on session begin, update on pause/resume, end on done/abandon). Tapping the Dynamic Island or lock screen banner deep-links to this screen via `arenaprotocol://active`. |
@@ -339,6 +345,7 @@ struct ScheduledBlock: Identifiable, Codable {
     var durationMins: Int       // arena: user-specified; protocol: sum of blocks
     var note: String
     var notificationId: String? // set after notification is scheduled
+    var calEventId: String?     // Google Calendar event identifier
 }
 // Persisted: "arena_schedule"
 ```
@@ -579,6 +586,15 @@ struct HabitLog: Codable {
 | `arena_checkin_dismissed` | `String` — date string, skip checkin if == today |
 | `arena_cal_processed` | `[String: Double]` — processed calendar event IDs for dedup |
 | `timerEndTime` | `Double` — timer end epoch for background resume |
+
+### App Group Keys (group.arena.protocol)
+| Key | Type |
+|---|---|
+| `arena_widget_state` | `WidgetState` |
+| `arena_sessions` | `[SessionStub]` — for widget session count |
+| `arena_shared_arenas` | `[SharedArena]` — arena list for Shortcuts/Control Center |
+| `arena_pending_intent` | `PendingArenaIntent` — Shortcut → app session start |
+| `arena_pending_task` | `String` — Shortcut → app checklist task |
 
 ---
 

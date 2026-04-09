@@ -12,44 +12,52 @@ struct ChecklistPanelView: View {
     @State private var draftItems: [ChecklistItem] = [ChecklistItem(text: "")]
     @State private var isEditing: Bool = true
     @State private var currentChecklistId: String? = nil
+    @State private var hapticToggleTrigger: Int = 0
+    @State private var hapticLockTrigger: Int = 0
     @FocusState private var focusedItemId: String?
 
     private let gold = Color(hex: "#E8C547")
 
     var body: some View {
         VStack(spacing: 0) {
-            dragHandle
+            panelHeader
             scopeTabBar
             Divider().background(Color.white.opacity(0.06)).padding(.horizontal, 16)
 
-            ScrollView(showsIndicators: false) {
-                if isEditing {
-                    draftMode
-                } else {
-                    lockedMode
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    if isEditing {
+                        draftMode
+                    } else {
+                        lockedMode
+                    }
+                }
+                .padding(.top, 8)
+                .onChange(of: draftItems.count) { _, _ in
+                    if let lastId = draftItems.last?.id {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo(lastId, anchor: .bottom)
+                        }
+                    }
                 }
             }
-            .padding(.top, 8)
         }
         .background(Color(hex: "#080810"))
+        .sensoryFeedback(.selection, trigger: hapticToggleTrigger)
+        .sensoryFeedback(.impact(weight: .medium), trigger: hapticLockTrigger)
         .onAppear { loadChecklist() }
         .onChange(of: activeScope) { _, _ in loadChecklist() }
     }
 
-    // MARK: - Drag Handle
+    // MARK: - Panel Header
 
-    private var dragHandle: some View {
-        VStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.white.opacity(0.15))
-                .frame(width: 36, height: 4)
-                .padding(.top, 10)
-            Text("CHECKLIST")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundStyle(gold.opacity(0.5))
-                .kerning(5)
-                .padding(.bottom, 4)
-        }
+    private var panelHeader: some View {
+        Text("CHECKLIST")
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundStyle(gold.opacity(0.55))
+            .kerning(5)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
     }
 
     // MARK: - Scope Tabs
@@ -128,6 +136,7 @@ struct ChecklistPanelView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+                .id(item.id)
 
                 if idx < draftItems.count - 1 {
                     Rectangle()
@@ -152,9 +161,9 @@ struct ChecklistPanelView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(lastHasText ? gold.opacity(0.04) : Color.white.opacity(0.01))
-                .overlay(RoundedRectangle(cornerRadius: 10)
+                .overlay(RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(lastHasText ? gold.opacity(0.15) : Color.white.opacity(0.04), lineWidth: 1))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
             .disabled(!lastHasText)
@@ -214,8 +223,7 @@ struct ChecklistPanelView: View {
                 // Items
                 ForEach(cl.items) { item in
                     Button {
-                        let gen = UISelectionFeedbackGenerator()
-                        gen.selectionChanged()
+                        hapticToggleTrigger += 1
                         withAnimation(.easeInOut(duration: 0.2)) {
                             store.toggleChecklistItem(checklistId: cl.id, itemId: item.id)
                         }
@@ -241,7 +249,7 @@ struct ChecklistPanelView: View {
                             // Text
                             Text(item.text)
                                 .font(.system(size: 12, design: .monospaced))
-                                .foregroundStyle(item.isCompleted ? Color.white.opacity(0.2) : Color.white.opacity(0.75))
+                                .foregroundStyle(item.isCompleted ? Color.white.opacity(0.15) : Color.white.opacity(0.85))
                                 .strikethrough(item.isCompleted, color: Color.white.opacity(0.15))
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
@@ -276,13 +284,23 @@ struct ChecklistPanelView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
                         .background(Color.white.opacity(0.03))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 .padding(.bottom, 24)
+            } else {
+                ContentUnavailableView {
+                    Label("No Tasks", systemImage: "checklist")
+                        .foregroundStyle(Color.white.opacity(0.2))
+                } description: {
+                    Text("Switch to draft mode to add tasks.")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.12))
+                }
+                .padding(.top, 32)
             }
         }
     }
@@ -315,8 +333,7 @@ struct ChecklistPanelView: View {
     }
 
     private func lockIn() {
-        let gen = UIImpactFeedbackGenerator(style: .medium)
-        gen.impactOccurred()
+        hapticLockTrigger += 1
 
         let validItems = draftItems.filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }
         guard !validItems.isEmpty else { return }

@@ -35,33 +35,36 @@ struct AppShortcutsBar: View {
     @State private var editMode = false
     @State private var showPicker = false
 
+    /// Identifies each item across the three copies
+    private struct CarouselItem: Identifiable {
+        let app: DockApp
+        let copy: Int          // 0, 1, 2
+        var id: String { "\(app.id)-copy\(copy)" }
+    }
+
+    private func carouselItems(for apps: [DockApp]) -> [CarouselItem] {
+        (0..<3).flatMap { copy in
+            apps.map { CarouselItem(app: $0, copy: copy) }
+        }
+    }
+
+    /// The first item ID of the middle (copy-1) section — used as the anchor
+    private func middleAnchorID(for apps: [DockApp]) -> String? {
+        guard let first = apps.first else { return nil }
+        return "\(first.id)-copy1"
+    }
+
     var body: some View {
+        let apps = store.dockApps
+        let items = carouselItems(for: apps)
+        let useCarousel = apps.count >= 2 && !editMode
+
         VStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(store.dockApps) { app in
-                        DockIconView(
-                            app: app,
-                            editMode: editMode,
-                            onDelete: {
-                                store.dockApps.removeAll { $0.id == app.id }
-                                store.saveDockApps()
-                            }
-                        )
-                    }
-                    if editMode {
-                        AddDockButton { showPicker = true }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+            if useCarousel {
+                infiniteCarousel(items: items, apps: apps)
+            } else {
+                plainScroll(apps: apps)
             }
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.5)
-                    .onEnded { _ in
-                        withAnimation(.spring(response: 0.3)) { editMode = true }
-                    }
-            )
 
             if editMode {
                 Button("DONE") {
@@ -82,6 +85,126 @@ struct AppShortcutsBar: View {
             )
         }
     }
+
+    // MARK: - Infinite carousel (non-edit mode, >= 2 apps)
+
+    @ViewBuilder
+    private func infiniteCarousel(items: [CarouselItem], apps: [DockApp]) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(items) { item in
+                        DockIconView(
+                            app: item.app,
+                            editMode: false,
+                            onDelete: {}
+                        )
+                        .id(item.id)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    CarouselBoundaryDetector(
+                        appCount: apps.count,
+                        onNeedReset: {
+                            if let anchor = middleAnchorID(for: apps) {
+                                proxy.scrollTo(anchor, anchor: .leading)
+                            }
+                        }
+                    )
+                )
+            }
+            .coordinateSpace(name: "carouselClip")
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.5)
+                    .onEnded { _ in
+                        withAnimation(.spring(response: 0.3)) { editMode = true }
+                    }
+            )
+            .onAppear {
+                // Start at the middle copy
+                if let anchor = middleAnchorID(for: apps) {
+                    proxy.scrollTo(anchor, anchor: .leading)
+                }
+            }
+            .onChange(of: apps.count) { _, _ in
+                if let anchor = middleAnchorID(for: apps) {
+                    proxy.scrollTo(anchor, anchor: .leading)
+                }
+            }
+        }
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - Plain scroll (edit mode or < 2 apps)
+
+    @ViewBuilder
+    private func plainScroll(apps: [DockApp]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(apps) { app in
+                    DockIconView(
+                        app: app,
+                        editMode: editMode,
+                        onDelete: {
+                            store.dockApps.removeAll { $0.id == app.id }
+                            store.saveDockApps()
+                        }
+                    )
+                }
+                if editMode {
+                    AddDockButton { showPicker = true }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.5)
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.3)) { editMode = true }
+                }
+        )
+    }
+}
+
+// MARK: - Boundary Detector (GeometryReader-based)
+
+/// Monitors scroll position and fires a reset callback when the user
+/// scrolls into the first or last copy region.
+private struct CarouselBoundaryDetector: View {
+    let appCount: Int
+    let onNeedReset: () -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            let totalWidth = geo.size.width
+            // Each copy takes 1/3 of the total content width
+            let copyWidth = totalWidth / 3.0
+            // minX is negative when scrolled right
+            let offsetX = geo.frame(in: .named("carouselClip")).minX
+
+            Color.clear
+                .preference(key: CarouselOffsetKey.self, value: offsetX)
+                .onPreferenceChange(CarouselOffsetKey.self) { offset in
+                    // offset is 0 at leading edge; becomes negative as user scrolls right
+                    // We want to reset when user reaches copy-0 or copy-2 territory
+                    let scrolled = -offset
+                    let threshold: CGFloat = 20
+                    if scrolled < threshold || scrolled > (copyWidth * 2 - threshold) {
+                        onNeedReset()
+                    }
+                }
+        }
+    }
+}
+
+private struct CarouselOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
 }
 
 // MARK: - Dock Icon
@@ -96,9 +219,9 @@ struct DockIconView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Button(action: launchApp) {
-                VStack(spacing: 5) {
+                VStack(spacing: 4) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 12)
                             .fill(Color(hex: app.brandColor).opacity(0.15))
                             .frame(width: 56, height: 56)
                         Image(systemName: app.sfSymbol)
@@ -160,9 +283,9 @@ struct AddDockButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 5) {
+            VStack(spacing: 4) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(Color.white.opacity(0.08))
                         .frame(width: 56, height: 56)
                     Image(systemName: "plus")

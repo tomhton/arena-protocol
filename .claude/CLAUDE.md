@@ -91,3 +91,40 @@ Tests use **Swift Testing** (`@Suite`, `@Test`, `#expect`) — not XCTest. All t
 ## CONTEXT.md
 
 `CONTEXT.md` in the repo root is a comprehensive session snapshot (36 KB). It contains all domain model definitions, the full screen inventory, version history, and color palette. It is the authoritative reference for current app state — check it before making assumptions about models or screen structure.
+
+## Post-Change Protocol
+
+**Every code change — no matter how small — must end with these steps:**
+
+1. **CONTEXT.md** — update the following sections:
+   - Version number (top line: `Last updated: YYYY-MM-DD (vX.Y.Z)`)
+   - File map (add new files, remove deleted files, update descriptions of changed files)
+   - Model definitions (if any struct/enum/class was added, renamed, or had fields changed)
+   - UserDefaults keys table (if any new persistence key was added)
+   - Screen enum inventory (if any navigation case was added/removed)
+   - App Group keys table (if SharedStore keys changed)
+
+2. **CHANGELOG.md** — add a new version entry above existing history:
+   - Format: `## vX.Y.Z — YYYY-MM-DD HH:MM`
+   - Include: summary line, feature bullets, files changed list
+
+3. **Build verification** — ensure `swift build` passes (ignore pre-existing ActivityKit/macOS errors which only affect `swift build` on macOS, not Xcode iOS builds)
+
+4. **No partial implementations** — every prompt must end in a buildable, functional state. If a feature spans multiple files, all files must be updated in the same prompt. Never leave dangling references to deleted code or unimplemented method stubs.
+
+5. **pbxproj** — when adding or removing `.swift` files, update `project.pbxproj`:
+   - PBXFileReference section (file entry)
+   - PBXBuildFile section (build entry)
+   - PBXGroup section (folder membership)
+   - PBXSourcesBuildPhase section (compile list)
+
+## Schema Versioning
+
+All app data is stored as Codable JSON in UserDefaults. When changing Codable model structs:
+
+- **Adding fields:** Always provide a default value (`var newField: Type = defaultValue`) so existing JSON decodes without error.
+- **Removing fields:** Remove the property. Old JSON keys are silently ignored by Codable.
+- **Renaming fields:** Add a `CodingKeys` enum mapping old key → new property, or add migration logic in `DataStore.init()`.
+- **Type changes:** Add migration in `DataStore.init()` that reads old format, converts, and re-saves.
+
+Never ship a change that causes `loadFromDefaults()` to return the fallback value because the existing JSON can't decode into the new struct. That silently wipes user data.

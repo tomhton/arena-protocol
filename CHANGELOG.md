@@ -5,6 +5,172 @@ Format: version — date — summary. Most recent version first.
 
 ---
 
+## v2.33.0 — 2026-04-09
+
+**Schedule button promoted to main menu, scheduled blocks sync to Google Calendar.**
+
+### Summary
+- **SCHEDULE button promoted** from small tool icon row to a full-width colored quick action button (`#4ECDC4` cyan) on the HomeView main menu, matching the style of MORNING/WIND DOWN/STUCK
+- **Google Calendar sync** — creating a scheduled block now writes a `[ARENA_LABEL]` event to Google Calendar via EventKit, so it appears in the CalendarDayView widget on the home screen
+- **Calendar cleanup** — removing a scheduled block deletes the corresponding calendar event
+- `ScheduledBlock` model gains `calEventId: String?` field (backward-compatible default `nil`)
+
+### Files changed
+- `ios/ArenaProtocol/Models/DataStore.swift` — `ScheduledBlock.calEventId`, `addScheduledBlock()` writes to calendar, `removeScheduledBlock()` cleans up calendar event
+- `ios/ArenaProtocol/Views/HomeView.swift` — SCHEDULE button moved to `quickActionRow`, removed from `quickToolsRow`
+- `CONTEXT.md` — version bump, model definition updated
+- `CHANGELOG.md` — this entry
+
+---
+
+## v2.32.0 — 2026-04-02
+
+**Major UI/UX revamp complete (P3-P12): intervals removed, social integrated, header redesigned, calendar restyled, protocols fixed, session display enhanced, checklist tab redesigned, dock carousel, arena cards tightened, visual polish.**
+
+### Summary
+This version completes the full 13-prompt UI/UX revamp plan (P0-P12). Key changes:
+- **P3:** Intervals system fully removed (IntervalsSectionView, IntervalTimerView, Screen.interval, INTERVAL_PRESETS, IntervalsExpandTip)
+- **P4:** Social arena moved into the arena grid as a regular card; SocialSectionView deleted, socialActive state eliminated
+- **P5:** Header redesigned — "ENTER THE ARENA" replaced with today's date + rotating motivational quote
+- **P6:** Arena cards tightened (padding 16→10, spacing 10→7, text centered)
+- **P7:** Calendar section recessed styling with raised event bubbles
+- **P8:** Protocol long-press reorder fix (simultaneousGesture), ActiveProtocol back button with confirmation
+- **P9:** Session progress bar + interactive timeline bubbles with JointEntryEditSheet
+- **P10:** Checklist tab redesigned ("TO-DO" rotated text, draggable edge repositioning, edge-aware panel)
+- **P11:** App dock infinite wrap-around carousel (3× tripled items, boundary detection reset)
+- **P12:** Visual polish — standardized opacity tiers, corner radii, kerning, spacing rhythm across all components
+
+### Files Deleted
+- `IntervalsSectionView.swift`, `IntervalTimerView.swift`, `SocialSectionView.swift`
+
+### Files Changed
+- `HomeView.swift`, `RootView.swift`, `DataStore.swift`, `ArenaTips.swift`, `ProtocolsView.swift`
+- `HomeHeaderView.swift`, `ArenaGridView.swift`, `ArenaCardView.swift`, `ProtocolsInlineView.swift`
+- `ChecklistTabView.swift`, `ChecklistPanelView.swift`, `CalendarDayView.swift`
+- `SessionDisplayView.swift`, `AppShortcutsBar.swift`, `project.pbxproj`
+
+---
+
+## v2.31.4 — 2026-04-02
+
+**Social arena moved into the arena grid as a regular card (P4).**
+
+### Changes
+- **Social arena in grid** — the social arena now appears as the last card in the two-column arena grid, rendered with the same `ArenaCardView` as other arenas. Tapping expands it; long-pressing enters edit mode. Sessions started from this card automatically have `social: true`.
+- **Edit mode** — social arena appears in the reorder list with an EDIT button (non-draggable, always last).
+- **Removed `SocialSectionView`** — deleted the separate social toggle and "SOCIAL ONLY SESSION" button section.
+- **Removed `socialActive` state** — the `social` flag is now derived from whether the expanded arena is the social arena (`arena.id == store.socialArena.id`).
+
+### Files Changed
+- `SocialSectionView.swift` — **deleted**.
+- `HomeView.swift` — removed `socialActive` state, removed `SocialSectionView` usage, changed `social:` parameter in `expandedArenaOverlay` to check arena identity.
+- `ArenaGridView.swift` — appended `store.socialArena` to the grid arenas array; added `socialEditRow` for edit mode.
+- `project.pbxproj` — removed all `SocialSectionView.swift` references.
+- `CONTEXT.md` — version bump to v2.31.4, updated file map and Home screen description.
+- `CHANGELOG.md` — this entry.
+
+---
+
+## v2.31.3 — 2026-04-02
+
+**Session progress bar and interactive timeline bubbles (P9).**
+
+### Features
+- **Slot progress bar** — a 3pt horizontal bar below the current arena header shows remaining time for the active slot, colored with the arena's `liveColor`, receding from full to zero as time passes.
+- **Interactive timeline bubbles** — queued joint arena entries are now tappable rounded pill bubbles instead of static rows. Tapping opens `JointEntryEditSheet`.
+- **JointEntryEditSheet** — in-session sheet to change arena (horizontal picker from `letteredArenas`), change duration (preset buttons: 5/10/15/25/30/45/60m), remove the entry (`removeJoint`), or insert a new arena before it (`insertJoint`). All edits sync to Dynamic Island via `syncLiveActivity(force: true)`.
+
+### Files Changed
+- `SessionDisplayView.swift` — added `slotProgressBar` computed view, `editingEntry` state, `matchedEntrySlots()` helper, rewrote `timelineSection` with interactive bubbles, added `JointEntryEditSheet` view.
+- `CONTEXT.md` — version bump to v2.31.3, updated SessionDisplayView file map entry.
+- `CHANGELOG.md` — this entry.
+
+---
+
+## v2.31.2 — 2026-04-02
+
+**Infinite wrap-around carousel for AppShortcutsBar (P11).**
+
+### Feature
+- **Infinite scroll** — the app shortcuts dock now wraps around seamlessly in both directions. Items are tripled (3 copies), ScrollView starts at the middle copy, and a GeometryReader-based boundary detector silently resets position when the user scrolls past either edge.
+- Edit mode (long-press, delete, add) falls back to the original plain scroll to avoid conflicts with the carousel reset logic.
+- Carousel activates only when 2+ dock apps are present.
+
+### Files Changed
+- `AppShortcutsBar.swift` — added `CarouselItem` struct, `carouselItems(for:)` and `middleAnchorID(for:)` helpers, split body into `infiniteCarousel` and `plainScroll` branches, added `CarouselBoundaryDetector` and `CarouselOffsetKey` preference key.
+- `CONTEXT.md` — version bump to v2.31.2, updated file map entry for AppShortcutsBar.
+- `CHANGELOG.md` — this entry.
+
+---
+
+## v2.31.1 — 2026-04-02
+
+**Calendar section recessed/indented styling with raised event bubbles (P7).**
+
+### UI Polish
+- **Recessed content well** — calendar event area now sits in a darker `#040408` container with inner shadow and subtle border, creating an inset/recessed look against the standard `#080810` background.
+- **Raised event bubbles** — timeline rows, compact cards, and agenda items have brighter backgrounds, thin top-edge stroke borders, and soft white glow shadows to appear elevated above the recessed surface.
+- All three layout styles (timeline, compact, agenda) styled consistently.
+
+### Files Changed
+- `CalendarDayView.swift` — recessed container wrapper, updated `rowBackground` brightness, added `strokeBorder` + `shadow` to timeline rows and compact cards.
+- `CONTEXT.md` — version bump to v2.31.1.
+- `CHANGELOG.md` — this entry.
+
+---
+
+## v2.31.0 — 2026-04-02
+
+**HomeView decomposition: extract 6 sections into standalone component files (P2).**
+
+### Refactoring
+- **HomeView reduced from 1489 → 811 lines** — zero visual changes, pure extraction refactor.
+- **HomeHeaderView.swift** — Hero title ("ENTER THE ARENA") + subtitle row with active title and session count.
+- **SocialSectionView.swift** — Social toggle button + "SOCIAL ONLY SESSION" expand. Accepts `socialActive` and `hapticLight` as bindings.
+- **IntervalsSectionView.swift** — Expandable intervals preset grid. Owns its own `intervalsExpanded` state.
+- **ProtocolsInlineView.swift** — Horizontal protocol card scroll + vertical drag-to-reorder mode. Owns `protocolReorderMode` and `draggingProtocolId`.
+- **ArenaGridView.swift** — Edit toggle + two-column arena card grid + reorder list. Owns drag state (`draggingId`, `dragTargetIdx`, `longPressedArenaId`). Accepts `editMode` as binding.
+- **ChecklistTabView.swift** — Persistent bottom-left sliding panel with tab handle, tip, and drag-to-expand/collapse gestures. Owns `checklistExpanded` and `checklistDragOffset`.
+- All new files added to `project.pbxproj` (PBXFileReference, PBXBuildFile, PBXGroup, PBXSourcesBuildPhase).
+
+### Files Changed
+- `ios/ArenaProtocol/Views/HomeView.swift` (major reduction)
+- NEW `ios/ArenaProtocol/Components/HomeHeaderView.swift`
+- NEW `ios/ArenaProtocol/Components/SocialSectionView.swift`
+- NEW `ios/ArenaProtocol/Components/IntervalsSectionView.swift`
+- NEW `ios/ArenaProtocol/Components/ProtocolsInlineView.swift`
+- NEW `ios/ArenaProtocol/Components/ArenaGridView.swift`
+- NEW `ios/ArenaProtocol/Components/ChecklistTabView.swift`
+- `ios/ArenaProtocol.xcodeproj/project.pbxproj`
+
+---
+
+## v2.30.0 — 2026-04-02 23:30
+
+**Native platform integrations: App Intents, TipKit, Control Center widget, sensory feedback modernization.**
+
+### Features
+- **App Intents / Siri Shortcuts** — "Start [Arena] in Arena Protocol" and "Add [task] to my Arena Protocol checklist" voice commands. `ArenaEntity` query provides arena picker in Shortcuts. `AppShortcutsProvider` registers phrases. Pending intents bridge via `SharedStore` App Group.
+- **TipKit contextual tips** — Discoverable tips for hidden features: protocol long-press reorder, checklist tab drag, intervals expand, Siri Shortcuts (appears after first session completion). Tips configured with weekly display frequency.
+- **Control Center widget** — `ControlWidget` toggle to quick-start arena sessions from Control Center. Reads active session state and arena list from App Group shared store.
+- **Persistent checklist tab** — Checklist moved from floating center button + sheet to a persistent bottom-left sliding panel. Tab sticks out from screen edge with animated SF Symbol indicator (pulsing dot when unfinished tasks). Tap or drag to expand/collapse. No dismissible sheet — always accessible.
+- **sensoryFeedback modernization** — Replaced all `UIImpactFeedbackGenerator` / `UISelectionFeedbackGenerator` calls with SwiftUI `.sensoryFeedback()` modifiers and state triggers across HomeView and ChecklistPanelView.
+- **symbolEffect animations** — Checklist tab "on" indicator uses `Image(systemName:)` with `.symbolEffect(.pulse)` instead of static shapes.
+- **ScrollViewReader auto-scroll** — Checklist draft mode auto-scrolls to newly added items.
+- **ContentUnavailableView** — Native empty state view when checklist is in locked mode with no items.
+
+### Files Changed
+- **NEW** `ArenaAppIntents.swift` — `StartArenaIntent`, `AddChecklistTaskIntent`, `ArenaShortcutsProvider`, `ArenaEntity`
+- **NEW** `ArenaTips.swift` — `ProtocolReorderTip`, `ChecklistTabTip`, `IntervalsExpandTip`, `SiriShortcutsTip`
+- `ArenaProtocolApp.swift` — TipKit init, arena sync to SharedStore, pending intent/task consumption
+- `SharedStore.swift` — `SharedArena`, `PendingArenaIntent`, arena list + pending intent + pending task read/write
+- `HomeView.swift` — Persistent bottom-left checklist panel, TipKit integration, sensoryFeedback, symbolEffect
+- `ChecklistPanelView.swift` — Removed sheet drag handle, added ScrollViewReader, sensoryFeedback, ContentUnavailableView
+- `ArenaProtocolWidgetControl.swift` — Rewritten as functional arena session toggle with SharedStore integration
+- `project.pbxproj` — Added ArenaAppIntents.swift, ArenaTips.swift
+
+---
+
 ## v2.29.0 — 2026-04-02 22:00
 
 **Live Activity tappable arenas + retractable checklist system + HomeView UX polish.**

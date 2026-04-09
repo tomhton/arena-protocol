@@ -27,7 +27,6 @@
 		6000000000000000000012AB /* AppShortcutsBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000012AB /* AppShortcutsBar.swift */; };
 		6000000000000000000013AB /* EmberDropModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000013AB /* EmberDropModal.swift */; };
 		6000000000000000000014AB /* ArenaProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000015AB /* ArenaProtocolTests.swift */; };
-		6000000000000000000016AB /* IntervalTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000016AB /* IntervalTimerView.swift */; };
 		6000000000000000000017AB /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000017AB /* CalendarManager.swift */; };
 		60000000000000000000F8AB /* ChecklistPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50000000000000000000F8AB /* ChecklistPanelView.swift */; };
 		6000000000000000000018AB /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5000000000000000000018AB /* WhatsNewView.swift */; };
@@ -51,6 +50,13 @@
 		CA6DE8502F68E95500CBDDFF /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA88FD792F6811D70015A8AB /* WidgetKit.framework */; };
 		CA88FDA92F6816550015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
 		CA88FE572F68515D0015A8AB /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA88FDA72F6816550015A8AB /* SharedStore.swift */; };
+		60000000000000000000FA01 /* ArenaAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50000000000000000000FA01 /* ArenaAppIntents.swift */; };
+		60000000000000000000FA02 /* ArenaTips.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50000000000000000000FA02 /* ArenaTips.swift */; };
+		60000000000000000000FB01 /* HomeHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50000000000000000000FB01 /* HomeHeaderView.swift */; };
+		60000000000000000000FB04 /* ProtocolsInlineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50000000000000000000FB04 /* ProtocolsInlineView.swift */; };
+		60000000000000000000FB05 /* ArenaGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50000000000000000000FB05 /* ArenaGridView.swift */; };
+		60000000000000000000FB06 /* ChecklistTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50000000000000000000FB06 /* ChecklistTabView.swift */; };
+		60000000000000000000FB02 /* SocialSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50000000000000000000FB02 /* SocialSectionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,7 +114,6 @@
 		5000000000000000000013AB /* EmberDropModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmberDropModal.swift; sourceTree = "<group>"; };
 		5000000000000000000014AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5000000000000000000015AB /* ArenaProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaProtocolTests.swift; sourceTree = "<group>"; };
-		5000000000000000000016AB /* IntervalTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalTimerView.swift; sourceTree = "<group>"; };
 		5000000000000000000017AB /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarManager.swift; sourceTree = "<group>"; };
 		5000000000000000000018AB /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
 		5000000000000000000019AB /* SessionIntelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionIntelligence.swift; sourceTree = "<group>"; };
@@ -125,6 +130,13 @@
 		50000000000000000000F6AB /* CalendarDayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDayView.swift; sourceTree = "<group>"; };
 		50000000000000000000F7AB /* SkinMaterialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinMaterialView.swift; sourceTree = "<group>"; };
 		50000000000000000000F8AB /* ChecklistPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChecklistPanelView.swift; sourceTree = "<group>"; };
+		50000000000000000000FA01 /* ArenaAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaAppIntents.swift; sourceTree = "<group>"; };
+		50000000000000000000FA02 /* ArenaTips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaTips.swift; sourceTree = "<group>"; };
+		50000000000000000000FB01 /* HomeHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHeaderView.swift; sourceTree = "<group>"; };
+		50000000000000000000FB04 /* ProtocolsInlineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolsInlineView.swift; sourceTree = "<group>"; };
+		50000000000000000000FB05 /* ArenaGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaGridView.swift; sourceTree = "<group>"; };
+		50000000000000000000FB06 /* ChecklistTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChecklistTabView.swift; sourceTree = "<group>"; };
+		50000000000000000000FB02 /* SocialSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialSectionView.swift; sourceTree = "<group>"; };
 		CA3792352F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaLiveActivityAttributes.swift; sourceTree = "<group>"; };
 		CA88FD792F6811D70015A8AB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		CA88FD7B2F6811D70015A8AB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -204,6 +216,8 @@
 				CA3792352F685EA600A87FC1 /* ArenaLiveActivityAttributes.swift */,
 				CA88FD952F6812A70015A8AB /* ArenaProtocol.entitlements */,
 				5000000000000000000001AB /* ArenaProtocolApp.swift */,
+				50000000000000000000FA01 /* ArenaAppIntents.swift */,
+				50000000000000000000FA02 /* ArenaTips.swift */,
 				7000000000000000000004AB /* Models */,
 				7000000000000000000005AB /* Views */,
 				7000000000000000000006AB /* Components */,
@@ -239,7 +253,6 @@
 				500000000000000000000DAB /* SettingsView.swift */,
 				500000000000000000000EAB /* StuckView.swift */,
 				500000000000000000000FAB /* ArenaEditorView.swift */,
-				5000000000000000000016AB /* IntervalTimerView.swift */,
 				5000000000000000000018AB /* WhatsNewView.swift */,
 				500000000000000000001BAB /* InventoryView.swift */,
 				500000000000000000001CAB /* ProfileView.swift */,
@@ -263,6 +276,11 @@
 				50000000000000000000F6AB /* CalendarDayView.swift */,
 				50000000000000000000F7AB /* SkinMaterialView.swift */,
 				50000000000000000000F8AB /* ChecklistPanelView.swift */,
+				50000000000000000000FB01 /* HomeHeaderView.swift */,
+				50000000000000000000FB04 /* ProtocolsInlineView.swift */,
+				50000000000000000000FB05 /* ArenaGridView.swift */,
+				50000000000000000000FB06 /* ChecklistTabView.swift */,
+				50000000000000000000FB02 /* SocialSectionView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -447,7 +465,6 @@
 				600000000000000000000DAB /* SettingsView.swift in Sources */,
 				600000000000000000000EAB /* StuckView.swift in Sources */,
 				600000000000000000000FAB /* ArenaEditorView.swift in Sources */,
-				6000000000000000000016AB /* IntervalTimerView.swift in Sources */,
 				6000000000000000000018AB /* WhatsNewView.swift in Sources */,
 				600000000000000000001BAB /* InventoryView.swift in Sources */,
 				600000000000000000001CAB /* ProfileView.swift in Sources */,
@@ -464,6 +481,13 @@
 				60000000000000000000F6AB /* CalendarDayView.swift in Sources */,
 				60000000000000000000F7AB /* SkinMaterialView.swift in Sources */,
 				60000000000000000000F8AB /* ChecklistPanelView.swift in Sources */,
+				60000000000000000000FA01 /* ArenaAppIntents.swift in Sources */,
+				60000000000000000000FA02 /* ArenaTips.swift in Sources */,
+				60000000000000000000FB01 /* HomeHeaderView.swift in Sources */,
+				60000000000000000000FB04 /* ProtocolsInlineView.swift in Sources */,
+				60000000000000000000FB05 /* ArenaGridView.swift in Sources */,
+				60000000000000000000FB06 /* ChecklistTabView.swift in Sources */,
+				60000000000000000000FB02 /* SocialSectionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

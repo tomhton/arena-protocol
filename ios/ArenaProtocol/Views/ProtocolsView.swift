@@ -721,8 +721,35 @@ struct ActiveProtocolView: View {
     }
     private var blockColor: Color { Color(hex: currentBlock.color) }
 
+    @State private var showLeaveAlert = false
+
     var body: some View {
         VStack(spacing: 0) {
+            // Back button
+            HStack {
+                Button { showLeaveAlert = true } label: {
+                    Text("← BACK")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.4))
+                        .kerning(2)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            .padding(.horizontal, 22)
+            .padding(.top, 52)
+            .alert("Leave protocol?", isPresented: $showLeaveAlert) {
+                Button("Continue", role: .cancel) { }
+                Button("Leave", role: .destructive) {
+                    #if canImport(ActivityKit)
+                    endActivity()
+                    #endif
+                    onAbandon()
+                }
+            } message: {
+                Text("Progress will be lost.")
+            }
+
             Spacer()
 
             VStack(spacing: 4) {

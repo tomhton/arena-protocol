@@ -17,6 +17,7 @@ struct SessionDisplayView: View {
     @State private var showConcurrentConfirm = false
     @State private var showAbandonConfirm = false
     @State private var showChecklist = false
+    @State private var editingEntry: JointArenaEntry? = nil
 
     private var active: ActiveSessionState? { store.activeSession }
     private var stacked: [ActiveSessionState] { store.stackedSessions }
@@ -47,6 +48,9 @@ struct SessionDisplayView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Current arena block
             currentArenaSection
+
+            // Progress bar for current slot
+            slotProgressBar
 
             // Pause / Done controls
             if let a = active {
@@ -85,6 +89,35 @@ struct SessionDisplayView: View {
                 .presentationDetents([.fraction(0.4), .fraction(0.75)])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color(hex: "#080810"))
+        }
+        .sheet(item: $editingEntry) { entry in
+            JointEntryEditSheet(
+                entry: entry,
+                allArenas: store.letteredArenas,
+                jointEntries: jointEntries,
+                onEdit: { newArena, newDuration in
+                    store.editJoint(entryId: entry.id, newArena: newArena, newDuration: newDuration)
+                    #if canImport(ActivityKit)
+                    store.syncLiveActivity(force: true)
+                    #endif
+                },
+                onRemove: {
+                    store.removeJoint(entryId: entry.id)
+                    #if canImport(ActivityKit)
+                    store.syncLiveActivity(force: true)
+                    #endif
+                },
+                onInsertBefore: { arena, minutes in
+                    if let idx = jointEntries.firstIndex(where: { $0.id == entry.id }) {
+                        store.insertJoint(arena: arena, minutes: minutes, atIndex: idx)
+                        #if canImport(ActivityKit)
+                        store.syncLiveActivity(force: true)
+                        #endif
+                    }
+                }
+            )
+            .presentationDetents([.fraction(0.55)])
+            .presentationBackground(Color(hex: "#080810"))
         }
     }
 
@@ -156,9 +189,9 @@ struct SessionDisplayView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
                     .background(liveColor.opacity(0.15))
-                    .overlay(RoundedRectangle(cornerRadius: 10)
+                    .overlay(RoundedRectangle(cornerRadius: 12)
                         .strokeBorder(liveColor.opacity(0.5), lineWidth: 1))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
 
@@ -174,12 +207,38 @@ struct SessionDisplayView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(liveColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 12)
+    }
+
+    // MARK: - Progress Bar
+
+    private var slotProgressBar: some View {
+        Group {
+            if let slot = curSlot {
+                let elapsed = sessionNow.timeIntervalSince(slot.start)
+                let total = slot.end.timeIntervalSince(slot.start)
+                let fraction = total > 0 ? max(0, min(1, 1.0 - elapsed / total)) : 0
+
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(liveColor.opacity(0.12))
+                            .frame(height: 3)
+                        Capsule()
+                            .fill(liveColor)
+                            .frame(width: geo.size.width * fraction, height: 3)
+                    }
+                }
+                .frame(height: 3)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 10)
+            }
+        }
     }
 
     // MARK: - Timeline
@@ -196,8 +255,50 @@ struct SessionDisplayView: View {
                 .kerning(4)
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
-                .padding(.bottom, 2)
-            ForEach(Array(futureSlots.enumerated()), id: \.offset) { _, slot in
+                .padding(.bottom, 6)
+
+            // Interactive bubbles for joint entries
+            let entrySlotPairs = matchedEntrySlots()
+            ForEach(entrySlotPairs, id: \.entry.id) { pair in
+                let sc = Color(hex: pair.entry.arena.color)
+                let slotMins = pair.entry.minutes
+                Button {
+                    editingEntry = pair.entry
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(pair.entry.arena.icon)
+                            .font(.system(size: 13))
+                        Text(pair.entry.arena.label)
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(sc.opacity(0.85))
+                            .kerning(2)
+                        Text("\(slotMins)m")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(sc.opacity(0.4))
+                        Spacer()
+                        Text("\(formattedTime(pair.entry.scheduledStart)) → \(formattedTime(pair.entry.scheduledEnd))")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(sc.opacity(0.5))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(sc.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(sc.opacity(0.15), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 3)
+            }
+
+            // Show any future slots that don't match joint entries (e.g. primary arena overflow)
+            let unmatchedSlots = futureSlots.filter { slot in
+                !entrySlotPairs.contains { $0.entry.scheduledStart == slot.start }
+            }
+            ForEach(Array(unmatchedSlots.enumerated()), id: \.offset) { _, slot in
                 let sc = Color(hex: slot.arena.color)
                 let slotMins = max(1, Int(slot.end.timeIntervalSince(slot.start) / 60))
                 HStack(spacing: 10) {
@@ -217,6 +318,16 @@ struct SessionDisplayView: View {
                 .padding(.vertical, 6)
             }
         }
+    }
+
+    /// Match future joint entries to display as interactive bubbles
+    private func matchedEntrySlots() -> [(entry: JointArenaEntry, slot: (arena: Arena, start: Date, end: Date)?)] {
+        jointEntries
+            .filter { $0.scheduledStart > sessionNow }
+            .map { entry in
+                let matchingSlot = futureSlots.first { $0.start == entry.scheduledStart }
+                return (entry: entry, slot: matchingSlot)
+            }
     }
 
     // MARK: - Upcoming
@@ -322,9 +433,9 @@ struct SessionDisplayView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(liveColor.opacity(0.08))
-                .overlay(RoundedRectangle(cornerRadius: 10)
+                .overlay(RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(liveColor.opacity(0.2), lineWidth: 1))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
 
@@ -340,9 +451,9 @@ struct SessionDisplayView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(Color(hex: "#E8C547").opacity(0.08))
-                .overlay(RoundedRectangle(cornerRadius: 10)
+                .overlay(RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(Color(hex: "#E8C547").opacity(0.2), lineWidth: 1))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
 
@@ -493,5 +604,218 @@ struct SessionDisplayView: View {
         #endif
         SharedStore.clearActiveSession()
         WidgetCenter.shared.reloadAllTimelines()
+    }
+}
+
+// MARK: - Joint Entry Edit Sheet
+
+struct JointEntryEditSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let entry: JointArenaEntry
+    let allArenas: [Arena]
+    let jointEntries: [JointArenaEntry]
+    var onEdit: (Arena?, Int?) -> Void
+    var onRemove: () -> Void
+    var onInsertBefore: (Arena, Int) -> Void
+
+    @State private var selectedArena: Arena
+    @State private var selectedDuration: Int
+    @State private var showInsertPicker = false
+    @State private var insertArena: Arena?
+    @State private var insertDuration: Int = 15
+
+    private let durationPresets = [5, 10, 15, 25, 30, 45, 60]
+
+    init(entry: JointArenaEntry, allArenas: [Arena], jointEntries: [JointArenaEntry],
+         onEdit: @escaping (Arena?, Int?) -> Void,
+         onRemove: @escaping () -> Void,
+         onInsertBefore: @escaping (Arena, Int) -> Void) {
+        self.entry = entry
+        self.allArenas = allArenas
+        self.jointEntries = jointEntries
+        self.onEdit = onEdit
+        self.onRemove = onRemove
+        self.onInsertBefore = onInsertBefore
+        _selectedArena = State(initialValue: entry.arena)
+        _selectedDuration = State(initialValue: entry.minutes)
+        _insertArena = State(initialValue: allArenas.first)
+    }
+
+    var body: some View {
+        let entryColor = Color(hex: selectedArena.color)
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("EDIT ARENA")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(entryColor)
+                    .kerning(3)
+                Spacer()
+                Button { dismiss() } label: {
+                    Text("✕")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.35))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            // Arena picker
+            Text("ARENA")
+                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.white.opacity(0.22))
+                .kerning(4)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 6)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(allArenas) { arena in
+                        let ac = Color(hex: arena.color)
+                        let isSelected = arena.id == selectedArena.id
+                        Button {
+                            selectedArena = arena
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(arena.icon).font(.system(size: 11))
+                                Text(arena.label)
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(isSelected ? ac : ac.opacity(0.5))
+                                    .kerning(1)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(isSelected ? ac.opacity(0.15) : ac.opacity(0.04))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(isSelected ? ac.opacity(0.6) : ac.opacity(0.12), lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            .padding(.bottom, 16)
+
+            // Duration picker
+            Text("DURATION")
+                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.white.opacity(0.22))
+                .kerning(4)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 6)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(durationPresets, id: \.self) { mins in
+                        let isSelected = mins == selectedDuration
+                        Button {
+                            selectedDuration = mins
+                        } label: {
+                            Text("\(mins)m")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundStyle(isSelected ? entryColor : entryColor.opacity(0.4))
+                                .kerning(1)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(isSelected ? entryColor.opacity(0.15) : entryColor.opacity(0.04))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(isSelected ? entryColor.opacity(0.6) : entryColor.opacity(0.12), lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            .padding(.bottom, 20)
+
+            // Action buttons
+            HStack(spacing: 10) {
+                // Save changes
+                Button {
+                    let newArena: Arena? = selectedArena.id != entry.arena.id ? selectedArena : nil
+                    let newDuration: Int? = selectedDuration != entry.minutes ? selectedDuration : nil
+                    if newArena != nil || newDuration != nil {
+                        onEdit(newArena, newDuration)
+                    }
+                    dismiss()
+                } label: {
+                    Text("SAVE")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(hex: "#080810"))
+                        .kerning(2)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(entryColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                // Insert before
+                Button {
+                    showInsertPicker = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 9))
+                        Text("INSERT BEFORE")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .kerning(2)
+                    }
+                    .foregroundStyle(entryColor.opacity(0.6))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(entryColor.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(entryColor.opacity(0.2), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                // Remove
+                Button {
+                    onRemove()
+                    dismiss()
+                } label: {
+                    Text("REMOVE")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(hex: "#FF4444").opacity(0.7))
+                        .kerning(2)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(hex: "#FF4444").opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color(hex: "#FF4444").opacity(0.2), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+
+            Spacer()
+        }
+        .background(Color(hex: "#080810").ignoresSafeArea())
+        .sheet(isPresented: $showInsertPicker) {
+            JointArenaPicker(allArenas: allArenas) { pickedArena, pickedMinutes, _ in
+                onInsertBefore(pickedArena, pickedMinutes)
+                showInsertPicker = false
+                dismiss()
+            }
+            .presentationDetents([.fraction(0.6)])
+            .presentationBackground(Color(hex: "#080810"))
+        }
     }
 }

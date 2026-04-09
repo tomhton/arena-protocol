@@ -84,7 +84,7 @@ struct ArenaCardView: View {
                         .foregroundStyle(arenaColor)
                         .shadow(color: arenaColor, radius: 4)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                        .padding(10)
+                        .padding(8)
                 }
 
                 // Bottom-right: rank label or session count
@@ -102,7 +102,7 @@ struct ArenaCardView: View {
                                 .foregroundStyle(arenaColor.opacity(0.7))
                         }
                     }
-                    .padding(10)
+                    .padding(8)
                 }
 
                 // Edit pencil (top-right)
@@ -111,44 +111,52 @@ struct ArenaCardView: View {
                         .font(.system(size: 12))
                         .foregroundStyle(arenaColor.opacity(0.7))
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .padding(10)
+                        .padding(8)
                 }
 
+                // Letter label (top-left)
+                Text(arena.letter)
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.18))
+                    .kerning(2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(8)
+
                 // Content
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        if equippedSkin != nil {
-                            Text(arena.icon)
-                                .font(.system(size: 18))
-                                .engraved(color: arenaColor, depth: 1.5)
-                        } else {
-                            Text(arena.icon)
-                                .font(.system(size: 18))
-                                .foregroundStyle(arenaColor)
-                        }
-                        Text(arena.letter)
-                            .font(.system(size: 8, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(0.18))
-                            .kerning(3)
+                VStack(spacing: 4) {
+                    if equippedSkin != nil {
+                        Text(arena.icon)
+                            .font(.system(size: 18))
+                            .engraved(color: arenaColor, depth: 1.5)
+                    } else {
+                        Text(arena.icon)
+                            .font(.system(size: 18))
+                            .foregroundStyle(arenaColor)
                     }
 
                     if equippedSkin != nil {
                         Text(arena.label)
                             .font(.system(size: 15, weight: .bold, design: .monospaced))
                             .kerning(3)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
                             .engraved(color: Color(hex: "#ECECEC"), depth: 1.2)
                     } else {
                         Text(arena.label)
                             .font(.system(size: 15, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color(hex: "#ECECEC"))
                             .kerning(3)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
                     }
 
                     if !arena.subtitle.isEmpty {
                         Text(arena.subtitle)
                             .font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(arenaColor.opacity(0.6))
+                            .foregroundStyle(arenaColor.opacity(0.55))
                             .kerning(1)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
                     }
 
                     if streak > 1 && !editMode {
@@ -158,8 +166,8 @@ struct ArenaCardView: View {
                             .opacity(0.8)
                     }
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .frame(minHeight: 150)
         }
@@ -422,11 +430,11 @@ struct AddArenaCardView: View {
             .frame(maxWidth: .infinity, minHeight: 100)
             .background(Color.white.opacity(0.02))
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
                     .foregroundStyle(Color.white.opacity(0.15))
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
     }

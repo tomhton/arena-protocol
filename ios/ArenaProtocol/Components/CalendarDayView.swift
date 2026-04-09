@@ -31,22 +31,39 @@ struct CalendarDayView: View {
                 headerRow
                     .padding(.bottom, 10)
 
-                if events.isEmpty {
-                    emptyState
-                } else {
-                    switch store.settings.calendarViewStyle {
-                    case .timeline: timelineLayout
-                    case .compact:  compactLayout
-                    case .agenda:   agendaLayout
+                // Recessed content well
+                VStack(alignment: .leading, spacing: 0) {
+                    if events.isEmpty {
+                        emptyState
+                    } else {
+                        switch store.settings.calendarViewStyle {
+                        case .timeline: timelineLayout
+                        case .compact:  compactLayout
+                        case .agenda:   agendaLayout
+                        }
                     }
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
+                .background(Color(hex: "#040408"))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.black.opacity(0.5), lineWidth: 1)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.04), lineWidth: 0.5)
+                        .padding(1)
+                )
+                .shadow(color: Color.black.opacity(0.4), radius: 3, x: 0, y: 2)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(Color.white.opacity(0.02))
-            .overlay(RoundedRectangle(cornerRadius: 14)
+            .overlay(RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.white.opacity(0.06), lineWidth: 1))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal, 12)
             .padding(.bottom, 10)
             .onAppear { events = CalendarManager.shared.todayEvents() }
@@ -98,7 +115,7 @@ struct CalendarDayView: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
                     .background(Color(hex: "#60A5FA").opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
         }
@@ -318,7 +335,12 @@ struct CalendarDayView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, tier == .past || tier == .later ? 3 : 5)
             .background(rowBackground(tier: tier, accent: accent))
+            .overlay(
+                RoundedRectangle(cornerRadius: tier == .now ? 10 : 6)
+                    .strokeBorder(Color.white.opacity(tier == .now ? 0.06 : 0.03), lineWidth: 0.5)
+            )
             .clipShape(RoundedRectangle(cornerRadius: tier == .now ? 10 : 6))
+            .shadow(color: Color.white.opacity(tier == .now ? 0.06 : 0.03), radius: 4, x: 0, y: 1)
         }
         .buttonStyle(.plain)
         .disabled(!isTappable)
@@ -362,8 +384,9 @@ struct CalendarDayView: View {
             .padding(8)
             .background(rowBackground(tier: tier, accent: accent))
             .overlay(RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(tier == .now ? accent.opacity(0.3) : Color.white.opacity(0.04), lineWidth: 1))
+                .strokeBorder(tier == .now ? accent.opacity(0.3) : Color.white.opacity(0.06), lineWidth: 1))
             .clipShape(RoundedRectangle(cornerRadius: 8))
+            .shadow(color: Color.white.opacity(tier == .now ? 0.06 : 0.03), radius: 4, x: 0, y: 1)
         }
         .buttonStyle(.plain)
         .disabled(!isTappable)
@@ -382,10 +405,10 @@ struct CalendarDayView: View {
 
     private func rowBackground(tier: EventTier, accent: Color) -> Color {
         switch tier {
-        case .past:     return Color.white.opacity(0.005)
-        case .now:      return accent.opacity(0.06)
-        case .upcoming: return Color.white.opacity(0.015)
-        case .later:    return Color.white.opacity(0.005)
+        case .past:     return Color.white.opacity(0.02)
+        case .now:      return accent.opacity(0.10)
+        case .upcoming: return Color.white.opacity(0.04)
+        case .later:    return Color.white.opacity(0.02)
         }
     }
 

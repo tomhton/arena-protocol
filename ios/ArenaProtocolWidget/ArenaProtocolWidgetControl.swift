@@ -1,77 +1,97 @@
-//
-//  ArenaProtocolWidgetControl.swift
-//  ArenaProtocolWidget
-//
-//  Created by Baloo on 3/16/26.
-//
+// ArenaProtocolWidgetControl.swift — Arena Protocol
+// Control Center widget — quick-start your most recent arena session.
 
 import AppIntents
 import SwiftUI
 import WidgetKit
 
 struct ArenaProtocolWidgetControl: ControlWidget {
-    static let kind: String = "com.arenaprotocol.app.ArenaProtocolWidget"
+    static let kind = "com.arenaprotocol.app.ArenaControl"
 
     var body: some ControlWidgetConfiguration {
         AppIntentControlConfiguration(
             kind: Self.kind,
-            provider: Provider()
+            provider: ArenaControlProvider()
         ) { value in
             ControlWidgetToggle(
-                "Start Timer",
+                value.isRunning ? value.arenaName : "Start Arena",
                 isOn: value.isRunning,
-                action: StartTimerIntent(value.name)
+                action: ToggleArenaIntent(arenaName: value.arenaName)
             ) { isRunning in
-                Label(isRunning ? "On" : "Off", systemImage: "timer")
+                Label(isRunning ? value.arenaName : "Arena", systemImage: isRunning ? "flame.fill" : "flame")
+                    .tint(isRunning ? .orange : .gray)
             }
         }
-        .displayName("Timer")
-        .description("A an example control that runs a timer.")
+        .displayName("Arena Session")
+        .description("Quick-start your last arena from Control Center.")
     }
 }
+
+// MARK: - Control Value
 
 extension ArenaProtocolWidgetControl {
     struct Value {
         var isRunning: Bool
-        var name: String
-    }
-
-    struct Provider: AppIntentControlValueProvider {
-        func previewValue(configuration: TimerConfiguration) -> Value {
-            ArenaProtocolWidgetControl.Value(isRunning: false, name: configuration.timerName)
-        }
-
-        func currentValue(configuration: TimerConfiguration) async throws -> Value {
-            let isRunning = true // Check if the timer is running
-            return ArenaProtocolWidgetControl.Value(isRunning: isRunning, name: configuration.timerName)
-        }
+        var arenaName: String
     }
 }
 
-struct TimerConfiguration: ControlConfigurationIntent {
-    static let title: LocalizedStringResource = "Timer Name Configuration"
+struct ArenaControlProvider: AppIntentControlValueProvider {
+    func previewValue(configuration: ArenaControlConfiguration) -> ArenaProtocolWidgetControl.Value {
+        .init(isRunning: false, arenaName: configuration.arenaName)
+    }
 
-    @Parameter(title: "Timer Name", default: "Timer")
-    var timerName: String
+    func currentValue(configuration: ArenaControlConfiguration) async throws -> ArenaProtocolWidgetControl.Value {
+        let state = SharedStore.readWidgetState()
+        let isRunning = state.activeArenaName != nil && state.timerEndsAt.map { $0 > Date() } ?? false
+        let name = state.activeArenaName ?? configuration.arenaName
+        return .init(isRunning: isRunning, arenaName: name)
+    }
 }
 
-struct StartTimerIntent: SetValueIntent {
-    static let title: LocalizedStringResource = "Start a timer"
+// MARK: - Configuration
 
-    @Parameter(title: "Timer Name")
-    var name: String
+struct ArenaControlConfiguration: ControlConfigurationIntent {
+    static let title: LocalizedStringResource = "Arena Selection"
 
-    @Parameter(title: "Timer is running")
+    @Parameter(title: "Arena Name", default: "Focus")
+    var arenaName: String
+}
+
+// MARK: - Toggle Intent
+
+struct ToggleArenaIntent: SetValueIntent {
+    static let title: LocalizedStringResource = "Toggle Arena Session"
+
+    @Parameter(title: "Arena Name")
+    var arenaName: String
+
+    @Parameter(title: "Session active")
     var value: Bool
 
-    init() {}
+    init() {
+        self.arenaName = "Focus"
+        self.value = false
+    }
 
-    init(_ name: String) {
-        self.name = name
+    init(arenaName: String) {
+        self.arenaName = arenaName
+        self.value = false
     }
 
     func perform() async throws -> some IntentResult {
-        // Start the timer…
+        if value {
+            // Starting — find arena by name, write pending intent for app to consume
+            let arenas = SharedStore.readArenas()
+            if let match = arenas.first(where: { $0.label.localizedCaseInsensitiveContains(arenaName) })
+                ?? arenas.first {
+                SharedStore.writePendingIntent(arenaId: match.id, duration: 30, note: "")
+            }
+        } else {
+            // Stopping — clear active session in widget state
+            SharedStore.clearActiveSession()
+        }
+        WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
 }
